@@ -56,6 +56,10 @@ jobs:
       working-directory: ./frontend
       run: npm test
 
+    - name: Build (Frontend)
+      working-directory: ./frontend
+      run: npm run build
+
   # 3. Integration Test (Frontend -> Backend)
   integration-test:
     needs: [backend-ci, frontend-ci] # 단위 테스트가 통과해야 실행
