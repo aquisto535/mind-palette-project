@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { InternalAxiosRequestConfig } from 'axios';
 
 // Axios 인스턴스 생성 (기본 설정)
 const client = axios.create({
@@ -8,7 +8,7 @@ const client = axios.create({
 
 // 인터셉터 설정 (가이드라인 2.3 참고)
 // 추후 JWT 인증 구현 시 토큰 추가 로직이 들어갈 위치
-client.interceptors.request.use((config) => {
+client.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   // const token = store.getState().auth.token;
   // if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;

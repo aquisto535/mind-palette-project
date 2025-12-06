@@ -1,4 +1,3 @@
-import client from './client';
 import { AnalysisResult, ChildInfo } from '../types';
 
 // Mock 데이터 생성 함수 (개발용)
@@ -17,7 +16,7 @@ const generateMockResult = (childName: string): AnalysisResult => {
 };
 
 // 이미지 업로드 및 분석 요청 API
-export const uploadImage = async (file: File, childInfo: ChildInfo | null): Promise<AnalysisResult> => {
+export const uploadImage = async (_file: File, childInfo: ChildInfo | null): Promise<AnalysisResult> => {
   // Phase 2: 실제 서버 연동 시 사용할 코드
   /*
   const formData = new FormData();

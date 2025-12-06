@@ -17,11 +17,23 @@ describe('API Gateway Tests', () => {
   // 분석 요청 테스트
   describe('POST /analyze', () => {
     const TEST_UPLOAD_DIR = path.join(__dirname, '../../shared_volume/uploads');
+    const DUMMY_IMAGE_PATH = path.join(__dirname, 'test-image.jpg');
     
-    // 테스트 전후 정리
+    // 테스트 전: 업로드 폴더 및 더미 이미지 준비
     beforeAll(() => {
       if (!fs.existsSync(TEST_UPLOAD_DIR)) {
         fs.mkdirSync(TEST_UPLOAD_DIR, { recursive: true });
+      }
+      // 테스트용 더미 이미지 생성
+      if (!fs.existsSync(DUMMY_IMAGE_PATH)) {
+        fs.writeFileSync(DUMMY_IMAGE_PATH, 'dummy image content');
+      }
+    });
+
+    // 테스트 후: 더미 이미지 정리
+    afterAll(() => {
+      if (fs.existsSync(DUMMY_IMAGE_PATH)) {
+        fs.unlinkSync(DUMMY_IMAGE_PATH);
       }
     });
 
@@ -31,9 +43,31 @@ describe('API Gateway Tests', () => {
       expect(res.body).toHaveProperty('error', 'No image file uploaded');
     });
 
-    // Note: 실제 파일 업로드 테스트는 jest 환경 설정이 필요하므로 
-    // 여기서는 기본적인 에러 처리와 라우트 연결만 확인합니다.
-    // 실제 구현 시에는 mock-fs 등을 활용하거나 실제 파일을 생성하여 테스트합니다.
+    it('should return 200 and analysis result when valid file is uploaded', async () => {
+      // 1. 기존 파일 목록 확인 (비교용)
+      const initialUploads = fs.readdirSync(TEST_UPLOAD_DIR);
+      const TEST_RESULT_DIR = path.join(__dirname, '../../shared_volume/results');
+      if (!fs.existsSync(TEST_RESULT_DIR)) fs.mkdirSync(TEST_RESULT_DIR, { recursive: true });
+      const initialResults = fs.readdirSync(TEST_RESULT_DIR);
+
+      // 2. 요청 수행
+      const res = await request(app)
+        .post('/analyze')
+        .attach('image', DUMMY_IMAGE_PATH);
+
+      // 3. 응답 검증
+      expect(res.statusCode).toEqual(200);
+      expect(res.body).toHaveProperty('score');
+      expect(res.body).toHaveProperty('interpretation');
+      expect(res.body).toHaveProperty('details');
+
+      // 4. 파일 저장 검증 (Uploads)
+      const finalUploads = fs.readdirSync(TEST_UPLOAD_DIR);
+      expect(finalUploads.length).toBeGreaterThan(initialUploads.length);
+      
+      // 5. 결과 저장 검증 (Results)
+      const finalResults = fs.readdirSync(TEST_RESULT_DIR);
+      expect(finalResults.length).toBeGreaterThan(initialResults.length);
+    });
   });
 });
-
