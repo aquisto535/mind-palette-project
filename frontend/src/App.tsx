@@ -5,85 +5,73 @@ import { Guide } from './components/Guide';
 import { Upload } from './components/Upload';
 import { Loading } from './components/Loading';
 import { Result } from './components/Result';
+import { ChildInfo, AnalysisResult } from './types';
+import { uploadImage } from './api/uploadApi';
 
 type Step = 'hero' | 'form' | 'guide' | 'upload' | 'loading' | 'result';
 
-interface ChildInfo {
-  name: string;
-  gender: 'male' | 'female';
-  birthDate: string;
-}
-
-interface AnalysisResult {
-  score: number;
-  percentile: number;
-  interpretation: string;
-  date: string;
-}
-
-function App() {
-  const [step, setStep] = useState<Step>('hero');
-  const [childInfo, setChildInfo] = useState<ChildInfo | null>(null);
-  const [file, setFile] = useState<File | null>(null);
-  const [result, setResult] = useState<AnalysisResult | null>(null);
+function App() 
+{
+  const [step, setStep] = useState<Step>('hero'); // 현재 진행 중인 단계
+  const [childInfo, setChildInfo] = useState<ChildInfo | null>(null); // 자녀 정보
+  const [file, setFile] = useState<File | null>(null); // 업로드된 파일
+  const [result, setResult] = useState<AnalysisResult | null>(null); // 분석 결과
 
   // Smooth scroll to top when step changes
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [step]);
+  }, [step]); // 단계가 변경될 때마다 페이지 맨 위로 스크롤
 
   const handleInfoSubmit = (info: ChildInfo) => {
-    setChildInfo(info);
-    setStep('guide');
+    setChildInfo(info); // 자녀 정보 저장
+    setStep('guide'); // 다음 단계로 이동
   };
 
-  const handleUpload = (uploadedFile: File) => {
-    setFile(uploadedFile);
-    setStep('loading');
-    
-    // Mock Analysis Process
-    setTimeout(() => {
-      const mockScore = Math.floor(Math.random() * (95 - 70) + 70); // Random 70-95
-      const mockPercentile = Math.floor(Math.random() * (99 - 60) + 60); // Random 60-99
+  const handleUpload = async (uploadedFile: File) => {
+    setFile(uploadedFile); // 업로드된 파일 저장
+    setStep('loading'); // 다음 단계로 이동
+
+    try {
+      // API 호출 (Mock 또는 실제)
+      const analysisResult = await uploadImage(uploadedFile, childInfo);
       
-      setResult({
-        score: mockScore,
-        percentile: mockPercentile,
-        date: new Date().toLocaleDateString(),
-        interpretation: `${childInfo?.name} 어린이는 그림을 통해 풍부한 상상력을 표현하고 있습니다.\n\n선이 굵고 힘이 있는 것으로 보아 자신감이 넘치고 에너지가 많은 성향으로 보입니다. 세부적인 묘사가 ${mockScore > 80 ? '매우 뛰어나며' : '잘 나타나 있으며'}, 이는 관찰력이 우수함을 의미합니다.\n\n전체적인 그림의 크기가 종이에 꽉 차는 것은 외향적이고 적극적인 성격을 나타낼 수 있습니다. 또래 친구들에 비해 인지적 표현력이 상위권에 속하는 것으로 분석됩니다.`
-      });
-      
+      setResult(analysisResult);
       setStep('result');
-    }, 3000);
+    } catch (error) {
+      console.error('Analysis failed:', error);
+      alert('분석 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+      setStep('upload');
+      setFile(null);
+    }
   };
 
   const handleReset = () => {
-    setStep('hero');
-    setChildInfo(null);
-    setFile(null);
-    setResult(null);
+    setStep('hero'); // 첫 단계로 이동
+    setChildInfo(null); // 자녀 정보 초기화
+    setFile(null); // 업로드된 파일 초기화
+    setResult(null); // 분석 결과 초기화
   };
 
   return (
     <div className="min-h-screen bg-white text-slate-900">
-      {step === 'hero' && <Hero onStart={() => setStep('form')} />}
+      {step === 'hero' && <Hero onStart={() => setStep('form')} />} // 히어로 섹션
       
-      {step === 'form' && <InfoForm onSubmit={handleInfoSubmit} />}
+      {step === 'form' && <InfoForm onSubmit={handleInfoSubmit} />} // 정보 입력 섹션
       
-      {step === 'guide' && <Guide onNext={() => setStep('upload')} />}
+      {step === 'guide' && <Guide onNext={() => setStep('upload')} />} // 가이드 섹션
       
-      {step === 'upload' && <Upload onUpload={handleUpload} />}
+      {step === 'upload' && <Upload onUpload={handleUpload} />} // 업로드 섹션
       
-      {step === 'loading' && <Loading />}
+      {step === 'loading' && <Loading />} // 로딩 섹션
       
       {step === 'result' && childInfo && result && (
         <Result 
-          childName={childInfo.name}
-          childGender={childInfo.gender}
+          childName={childInfo.name} // 자녀 이름
+          childGender={childInfo.gender} // 자녀 성별
           childAge={childInfo.birthDate} // Simply passing DOB string for now
-          imageFile={file}
+          imageFile={file} // 업로드된 파일
           result={result}
-          onReset={handleReset}
+          onReset={handleReset} // 초기화 핸들러
         />
       )}
     </div>

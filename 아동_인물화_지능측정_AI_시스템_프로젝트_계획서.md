@@ -76,7 +76,7 @@ Frontend (React.js) → Node.js API Gateway → C++ 전처리 서버 + Python AI
 
 #### Crow 선택 배경 (C++ 전처리 서버)
 1. **빠른 REST 구축**: Express.js와 유사한 라우팅으로 전처리 API를 수십 줄로 작성 가능.
-	- Mongoose 웹서버의 경우 REST API에 대한 지원이 Crow보다 
+	- Mongoose 웹서버의 경우 REST API에 대한 지원이 Crow보다 낮음
 2. **성능/복잡도 균형**: Boost.Asio 기반 비동기 모델이지만 코드 작성 난이도가 낮아 학습 곡선 완화.
 3. **학습 시너지**: MFC 경험을 현대 C++ 네트워킹 패턴으로 확장해 포트폴리오 가치를 높임.
 
@@ -86,11 +86,11 @@ Frontend (React.js) → Node.js API Gateway → C++ 전처리 서버 + Python AI
 3. **필수만 학습해도 구현 가능**: `POST /analyze` 엔드포인트와 데이터 검증 정도로도 목표 달성 가능해 학습 비용 대비 효과가 큼.
 
 #### 영상 데이터 전달 전략 (React → Node.js → C++ → Python)
-| 구간 | 권장 방식 | 데이터 형태 (상세) |
-|------|-----------|-------------------|
-| **React → Node.js** | `multipart/form-data` | **요청**: 이미지 파일(바이너리) + 메타데이터(JSON) <br> **응답**: 분석 결과 JSON |
-| **Node.js ↔ C++** | ① **임시 파일 경로 공유(초기)**<br>② **`application/octet-stream` 바이너리 스트림(최적화 시)** | **요청**: `{ "imagePath": "/shared/uploads/img.jpg" }` (JSON) <br> **응답**: `{ "processedPath": "/shared/processed/img_clean.jpg" }` (JSON) |
-| **C++ ↔ Python** | Node.js와 동일한 방식 재사용 | **요청**: `{ "imagePath": "/shared/processed/img_clean.jpg" }` (JSON) <br> **응답**: `{ "score": 85, "features": [...] }` (JSON) |
+| 구간                  | 권장 방식                                                                     | 데이터 형태 (상세)                                                                                                                              |
+| ------------------- | ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| **React → Node.js** | `multipart/form-data`                                                     | **요청**: 이미지 파일(바이너리) + 메타데이터(JSON) <br> **응답**: 분석 결과 JSON                                                                               |
+| **Node.js ↔ C++**   | ① **임시 파일 경로 공유(초기)**<br>② **`application/octet-stream` 바이너리 스트림(최적화 시)** | **요청**: `{ "imagePath": "/shared/uploads/img.jpg" }` (JSON) <br> **응답**: `{ "processedPath": "/shared/processed/img_clean.jpg" }` (JSON) |
+| **C++ ↔ Python**    | Node.js와 동일한 방식 재사용                                                       | **요청**: `{ "imagePath": "/shared/processed/img_clean.jpg" }` (JSON) <br> **응답**: `{ "score": 85, "features": [...] }` (JSON)             |
 
 > **데이터 흐름 요약**  
 > - **이미지 파일**: Docker Volume(공유 폴더)에 저장하고, 서버 간에는 **파일 경로(String)**만 JSON으로 가볍게 주고받음. (성능 최적화 시 바이너리 직접 전송 고려)
@@ -249,15 +249,16 @@ app.post('/analyze', upload.single('image'), async (req, res) => {
   - Canny 에지 검출
   - GrabCut 배경 제거
   - 이진화 및 모폴로지 연산
-- [ ] **Week 4**: 멀티스레딩 기반 성능 최적화
-  - 스레드 풀 구현
-  - 배치 처리
+- [ ] **Week 4**: 멀티스레딩 기반 성능 최적화 및 **코드 품질 고도화**
+  - 스레드 풀 구현 및 배치 처리
   - 성능 벤치마크
+  - **정적 분석 적용**: Microsoft Code Analysis 및 C++ Core Guidelines Checker 적용하여 코드 품질 개선 (Raw Pointer 제거, RAII 준수 확인)
 
 **산출물**:
 - C++ 전처리 서버
 - 최적화된 이미지 처리 모듈
 - 성능 벤치마크 리포트
+- **정적 분석 리포트 (MSVC Code Analysis 통과 인증)**
 
 **주요 전처리 알고리즘:**
 ```cpp
@@ -290,8 +291,10 @@ grabCut(img, mask, rect, bgModel, fgModel, 5, GC_INIT_WITH_RECT);
 
 #### **4월: FastAPI 서버 + 초기 모델 구축**
 - [ ] **Week 1**: FastAPI 기반 AI 서버 골격 구축, C++ 서버와 HTTP 연동
+  - **Pylint/Black/Mypy 설정**: 초기부터 엄격한 코드 컨벤션 적용
 - [ ] **Week 2**: CNN 백본(ResNet/EfficientNet) 선택 및 전이학습 세팅
 - [ ] **Week 3**: Multi-head 분류 헤드 설계(신체 부위 + 세부 특징)
+  - **Type Hinting**: 데이터 입출력(Tensor shape 등)에 명시적 타입 적용
 - [ ] **Week 4**: 데이터 파이프라인 정의 (증강, 라벨 검증, 버전 관리)
 
 #### **5월: 모델 학습/고도화 및 평가**
@@ -421,6 +424,55 @@ grabCut(img, mask, rect, bgModel, fgModel, 5, GC_INIT_WITH_RECT);
 - **백엔드**: Node.js 18.x, Python 3.11, C++ 17
 - **저장소**: 파일 시스템 (이미지 파일 + JSON)
 - **AI 프레임워크**: PyTorch 2.x, OpenCV 4.x
+- **코드 품질 및 정적 분석**:
+  - **Microsoft C++ Code Analysis**: Windows 컴파일러 수준의 잠재적 오류 검출
+  - **C++ Core Guidelines Checker**: Modern C++ 표준 준수 여부 및 메모리 안전성 검증 (Lifetime Profile 등)
+  - **GitHub CodeQL**: 전체 코드베이스의 보안 취약점(Data Flow) 심층 분석
+  - **Python Code Quality**:
+    - **Pylint & Black**: PEP 8 표준 준수 및 일관된 코드 스타일 자동화
+    - **Mypy**: 정적 타입 검사를 통해 인터프리터 언어의 타입 안정성 보완 (C++ 수준의 타입 엄격성 추구)
+  - **JavaScript Ecosystem**:
+    - **ESLint**: React/Node.js의 잠재적 런타임 오류 및 보안 안티 패턴 사전 차단
+    - **Prettier**: 프로젝트 전체의 코드 포맷 일관성 유지
+
+### 📂 권장 프로젝트 구조 (Monorepo 스타일)
+Docker Compose를 활용한 통합 관리를 위해 하나의 루트 디렉터리 아래 모든 서비스를 배치하는 방식을 권장합니다.
+
+```text
+mind-palette-project/          # [최상위 루트 폴더]
+├── docker-compose.yml         # ★ 전체 서비스를 한 번에 실행하는 파일
+├── README.md                  # 프로젝트 전체 설명
+├── .env                       # 공통 환경 변수 (DB 비번, API 키 등)
+│
+├── frontend/                  # [React 프로젝트]
+│   ├── Dockerfile
+│   ├── package.json
+│   ├── src/
+│   └── ...
+│
+├── api-gateway/               # [Node.js 프로젝트]
+│   ├── Dockerfile
+│   ├── package.json
+│   ├── server.js
+│   └── ...
+│
+├── preprocess-server/         # [C++ 프로젝트]
+│   ├── Dockerfile
+│   ├── CMakeLists.txt
+│   ├── src/
+│   └── ...
+│
+├── ai-server/                 # [Python 프로젝트]
+│   ├── Dockerfile
+│   ├── requirements.txt
+│   ├── main.py
+│   └── ...
+│
+└── shared_volume/             # [공유 폴더] (Docker Volume 마운트용)
+    ├── uploads/
+    └── results/
+```
+
 ### **테스트 환경 (Quality Assurance)**
 > **"도구(Tool)"와 "파이프라인(Pipeline)"의 구분**
 > - **테스트 도구 (전동 드릴)**: 실제 검증을 수행하는 라이브러리 (Jest, PyTest, GTest). 개발자가 로컬에서도 실행 가능.
@@ -438,17 +490,108 @@ grabCut(img, mask, rect, bgModel, fgModel, 5, GC_INIT_WITH_RECT);
 
 ### **CI/CD 파이프라인 (자동화 전략)**
 - **구축 도구**: **GitHub Actions**
+- **품질 및 보안 보증 전략 (Dual-Layer Defense)**:
+  - **1차 방어선 (품질 - MSVC Code Analysis)**: C++ Core Guidelines 준수 및 Windows API 오용 방지, 메모리 누수 등 로컬 품질 검증. (시스템 안정성 확보)
+  - **2차 방어선 (보안 - CodeQL)**: 데이터 흐름 분석(Data Flow Analysis)을 통한 잠재적 인젝션 공격, 메모리 커럽션 등 보안 취약점 심층 탐지. (보안성 확보)
 - **파이프라인 워크플로우 (Workflow)**:
   1. **Trigger**: 코드 Push 또는 Pull Request 발생
   2. **CI (지속적 통합)**:
-     - Ubuntu 최신 컨테이너(Runner) 실행
-     - **환경 세팅**: Node.js, Python, C++ 컴파일러 설치
+     - Ubuntu/Windows Runner 실행 (멀티 플랫폼 검증)
+     - **환경 세팅**: Node.js, Python, C++ 컴파일러 및 **정적 분석 도구** 설정
+     - **코드 분석**: MSVC Code Analysis (Windows), CodeQL (Cross-platform) 실행 및 SARIF 리포트 생성
      - **테스트 실행**: `npm test`, `pytest`, `ctest` 명령어 자동 호출
-     - **검증**: 테스트 실패 시 빌드 중단 및 알림 (불량 코드 유입 방지)
+     - **검증**: 분석/테스트 실패 시 빌드 중단 및 알림 (불량 코드 유입 방지)
   3. **CD (지속적 제공)**:
      - 테스트 통과 시 **Docker Image** 빌드
      - Docker Hub/Github Packages에 아티팩트(이미지) Push
      - (선택 사항) 클라우드/서버에 배포 트리거
+
+#### 📄 GitHub Actions 설정 예시 (.github/workflows/main.yml)
+이 설정은 코드가 푸시될 때마다 테스트와 함께 **MSVC Code Analysis(품질)**와 **CodeQL(보안)**을 자동으로 수행하여 코드의 건전성을 이중으로 검증합니다.
+
+```yaml
+name: Mind Palette CI
+
+# 트리거: main 브랜치에 푸시되거나 PR이 생성될 때 실행
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  # 1. 품질 검사 및 테스트 (Windows 환경 - MSVC Analysis)
+  quality-check-cpp:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Configure CMake
+      run: cmake -S preprocess-server -B build
+
+    # MSVC Code Analysis 실행 (C++ Core Guidelines 체크)
+    - name: Run MSVC Code Analysis
+      uses: microsoft/msvc-code-analysis-action@v0.1.0
+      id: run-analysis
+      with:
+        cmakeBuildDirectory: build
+        buildConfiguration: Release
+        ruleset: NativeRecommendedRules.ruleset
+
+    - name: Upload SARIF Report
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: ${{ steps.run-analysis.outputs.sarif }}
+
+  # 2. 보안 검사 (CodeQL - Data Flow Analysis)
+  security-check:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ 'cpp', 'javascript', 'python' ]
+        build-mode: manual
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v4
+      with:
+        languages: ${{ matrix.language }}
+        build-mode: ${{ matrix.build-mode }}
+
+    # CodeQL을 위한 빌드 (C++인 경우만 수행)
+    - name: Build C++ for CodeQL
+      if: matrix.language == 'cpp'
+      run: |
+        sudo apt-get update && sudo apt-get install -y libopencv-dev libboost-all-dev
+        cmake -S preprocess-server -B build
+        cmake --build build --config Release
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v4
+      with:
+        category: "/language:${{matrix.language}}"
+
+  # 3. 유닛 테스트 및 통합 (기존 로직)
+  build-and-test:
+    needs: [quality-check-cpp, security-check] # 분석 통과 후 실행
+    runs-on: ubuntu-latest
+    # ... (기존 빌드 및 테스트 내용) ...
+```
+
+#### 🚀 적용 방법 (Step-by-Step)
+1. **파일 생성**: 프로젝트 루트(최상위)에 `.github/workflows/` 폴더를 생성하고, 그 안에 `main.yml` 파일을 만듭니다.
+2. **코드 작성**: 위 예시 코드를 복사하여 붙여넣습니다.
+3. **커밋 및 푸시**:
+   ```bash
+   git add .github/workflows/main.yml
+   git commit -m "Add CI pipeline"
+   git push origin main
+   ```
+4. **확인**: GitHub 저장소 페이지 상단의 **[Actions]** 탭을 클릭하여, 워크플로우가 실행되고 초록색 체크 표시(성공)가 뜨는지 확인합니다.
 
 ### **배포 및 운영**
 - **클라우드**: 먼저 로컬 PC + Docker Compose로 빠르게 개발·테스트를 반복하고, 안정화되면 동일한 Compose 스택을 AWS/GCP VM에 배포하여 실제 네트워크·자원 환경에서 데모/공유용으로 운영.
@@ -460,6 +603,13 @@ grabCut(img, mask, rect, bgModel, fgModel, 5, GC_INIT_WITH_RECT);
 ## 🔧 C++ 전처리 서버 세부 사항
 
 ### **멀티스레딩 최적화 전략**
+> **⚠️ 구현 핵심 가이드: Windows API vs Standard C++**
+> - **Windows API 사용 금지**: `CreateThread`, `QueueUserWorkItem` 등 Windows 전용 API는 Docker(Linux) 컨테이너 환경에서 작동하지 않으므로 사용을 엄격히 배제합니다.
+> - **C++17 표준 준수**: **`std::thread`**, **`std::mutex`**, **`std::condition_variable`** 등 표준 라이브러리만을 사용하여 **스레드 풀(Thread Pool)을 직접 구현**합니다.
+> - **전략적 이점**: 
+>   1. **이식성(Portability)**: 수정 없이 Windows/Linux/Docker 어디서든 동작.
+>   2. **기술 역량 증명**: 라이브러리에 의존하지 않고 동기화(Synchronization)와 경쟁 상태(Race Condition) 제어를 직접 설계하는 능력 어필.
+
 ```cpp
 // 이미지 배치 처리
 class ImageProcessor {
@@ -501,6 +651,64 @@ public:
 3. **스레드 풀**: 스레드 생성/소멸 비용 최소화
 4. **메모리 풀**: Mat 객체 재사용으로 할당 비용 감소
 5. **SIMD 명령어**: OpenCV의 최적화된 함수 활용
+
+---
+
+## 🔧 Python AI 서버 및 CUDA 가속 전략
+
+### **CUDA 활용 전략 (Python 환경)**
+본 프로젝트에서는 C/C++ 기반의 복잡한 저수준 CUDA 프로그래밍 없이도, **Python(PyTorch)** 생태계의 강력한 GPU 가속 기능을 활용하여 개발 효율성과 성능을 동시에 확보합니다.
+
+### **분야별 성능 가속 효과**
+1. **객체 탐지 (Object Detection)**
+   - **CPU**: 이미지 1장 분석에 0.5~1초 소요 (병목 발생)
+   - **GPU (CUDA)**: 이미지 1장 분석에 **0.02~0.05초** 소요 (실시간급 처리)
+   - **적용**: 아동 그림의 세부 객체(머리, 눈, 코, 입, 팔, 다리 등)를 YOLO/Faster R-CNN 등으로 탐지할 때 필수적입니다.
+
+2. **이미지 전처리 (Preprocessing)**
+   - **기존**: OpenCV(CPU)로 처리 후 텐서 변환 (데이터 이동 오버헤드 발생)
+   - **개선**: **Torchvision** 또는 **Kornia** 라이브러리를 사용하여 전처리부터 추론까지 **GPU 메모리 상에서 원스톱(End-to-End) 처리** 가능.
+   - 리사이징, 노이즈 제거 등의 연산을 GPU 병렬 코어로 가속하여 전체 파이프라인 지연 시간 단축.
+
+3. **LLM (상담 리포트 생성 시)**
+   - 향후 종합 심리 리포트 생성에 LLM(거대 언어 모델) 도입 시, GPU 가속 없이는 실용적인 응답 속도 구현이 불가능합니다.
+   - GPU 사용 시 초당 수십 토큰의 텍스트 생성으로 매끄러운 사용자 경험(UX) 제공.
+
+### **구현 방안 (Low-Code CUDA)**
+- 별도의 CUDA 커널 작성(`__global__`, `cudaMalloc`) 없이 PyTorch API만으로 구현 가능.
+- **코드 예시**:
+  ```python
+  import torch
+
+  # 1. GPU 장치 설정
+  device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+  # 2. 모델과 데이터를 GPU로 이동 (코드 한 줄)
+  model = MyDetectionModel().to(device)
+  inputs = image_tensor.to(device)
+
+  # 3. 연산 수행 (자동으로 CUDA 코어에서 병렬 연산 수행)
+  outputs = model(inputs)
+  ```
+
+---
+
+## ⚖️ 기술적 의사결정: CPU vs GPU 이원화 전략 (Architecture Decision)
+
+### **1. 왜 전처리(C++)는 CUDA를 쓰지 않는가?**
+본 프로젝트는 **"무조건적인 GPU 사용"을 지양**하고, 작업의 특성에 따른 **최적의 리소스 배분**을 통해 시스템 전체 효율을 극대화합니다.
+
+- **PCIe 데이터 전송 병목 (The PCIe Bottleneck)**:
+  - CPU(Host)에서 GPU(Device)로 이미지를 전송하고 다시 가져오는 시간(`cudaMemcpy`)이, 단순한 Resize나 Blur 연산을 수행하는 시간보다 더 오래 걸리는 **"오버헤드가 연산을 압도하는(Overhead dominates computation)"** 현상을 방지합니다.
+- **CPU 캐시 효율성 (Cache Locality)**:
+  - OpenCV의 CPU 함수들은 L1/L2 캐시와 SIMD(AVX2/SSE) 명령어에 고도로 최적화되어 있어, 512x512급 이미지 처리에서는 GPU보다 효율적일 수 있습니다.
+- **결론**: 전처리는 **C++ 멀티스레딩(Thread Pool)**으로 CPU 성능을 극한까지 활용하여 비용 효율적으로 병목을 해결합니다.
+
+### **2. 왜 AI 추론(Python)은 CUDA를 쓰는가?**
+- **행렬 연산 가속**: CNN 모델의 합성곱(Convolution)은 단순 픽셀 처리가 아닌 거대 행렬 연산이므로, GPU의 수천 개 코어를 활용할 때 수십 배의 성능 향상이 발생합니다.
+- **실시간성 확보**: 전처리된 데이터를 한 번만 GPU로 보내면(Inference), 복잡한 추론 과정을 거쳐 결과만 작게 받아오므로 전송 비용 대비 연산 이득이 압도적입니다.
+
+**👉 최종 아키텍처 전략: "전처리는 C++로 CPU 한계까지, 추론은 Python으로 GPU 한계까지 사용하는 최적의 하이브리드 시스템"**
 
 ---
 

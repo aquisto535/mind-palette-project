@@ -1,14 +1,9 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-
-interface ChildInfo {
-  name: string;
-  gender: 'male' | 'female';
-  birthDate: string;
-}
+import { ChildInfo } from '../types';
 
 interface InfoFormProps {
-  onSubmit: (info: ChildInfo) => void;
+  onSubmit: (info: ChildInfo) => void; //onSubmit은 ChildInfo 타입의 데이터를 인자로 받아서 실행만 하고, 결과값은 돌려주지 않음
 }
 
 export const InfoForm: React.FC<InfoFormProps> = ({ onSubmit }) => {
@@ -39,8 +34,9 @@ export const InfoForm: React.FC<InfoFormProps> = ({ onSubmit }) => {
 
         <form onSubmit={handleSubmit} className="space-y-6 bg-white p-8 rounded-2xl shadow-xl border border-slate-100">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">이름 (또는 애칭)</label>
+            <label htmlFor="name" className="block text-sm font-medium text-slate-700 mb-2">이름 (또는 애칭)</label>
             <input
+              id="name"
               type="text"
               value={info.name}
               onChange={(e) => setInfo({ ...info, name: e.target.value })}
@@ -79,8 +75,9 @@ export const InfoForm: React.FC<InfoFormProps> = ({ onSubmit }) => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">생년월일</label>
+            <label htmlFor="birthDate" className="block text-sm font-medium text-slate-700 mb-2">생년월일</label>
             <input
+              id="birthDate"
               type="date"
               value={info.birthDate}
               onChange={(e) => setInfo({ ...info, birthDate: e.target.value })}

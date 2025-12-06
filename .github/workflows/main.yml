@@ -1,0 +1,85 @@
+name: Mind Palette CI/CD
+
+# 트리거: main 브랜치에 푸시되거나 PR이 생성될 때 실행
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  # 1. Node.js (API Gateway) CI
+  backend-ci:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18.x]
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        cache-dependency-path: api-gateway/package-lock.json
+        
+    - name: Install Dependencies (Backend)
+      working-directory: ./api-gateway
+      run: npm ci
+      
+    - name: Run Tests (Backend)
+      working-directory: ./api-gateway
+      run: npm test
+
+  # 2. React (Frontend) CI
+  frontend-ci:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18.x]
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+        
+    - name: Install Dependencies (Frontend)
+      working-directory: ./frontend
+      run: npm ci
+      
+    - name: Run Tests (Frontend)
+      working-directory: ./frontend
+      run: npm test -- --watchAll=false
+
+  # 3. Integration Test (Frontend -> Backend)
+  # 실제 환경과 유사하게 두 서비스를 띄우고 통신을 테스트
+  integration-test:
+    needs: [backend-ci, frontend-ci] # 단위 테스트가 통과해야 실행
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18.x'
+        
+    - name: Install Dependencies & Start Backend
+      working-directory: ./api-gateway
+      run: |
+        npm ci
+        npm start &
+        sleep 5 # 서버 시작 대기
+        
+    # 통합 테스트 스크립트 실행 (Jest 사용)
+    - name: Run Integration Tests
+      working-directory: ./api-gateway
+      run: |
+        npm ci
+        npm test tests/integration.test.js
+

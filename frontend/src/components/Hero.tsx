@@ -1,9 +1,9 @@
 import React from 'react';
-import { motion } from 'framer-motion';
-import { ChevronDown } from 'lucide-react';
+import { motion } from 'framer-motion'; // Framer Motion 라이브러리
+import { ChevronDown } from 'lucide-react'; // Lucide React 라이브러리
 
 interface HeroProps {
-  onStart: () => void;
+  onStart: () => void; // 시작 핸들러
 }
 
 export const Hero: React.FC<HeroProps> = ({ onStart }) => {

@@ -3,13 +3,7 @@ import { motion } from 'framer-motion';
 import { Download, Share2, RefreshCw } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
-
-interface AnalysisResult {
-  score: number;
-  percentile: number;
-  interpretation: string;
-  date: string;
-}
+import { AnalysisResult } from '../types';
 
 interface ResultProps {
   childName: string;
