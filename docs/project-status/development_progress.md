@@ -1,63 +1,47 @@
-# 📊 Mind Palette 프로젝트 개발 진행 현황
+# Mind Palette 프로젝트 개발 진행 상황
 
-이 문서는 프로젝트의 주요 마일스톤 달성 현황과 현재 진행 중인 작업, 그리고 이슈 사항을 기록합니다.
+## 📅 프로젝트 로드맵 및 현황
 
-**최종 업데이트**: 2025-11-28
-
----
-
-## 📅 전체 로드맵 현황
-
-| 단계 | 기간 | 내용 | 상태 | 진행률 |
-| :--- | :--- | :--- | :---: | :---: |
-| **Phase 1** | 2025.11 ~ 2026.01 | Frontend UI/UX 프로토타입 개발 | 🟡 진행 중 | 80% |
-| **Phase 2** | 2026.02 | Backend API (Node.js) 구축 | 🟡 진행 중 | 10% |
-| **Phase 3** | 2026.03 | C++ 전처리 서버 개발 | ⚪ 대기 | 0% |
-| **Phase 4** | 2026.04 ~ 05 | Python AI 서버 및 모델 학습 | ⚪ 대기 | 0% |
-| **Phase 5** | 2026.06 | 전체 시스템 통합 및 최적화 | ⚪ 대기 | 0% |
-| **Phase 6** | 2026.07 | 안정화 및 QA | ⚪ 대기 | 0% |
-| **Phase 7** | 2026.08 | 배포 및 포트폴리오 완성 | ⚪ 대기 | 0% |
+| 단계 | 주요 내용 | 상태 | 완료/예정일 |
+|:---:|:---|:---:|:---:|
+| **Phase 1** | **프로젝트 착수 및 설계** | ✅ 완료 | 2024-12-05 |
+| | - 요구사항 정의, 아키텍처 설계 | ✅ 완료 | |
+| | - 기술 스택 선정 (React, Node.js, C++, Python) | ✅ 완료 | |
+| | - 개발 환경 설정 (Cursor, Git) | ✅ 완료 | |
+| **Phase 2** | **Frontend & API Gateway (MVP)** | 🔄 진행중 | |
+| | - React 프론트엔드 UI 구현 | ✅ 완료 | 2024-12-06 |
+| | - Netlify 배포 및 CI/CD 구축 | ✅ 완료 | 2024-12-06 |
+| | - Node.js API Gateway 기본 구조 | ✅ 완료 | 2024-12-06 |
+| | - 파일 업로드 및 결과 반환 API (Mock) | ✅ 완료 | 2024-12-06 |
+| | - Frontend-Backend 연동 (로컬/Mock 분기) | ✅ 완료 | 2024-12-06 |
+| **Phase 3** | **C++ Preprocessing Server** | ⏳ 대기 | |
+| | - 이미지 전처리 (OpenCV) | | |
+| | - 윤곽선 추출 및 노이즈 제거 | | |
+| **Phase 4** | **Python AI Inference Server** | ⏳ 대기 | |
+| | - PyTorch 모델 서빙 | | |
+| | - HTP/KFD 분석 알고리즘 구현 | | |
+| **Phase 5** | **통합 및 고도화** | ⏳ 대기 | |
+| | - 전체 파이프라인 연동 | | |
+| | - 성능 최적화 및 보안 강화 | | |
 
 ---
 
 ## 📝 상세 진행 로그
 
-### ✅ 2025-12-06
-- **CI/CD**: GitHub Actions 파이프라인 구축 (`.github/workflows/main.yml`).
-  - Backend 단위 테스트 자동화.
-  - Frontend 단위 테스트 자동화.
-  - Integration Test (파일 업로드 시나리오) 자동화.
-- **Test**: `api-gateway` 통합 테스트 스크립트(`integration.test.js`) 작성.
+### 2024-12-06 (Day 2)
+- **CI/CD 및 보안 강화**
+  - GitHub Actions 워크플로우(`main.yml`) 구축: Backend/Frontend CI, Integration Test, Security Analysis
+  - CodeQL Action 버전을 `v2` -> `v3`로 마이그레이션 (Deprecated 경고 해결)
+  - `integration.test.js` 추가: 실제 API 호출 및 파일 저장 검증 자동화
+- **Frontend-Backend 연동**
+  - `frontend/src/api/uploadApi.ts` 수정: `VITE_USE_MOCK` 환경변수로 Mock/Real 모드 전환 가능하도록 개선
+  - 로컬 연동 테스트 성공: `curl`을 이용한 파일 업로드 및 `shared_volume` 저장 확인
+- **API Gateway 고도화 (TDD & Tidy First)**
+  - `server.js` 리팩터링: `routes`, `services`, `utils`로 모듈 분리
+  - TDD 사이클 완료: 실패하는 테스트 -> 구현 -> 리팩터링
 
-### ✅ 2025-11-28
-- **Frontend**: 
-  - UI 개발 완료 및 초기 배포 성공 (Vercel/Netlify 등).
-  - 주요 컴포넌트 (`Hero`, `InfoForm`, `Upload`, `Result`) 테스트 코드 작성 및 통과.
-- **Backend (Node.js)**: 
-  - `api-gateway` 모듈 구성 완료.
-  - 기본 API 엔드포인트에 대한 테스트 코드 구성 및 통과.
-- **개발 환경**: TDD 및 Tidy First 방법론 적용을 위한 `.cursorrules` 설정 완료.
-- **프로젝트 관리**: `plan.md`를 통한 마이크로 태스크 관리 체계 수립.
-
-### ✅ 2025-11-27
-- **기획**: 프로젝트 계획서 및 아키텍처 설계 완료.
-- **문서화**: GitHub `docs` 폴더 구조화 및 방법론 문서 추가.
-
----
-
-## 🚀 Next Steps (단기 목표)
-
-1. **CI/CD 파이프라인 구축**
-   - [ ] GitHub Actions를 통한 자동 테스트 워크플로우 설정 (Frontend + Backend).
-   - [ ] Frontend 재배포 자동화 (CD).
-2. **통합 테스트 (Integration Test)**
-   - [ ] 배포된 Frontend에서 업로드한 아이 정보 및 이미지 파일이 Backend(Node.js)로 정상 전송되는지 확인.
-   - [ ] `shared_volume`에 파일 저장 여부 검증.
-
----
-
-## ⚠️ 이슈 및 메모 (Issues & Notes)
-
-- **데이터베이스**: 초기 단계에서는 DB 없이 파일 시스템(JSON)으로 데이터를 관리함 (YAGNI 원칙).
-- **테스트**: `api-gateway`는 `jest`와 `supertest`를 사용하여 통합 테스트 위주로 진행 예정.
-
+### 2024-12-05 (Day 1)
+- **프로젝트 초기 설정**
+  - `plan.md`, `.cursorrules`, `development_progress.md` 문서화 완료
+  - Node.js API Gateway 프로젝트 초기화 (`api-gateway` 폴더)
+  - React Frontend 프로젝트 초기화 및 Netlify 배포 성공
