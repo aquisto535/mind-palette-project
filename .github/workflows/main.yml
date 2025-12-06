@@ -54,7 +54,7 @@ jobs:
       
     - name: Run Tests (Frontend)
       working-directory: ./frontend
-      run: npm test -- --watchAll=false
+      run: npm test
 
   # 3. Integration Test (Frontend -> Backend)
   # 실제 환경과 유사하게 두 서비스를 띄우고 통신을 테스트
