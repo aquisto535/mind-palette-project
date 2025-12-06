@@ -1,3 +1,4 @@
+import client from './client';
 import { AnalysisResult, ChildInfo } from '../types';
 
 // Mock 데이터 생성 함수 (개발용)
@@ -16,22 +17,34 @@ const generateMockResult = (childName: string): AnalysisResult => {
 };
 
 // 이미지 업로드 및 분석 요청 API
-export const uploadImage = async (_file: File, childInfo: ChildInfo | null): Promise<AnalysisResult> => {
-  // Phase 2: 실제 서버 연동 시 사용할 코드
-  /*
-  const formData = new FormData();
-  formData.append('image', file);
-  if (childInfo) {
-    formData.append('childInfo', JSON.stringify(childInfo));
+export const uploadImage = async (file: File, childInfo: ChildInfo | null): Promise<AnalysisResult> => {
+  // 환경 변수로 Mock 모드 제어 (기본값: true)
+  // VITE_USE_MOCK=false 로 설정된 경우에만 실제 서버와 통신
+  const useMock = import.meta.env.VITE_USE_MOCK !== 'false';
+
+  if (!useMock) {
+    try {
+      console.log('Sending request to real API...');
+      const formData = new FormData();
+      formData.append('image', file);
+      if (childInfo) {
+        formData.append('childInfo', JSON.stringify(childInfo));
+      }
+
+      const response = await client.post<AnalysisResult>('/analyze', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      return response.data;
+    } catch (error) {
+      console.error('API Request Failed:', error);
+      // API 실패 시에도 안전하게 Mock 데이터로 폴백(선택 사항)하거나 에러를 던짐
+      // 여기서는 개발 편의를 위해 에러를 던져서 확인
+      throw error;
+    }
   }
 
-  const response = await client.post<AnalysisResult>('/analyze', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
-  return response.data;
-  */
-
-  // Phase 1: Mock 응답 (3초 딜레이 시뮬레이션)
+  // Mock 응답 (3초 딜레이 시뮬레이션)
+  console.log('Using Mock Data...');
   return new Promise((resolve) => {
     setTimeout(() => {
       resolve(generateMockResult(childInfo?.name || '아이'));
