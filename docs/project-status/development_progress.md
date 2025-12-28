@@ -39,6 +39,10 @@
 - **API Gateway 고도화 (TDD & Tidy First)**
   - `server.js` 리팩터링: `routes`, `services`, `utils`로 모듈 분리
   - TDD 사이클 완료: 실패하는 테스트 -> 구현 -> 리팩터링
+- **보안 및 의존성 관리 (Maintenance)**
+  - Node.js 패키지 업데이트: `multer` (v2.0.2), `supertest` (v7.1.4) 등 최신 보안 버전 적용
+  - GitHub Actions 버전 업그레이드: `v3` -> `v4` (CodeQL, Checkout, Setup-Node) 일괄 적용하여 미래 호환성 확보
+  - Frontend CI 강화: `npm run build` 단계 추가로 배포 전 빌드 오류 사전 차단
 
 ### 2024-12-05 (Day 1)
 - **프로젝트 초기 설정**

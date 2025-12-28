@@ -2,18 +2,20 @@ ___
 ## 📋 프로젝트 개요
 
 ### 🎯 프로젝트 명
-**"Mind Palette" - AI 기반 아동 인물화 지능측정 시스템**
+**"Mind Palette" - 차세대 인지 발달 분석 AI 솔루션 (Next-Gen Cognitive Analytics AI)**
 
 ### 📅 프로젝트 기간
 **2025년 11월 ~ 2026년 8월 (10개월)**
 
-### 🎯 프로젝트 목표
-아이가 그린 인물화 그림을 통해 아이의 지능을 측정하는 하이브리드 AI 시스템 구축
+### 🎯 프로젝트 목표 (Vision 2026)
+단순한 지능 측정 자동화를 넘어, **Traditional Vision AI(정량적 분석)**와 **Modern Multimodal AI(정성적 해석)**의 결합을 통해 아동의 인지 및 심리 상태를 통합 진단하는 **Hybrid AI Core** 구축.
 
-### 🚀 핵심 가치 제안
-- **사회적 가치**: 아동 발달 조기 발견 및 지원
-- **기술적 가치**: Node.js + C++ + Python 하이브리드 아키텍처
-- **상업적 가치**: 교육 테크 블루오션 시장 선점
+향후 26만 GPU 시대의 대규모 인프라 환경에서의 확장을 고려한 **Scalable MLOps 파이프라인** 설계 및 **Data-Centric AI(합성 데이터 활용)** 방법론 도입의 초석 마련.
+
+### 🚀 핵심 가치 제안 (Key Values)
+- **Social Impact**: 아동 심리/발달 데이터의 디지털 전환(DX)을 통한 **조기 진단 접근성 민주화**
+- **Tech Innovation**: **On-Device & Cloud Hybrid** 아키텍처 (C++ Edge Preprocessing + Python AI Core)
+- **Scalability**: 향후 초거대 AI 모델(LMM) 도입 및 TensorRT 최적화를 대비한 **Future-Proof 모듈러 설계**
 
 ---
 
@@ -311,15 +313,22 @@ grabCut(img, mask, rect, bgModel, fgModel, 5, GC_INIT_WITH_RECT);
 
 ---
 
-### **Phase 5: 전체 파이프라인 통합 및 성능 최적화 (6월)**
-- [ ] **Week 1**: React → Node.js → C++ → Python 연동 리허설 및 회귀 테스트
-- [ ] **Week 2**: 병목 측정 (전처리/추론/파일 I/O) 및 개선 플랜 수립
-- [ ] **Week 3**: 성능 튜닝 (멀티스레딩, 비동기 처리, 캐싱)
-- [ ] **Week 4**: 모니터링/로깅(ELK, Prometheus) 구성 및 SLA 기준 정립
+### **Phase 5: 전체 파이프라인 통합 및 서빙 최적화 (6월)**
+- [ ] **Week 1**: React → Node.js → C++ → Python 연동 리허설 및 E2E 테스트
+- [ ] **Week 2**: **Inference Optimization (핵심)**
+  - PyTorch 모델을 **ONNX 포맷으로 변환(Export)**하여 하드웨어 독립성 확보
+  - Python FastAPI 서버 내 추론 엔진을 **ONNX Runtime**으로 교체하여 Latency 단축 검증
+- [ ] **Week 3**: **Performance Tuning & Benchmark**
+  - C++ 전처리 스레드 풀 최적화 및 Python 비동기 처리 튜닝
+  - **벤치마크 리포트 작성**: PyTorch 순정 vs ONNX Runtime 속도 비교 데이터 확보 (포트폴리오용)
+- [ ] **Week 4**: 배포 아키텍처 및 보안 구성
+  - **Nginx Reverse Proxy 도입**: AWS EC2 앞단에 배치하여 SSL/HTTPS 처리
+  - **모니터링**: Prometheus + Grafana 구성을 통해 GPU/CPU 사용률 및 추론 Latency 시각화
 
 **산출물**:
 - 전 구간 통합된 파이프라인
 - 성능 튜닝 리포트 (응답 < 3초 달성 근거)
+- 보안 아키텍처 다이어그램 (Nginx + Docker Network)
 - 모니터링·알람·로깅 대시보드
 
 ---
@@ -351,6 +360,24 @@ grabCut(img, mask, rect, bgModel, fgModel, 5, GC_INIT_WITH_RECT);
 
 ---
 
+### **Phase 8: 엔지니어링 고도화 (Post-Project)**
+> **비전 2026**: "기능 구현"을 넘어 **"AI 인프라 효율화 및 거대 모델 운영"** 역량을 증명하기 위한 심화 과정입니다.
+> **보유 장비(RTX 3050 Ti)**를 적극 활용하여, 제한된 리소스 환경에서의 극한 최적화(Edge Optimization) 사례를 만듭니다.
+
+#### **1. Extreme Optimization (TensorRT & Quantization)**
+- [ ] **TensorRT Engine 빌드**: Phase 5의 ONNX 모델을 **NVIDIA TensorRT Engine**으로 변환하여 RTX 3050 Ti의 Tensor Core 가속 활용.
+- [ ] **Quantization (양자화)**: **FP16(Half Precision)** 양자화를 적용하여 정확도 손실 없이 추론 속도 2배 이상 향상 검증.
+- [ ] **Kernel Profiling**: NVIDIA Nsight Systems를 활용해 GPU 커널 병목 지점을 분석하고 최적화.
+
+#### **2. Production DevOps (MLOps)**
+- [ ] **Docker Multi-stage Build**: C++ 빌드 도구 제거 및 이미지 경량화.
+- [ ] **CI/CD Pipeline 고도화**: 모델 학습부터 변환(ONNX/TensorRT), 배포까지 이어지는 자동화 파이프라인 구축 (GitHub Actions).
+
+**기대 효과**:
+- "단순히 모델을 만드는 것을 넘어, **ONNX 표준화와 Docker 최적화를 통해 실제 서비스 가능한 MLOps 파이프라인**을 구축"
+
+---
+
 ## 🎯 핵심 마일스톤
 
 ### **3개월 마일스톤 (프론트엔드 완성)**
@@ -371,6 +398,9 @@ grabCut(img, mask, rect, bgModel, fgModel, 5, GC_INIT_WITH_RECT);
 ### **10개월 마일스톤 (배포/포트폴리오 마감)**
 - 🔄 **7월**: 안정화·QA·운영 가이드 완료
 - 🔄 **8월**: Docker 패키지 + 포트폴리오 데모 + 문서 세트 완성 ✅ **배포 가능한 프로덕션 + 포트폴리오 제출물**
+
+### **Future (2026 대비)**
+- 🚀 **Post-Project**: ONNX/TensorRT 변환 및 서빙 최적화 ✅ **엔지니어링(MLOps) 역량 증명**
 
 ---
 
@@ -416,7 +446,7 @@ grabCut(img, mask, rect, bgModel, fgModel, 5, GC_INIT_WITH_RECT);
 
 ### **개발 환경**
 - **OS**: Windows 11 + WSL2 (Ubuntu)
-- **IDE**: Visual Studio Code + Visual Studio 2022
+- **IDE**: Cursor + Visual Studio 2022
 - **버전 관리**: Git + GitHub
 - **컨테이너**: Docker + Docker Compose
 

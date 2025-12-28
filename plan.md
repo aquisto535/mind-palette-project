@@ -17,7 +17,7 @@
 - [x] 분석 결과가 `shared_volume/results` 폴더에 JSON 파일로 저장되어야 한다.
 
 ### 리팩터링 (Refactoring)
-- [ ] (Refactor) `server.js`의 비즈니스 로직을 별도 모듈로 분리해야 한다.
+- [x] (Refactor) `server.js`의 비즈니스 로직을 별도 모듈로 분리해야 한다.
 
 ---
 
@@ -44,6 +44,7 @@
 
 - [ ] (TODO) C++ 서버 헬스 체크 엔드포인트 테스트
 - [ ] (TODO) 이미지 전처리 요청 테스트
+- [ ] **Atomic Write 구현**: 결과 파일 저장 시 `.tmp`로 쓰고 완료 후 `rename`하여 Python 서버가 미완성 파일을 읽는 경쟁 상태(Race Condition) 방지.
 - [ ] **MSVC Code Analysis**: C++ 코드 품질 분석(메모리 누수, API 오용 등)이 CI 파이프라인에 포함되어야 한다.
 - [ ] **GoogleTest (GTest)**: 이미지 처리 알고리즘 단위 테스트 작성
 
@@ -52,3 +53,16 @@
 - [ ] (TODO) FastAPI 서버 헬스 체크
 - [ ] (TODO) 추론 요청 테스트
 
+---
+
+## 🌐 Phase 5: 통합 및 고도화 (배포 전략)
+
+### 성능 최적화 (Performance Optimization)
+- [ ] **Hash-based Caching (중복 방지)**: 이미지 업로드 시 SHA-256 해시를 계산하여, 기존에 처리된 이미지(`results/`)가 있다면 분석을 생략하고 즉시 반환.
+- [ ] **Inference Optimization**: Python AI 서버의 추론 엔진을 ONNX Runtime으로 교체.
+
+### 배포 아키텍처 및 보안 (Architecture & Security)
+- [ ] **Nginx Reverse Proxy 도입**: AWS EC2 앞단에 Nginx를 배치하여 SSL 인증서(Let's Encrypt) 관리 및 HTTPS 트래픽 처리.
+- [ ] **Mixed Content 방지**: Frontend(HTTPS) ↔ API Gateway(HTTPS) 간 보안 통신 구현.
+- [ ] **Internal Private Network**: API Gateway ↔ C++ ↔ Python 구간은 내부망 HTTP 통신(Plain Text) 유지하여 성능 최적화 (SSL 오버헤드 제거).
+- [ ] **Docker Compose 프로덕션 설정**: `restart: always`, 로깅 드라이버, 볼륨 백업 정책 적용.
