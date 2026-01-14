@@ -41,7 +41,11 @@ UI 설정 대신 프로젝트 루트에 `netlify.toml` 파일을 생성하여 �
   publish = "dist"
   
   # 의존성 설치 후 빌드 실행
-  command = "npm install && npm run build"
+  command = "npm ci && npm run build"
+
+[build.environment]
+  # GitHub Actions CI(Node 20.x)와 Netlify 빌드 환경을 맞춰 재현성 확보
+  NODE_VERSION = "20"
 ```
 
 ---
@@ -59,3 +63,10 @@ UI 설정 대신 프로젝트 루트에 `netlify.toml` 파일을 생성하여 �
 - `.env` 파일은 보안상 Git에 업로드하지 않습니다.
 - API Key 등 환경 변수가 필요한 경우, Netlify 대시보드의 **Site configuration > Environment variables** 메뉴에 직접 키와 값을 등록해야 합니다.
 
+---
+
+## 4. (권장) CI 통과 후에만 배포되게 하기
+
+Netlify는 GitHub에 merge/push가 되면 자동으로 배포합니다. 따라서 **`main` 브랜치에 CI 통과를 “게이트”로 두면** 배포도 자연스럽게 CI 통과 커밋만 나갑니다.
+
+- 자세한 설정 절차는 `docs/troubleshooting/CI_CD_INTEGRATION_GUIDE.md`의 **2.3 (Branch Protection)** 를 참고하세요.

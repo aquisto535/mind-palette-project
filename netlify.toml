@@ -1,5 +1,9 @@
 [build]
   base = "frontend"
   publish = "dist"
-  command = "npm install && npm run build"
+  command = "npm ci && npm run build"
+
+[build.environment]
+  # Keep Netlify's build environment aligned with GitHub Actions (Node 20.x)
+  NODE_VERSION = "20"
 

@@ -168,6 +168,26 @@ jobs:
 
 **핵심**: GitHub Actions에서 **빌드까지 검증**하여 Netlify에서 빌드 실패하는 불상사를 사전에 방지합니다.
 
+### 2.3 (선택) CI 통과 후에만 배포되게 하기 (Branch Protection)
+
+> **목표**: “CI가 깨진 커밋이 `main`에 들어가고 → Netlify가 배포해버리는” 상황을 구조적으로 차단합니다.  
+> **핵심 아이디어**: Netlify는 GitHub에 push/merge가 되면 배포합니다. 따라서 **`main`에 merge 자체를 CI 통과로 게이트**하면 됩니다.
+
+#### 권장 설정 (GitHub Repository Settings)
+
+1. GitHub에서 `Settings → Branches → Branch protection rules`로 이동
+2. `main` 브랜치에 protection rule 추가
+3. 아래 옵션을 체크:
+   - **Require a pull request before merging**
+   - **Require status checks to pass before merging**
+     - 필수 체크로 GitHub Actions 워크플로우의 CI job들을 선택 (예: `backend-ci`, `frontend-ci`, `integration-test`, `security-analysis`)
+   - (권장) **Require branches to be up to date before merging**
+   - (권장) **Restrict who can push to matching branches** (직접 push 금지)
+
+#### 효과
+- PR에서 CI가 실패하면 **Merge가 막히고**
+- `main`에 들어가지 않으니 **Netlify 자동 배포도 자연스럽게 막힙니다.**
+
 ---
 
 ## 3. GitHub Actions 버전 관리
