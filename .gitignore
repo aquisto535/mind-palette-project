@@ -1,0 +1,61 @@
+# ============================================================
+# Mind Palette - Repo root .gitignore
+# Focus: C++ / CMake / Visual Studio generated artifacts
+# ============================================================
+
+# --- Visual Studio / MSVC (generated) ---
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln
+*.VC.db
+*.VC.VC.opendb
+
+# Old VS CMake settings (per-user/machine)
+CMakeSettings.json
+CMakeUserPresets.json
+
+# --- CMake / Ninja (generated) ---
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+CTestTestfile.cmake
+Testing/
+build.ninja
+.ninja_deps
+.ninja_log
+compile_commands.json
+
+# Visual Studio "Open Folder" CMake output (generated)
+out/
+preprocess-server/out/
+
+# vcpkg install roots created inside build trees (generated)
+vcpkg_installed/
+
+# --- C/C++ build artifacts (generated) ---
+*.o
+*.obj
+*.lo
+*.a
+*.lib
+*.dll
+*.so
+*.dylib
+*.exe
+*.pdb
+*.idb
+*.ilk
+*.exp
+*.iobj
+*.ipdb
+*.tlog
+*.pch
+*.res
+*.manifest
+
+# --- OS / Explorer noise ---
+.DS_Store
+Thumbs.db
+

@@ -34,19 +34,43 @@
 ## 🎨 Phase 1: Frontend (React) 통합
 
 ### 업로드 컴포넌트 연동
-- [ ] `handleUpload` 함수가 실제 API 엔드포인트로 `FormData`를 전송해야 한다 (Mocking).
-- [ ] API 응답 성공 시 결과 페이지(`setStep('result')`)로 전환되어야 한다.
-- [ ] API 응답 실패 시 에러 메시지를 처리해야 한다.
+- [x] `handleUpload` 함수가 실제 API 엔드포인트로 `FormData`를 전송해야 한다 (Mocking).
+- [x] API 응답 성공 시 결과 페이지(`setStep('result')`)로 전환되어야 한다.
+- [x] API 응답 실패 시 에러 메시지를 처리해야 한다.
 
 ---
 
-## ⚙️ Phase 3: C++ Preprocessing Server (예정)
+## ⚙️ Phase 3: C++ Preprocessing Server 
+> 목표(계획서 기준): **Crow + OpenCV** 기반 전처리 마이크로서비스를 구축하고, **전처리 속도 < 100ms**를 목표로 멀티스레딩 최적화 및 **정적 분석/테스트(QA)** 를 적용한다.
 
-- [ ] (TODO) C++ 서버 헬스 체크 엔드포인트 테스트
-- [ ] (TODO) 이미지 전처리 요청 테스트
+### Week 1: REST API 기본 골격 (Crow)
+- [x] `GET /` 요청 시 200 OK와 함께 서버 상태 메시지를 반환해야 한다.
+- [x] `GET /health` 요청 시 200 OK와 "OK"를 반환해야 한다.
+- [ ] **통신 계약(초기, 파일 경로 공유)**: `Node.js ↔ C++`는 `{ "imagePath": "/shared/uploads/img.jpg" }` → `{ "processedPath": "/shared/processed/img_clean.jpg" }` JSON으로 주고받아야 한다.
+- [ ] **Node.js ↔ C++ 통신 테스트**: API Gateway가 C++ 전처리 엔드포인트를 호출해 `processedPath`를 받을 수 있어야 한다.
+
+### Week 2: OpenCV 전처리(기본) + API
+- [ ] **OpenCV 도입(vcpkg + CMake)**: 전처리 모듈을 빌드에 포함해야 한다.
+- [ ] `POST /preprocess` 요청 시 `imagePath`가 없거나 빈 값이면 400 Bad Request를 반환해야 한다.
+- [ ] `POST /preprocess` 요청 시 존재하지 않는 파일 경로면 404 Not Found를 반환해야 한다.
+- [ ] `POST /preprocess` 요청 시 유효한 이미지 경로면 200 OK와 `processedPath`를 반환해야 한다.
+- [ ] **크기 정규화**: 입력 이미지는 512x512로 리사이즈되어야 한다.
+- [ ] **노이즈 제거**: GaussianBlur + medianBlur가 적용되어야 한다.
+- [ ] **그레이스케일 변환**: 후속 에지 검출을 위한 grayscale 이미지가 생성되어야 한다.
+
+### Week 3: 에지/배경 제거 고도화
+- [ ] **Canny 에지 검출**: 에지 이미지가 생성되어야 한다.
+- [ ] **윤곽선 강화**: 모폴로지 연산(MORPH_CLOSE 등)이 적용되어야 한다.
+- [ ] **배경 제거**: GrabCut 기반 배경 제거가 적용되어야 한다.
+- [ ] **이진화 및 모폴로지**: 이진화 + 모폴로지 결과를 저장할 수 있어야 한다.
+
+### Week 4: 멀티스레딩/성능/품질(QA)
+- [ ] **Thread Pool 구현(표준 C++만)**: `std::thread`/`std::mutex`/`std::condition_variable` 기반으로 구현해야 한다. (Windows API 금지)
+- [ ] **배치 처리**: 여러 이미지를 한 번에 처리하여 오버헤드를 줄일 수 있어야 한다.
+- [ ] **성능 벤치마크**: 전처리 1건 처리 시간을 측정하고 < 100ms 목표 달성 근거를 남겨야 한다.
 - [ ] **Atomic Write 구현**: 결과 파일 저장 시 `.tmp`로 쓰고 완료 후 `rename`하여 Python 서버가 미완성 파일을 읽는 경쟁 상태(Race Condition) 방지.
-- [ ] **MSVC Code Analysis**: C++ 코드 품질 분석(메모리 누수, API 오용 등)이 CI 파이프라인에 포함되어야 한다.
-- [ ] **GoogleTest (GTest)**: 이미지 처리 알고리즘 단위 테스트 작성
+- [ ] **MSVC Code Analysis + Core Guidelines**: 메모리 누수/오용을 점검하고(RAII 준수, Raw Pointer 최소화) CI 파이프라인에 포함되어야 한다.
+- [ ] **GoogleTest (GTest)**: 이미지 처리 알고리즘 단위 테스트 작성 (회귀 테스트/엣지 케이스 포함)
 
 ## 🧠 Phase 4: Python AI Server (예정)
 

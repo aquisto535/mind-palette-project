@@ -4,16 +4,16 @@
 
 | 단계 | 주요 내용 | 상태 | 완료/예정일 |
 |:---:|:---|:---:|:---:|
-| **Phase 1** | **프로젝트 착수 및 설계** | ✅ 완료 | 2024-12-05 |
+| **Phase 1** | **프로젝트 착수 및 설계** | ✅ 완료 | 2025-12-05 |
 | | - 요구사항 정의, 아키텍처 설계 | ✅ 완료 | |
 | | - 기술 스택 선정 (React, Node.js, C++, Python) | ✅ 완료 | |
 | | - 개발 환경 설정 (Cursor, Git) | ✅ 완료 | |
 | **Phase 2** | **Frontend & API Gateway (MVP)** | 🔄 진행중 | |
-| | - React 프론트엔드 UI 구현 | ✅ 완료 | 2024-12-06 |
-| | - Netlify 배포 및 CI/CD 구축 | ✅ 완료 | 2024-12-06 |
-| | - Node.js API Gateway 기본 구조 | ✅ 완료 | 2024-12-06 |
-| | - 파일 업로드 및 결과 반환 API (Mock) | ✅ 완료 | 2024-12-06 |
-| | - Frontend-Backend 연동 (로컬/Mock 분기) | ✅ 완료 | 2024-12-06 |
+| | - React 프론트엔드 UI 구현 | ✅ 완료 | 2025-12-06 |
+| | - Netlify 배포 및 CI/CD 구축 | ✅ 완료 | 2025-12-06 |
+| | - Node.js API Gateway 기본 구조 | ✅ 완료 | 2025-12-06 |
+| | - 파일 업로드 및 결과 반환 API (Mock) | ✅ 완료 | 2025-12-06 |
+| | - Frontend-Backend 연동 (로컬/Mock 분기) | ✅ 완료 | 2025-12-06 |
 | **Phase 3** | **C++ Preprocessing Server** | ⏳ 대기 | |
 | | - 이미지 전처리 (OpenCV) | | |
 | | - 윤곽선 추출 및 노이즈 제거 | | |
@@ -28,7 +28,18 @@
 
 ## 📝 상세 진행 로그
 
-### 2024-12-06 (Day 2)
+### 2025-12-29 (Day 3)
+- **보안 취약점 대응 (Security Patch)**
+  - **React CVE 대응**: React 19 버전에서 보고된 **'인증받지 않은 원격 코드 실행(RCE)'** 및 RSC 관련 취약점(CVE-2025-55183 등) 대응.
+    - 조치: 프로젝트의 React 버전을 안정적인 `v18.3.1`로 고정/업데이트하여 해당 취약점 원천 차단.
+  - **의존성 강제 업데이트**: `npm audit fix --force`를 통해 메이저 보안 취약점 해결.
+    - `jspdf`: `v2.5.1` -> `v3.0.4` (XSS 취약점 해결).
+    - `vite`: `v5.0.0` -> `v7.3.0` (개발 서버 취약점 해결).
+  - **안정성 검증**: 메이저 버전 업데이트 후 빌드(`npm run build`) 정상 동작 확인.
+- **테스트 환경 개선**
+  - `IntersectionObserver` Mock 구현 추가로 Frontend 단위 테스트 오류 해결.
+
+### 2025-12-06 (Day 2)
 - **CI/CD 및 보안 강화**
   - GitHub Actions 워크플로우(`main.yml`) 구축: Backend/Frontend CI, Integration Test, Security Analysis
   - CodeQL Action 버전을 `v2` -> `v3`로 마이그레이션 (Deprecated 경고 해결)
@@ -44,7 +55,7 @@
   - GitHub Actions 버전 업그레이드: `v3` -> `v4` (CodeQL, Checkout, Setup-Node) 일괄 적용하여 미래 호환성 확보
   - Frontend CI 강화: `npm run build` 단계 추가로 배포 전 빌드 오류 사전 차단
 
-### 2024-12-05 (Day 1)
+### 2025-12-05 (Day 1)
 - **프로젝트 초기 설정**
   - `plan.md`, `.cursorrules`, `development_progress.md` 문서화 완료
   - Node.js API Gateway 프로젝트 초기화 (`api-gateway` 폴더)
