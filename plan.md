@@ -46,8 +46,8 @@
 ### Week 1: REST API 기본 골격 (Crow)
 - [x] `GET /` 요청 시 200 OK와 함께 서버 상태 메시지를 반환해야 한다.
 - [x] `GET /health` 요청 시 200 OK와 "OK"를 반환해야 한다.
-- [ ] **통신 계약(초기, 파일 경로 공유)**: `Node.js ↔ C++`는 `{ "imagePath": "/shared/uploads/img.jpg" }` → `{ "processedPath": "/shared/processed/img_clean.jpg" }` JSON으로 주고받아야 한다.
-- [ ] **Node.js ↔ C++ 통신 테스트**: API Gateway가 C++ 전처리 엔드포인트를 호출해 `processedPath`를 받을 수 있어야 한다.
+- [x] **통신 계약(초기, 파일 경로 공유)**: `Node.js ↔ C++`는 `{ "imagePath": "/shared/uploads/img.jpg" }` → `{ "processedPath": "/shared/processed/img_clean.jpg" }` JSON으로 주고받아야 한다.
+- [x] **Node.js ↔ C++ 통신 테스트**: API Gateway가 C++ 전처리 엔드포인트를 호출해 `processedPath`를 받을 수 있어야 한다.
 
 ### Week 2: OpenCV 전처리(기본) + API
 - [ ] **OpenCV 도입(vcpkg + CMake)**: 전처리 모듈을 빌드에 포함해야 한다.

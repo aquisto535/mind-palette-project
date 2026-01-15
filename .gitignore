@@ -30,6 +30,7 @@ compile_commands.json
 # Visual Studio "Open Folder" CMake output (generated)
 out/
 preprocess-server/out/
+shared_volume/
 
 # vcpkg install roots created inside build trees (generated)
 vcpkg_installed/

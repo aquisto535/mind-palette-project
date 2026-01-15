@@ -14,7 +14,9 @@
 | | - Node.js API Gateway 기본 구조 | ✅ 완료 | 2025-12-06 |
 | | - 파일 업로드 및 결과 반환 API (Mock) | ✅ 완료 | 2025-12-06 |
 | | - Frontend-Backend 연동 (로컬/Mock 분기) | ✅ 완료 | 2025-12-06 |
-| **Phase 3** | **C++ Preprocessing Server** | ⏳ 대기 | |
+| **Phase 3** | **C++ Preprocessing Server** | 🔄 진행중 | |
+| | - C++ REST API (Crow) 구축 | ✅ 완료 | |
+| | - Node.js ↔ C++ 연동 (JSON Protocol) | ✅ 완료 | |
 | | - 이미지 전처리 (OpenCV) | | |
 | | - 윤곽선 추출 및 노이즈 제거 | | |
 | **Phase 4** | **Python AI Inference Server** | ⏳ 대기 | |
@@ -27,6 +29,20 @@
 ---
 
 ## 📝 상세 진행 로그
+
+### 2026-01-15 (Day 5)
+- **Node.js ↔ C++ 연동 파이프라인 구성**
+  - **통신 규격 정의**: Node.js가 이미지 경로(`imagePath`)를 보내면 C++이 결과 경로(`processedPath`)를 반환하는 JSON 프로토콜 확립.
+  - **통합 테스트**: `curl` 및 `Jest` + `nock`을 활용하여 Node.js API Gateway에서 C++ 서버를 호출하고 응답을 받는 전체 흐름 검증 완료.
+  - **기술적 의사결정**: Docker/Linux 환경을 고려하여 Windows API 대신 표준 C++ 사용 원칙 재확인.
+
+### 2026-01-14 (Day 4)
+- **Phase 3: C++ 전처리 서버 기초 구축**
+  - **Crow 프레임워크 도입**: 경량 C++ REST API 서버 구축 (`preprocess-server`).
+  - **라우팅 구현**: 헬스 체크(`GET /health`) 및 전처리 요청(`POST /preprocess`) 엔드포인트 구현.
+  - **테스트 주도 개발(TDD)**:
+    - **GoogleTest(GTest)** 도입: API 라우팅 및 JSON 응답 검증을 위한 단위 테스트 환경 구축.
+    - **테스트 케이스**: `RootRoute`, `HealthCheck`, `PreprocessContract` (통신 규격) 테스트 작성 및 통과.
 
 ### 2025-12-29 (Day 3)
 - **보안 취약점 대응 (Security Patch)**

@@ -1,6 +1,9 @@
 const path = require('path');
 const fs = require('fs');
+const axios = require('axios');
 const { RESULT_DIR } = require('../utils/fileStorage');
+
+const PREPROCESS_SERVER_URL = process.env.PREPROCESS_SERVER_URL || 'http://localhost:8081';
 
 /**
  * 더미 분석 결과를 생성합니다.
@@ -35,7 +38,23 @@ exports.processAnalysis = async (file) => {
   const timestamp = Date.now();
   const resultPath = path.join(RESULT_DIR, `${timestamp}_result.json`);
 
-  // TODO: Phase 3 - C++ 전처리 서버 호출
+  // [Phase 3] C++ 전처리 서버 호출
+  let processedImagePath = file.path; // 기본값은 원본 이미지
+  try {
+    const preprocessRes = await axios.post(`${PREPROCESS_SERVER_URL}/preprocess`, {
+      imagePath: file.path
+    });
+    
+    if (preprocessRes.data && preprocessRes.data.processedPath) {
+      processedImagePath = preprocessRes.data.processedPath;
+      console.log('Preprocessing completed:', processedImagePath);
+    }
+  } catch (error) {
+    console.warn('Preprocessing failed, using original image:', error.message);
+    // 전처리 실패 시에도 일단 원본으로 계속 진행 (또는 에러 throw 선택 가능)
+    // 현재는 테스트 단계이므로 로그만 남김
+  }
+
   // TODO: Phase 4 - Python AI 서버 호출
   
   // [Phase 2] 임시 더미 데이터 생성
