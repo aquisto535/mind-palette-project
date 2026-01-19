@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const analyzeRouter = require('./src/routes/analyze');
+const healthRouter = require('./src/routes/health');
 const { UPLOAD_DIR, RESULT_DIR } = require('./src/utils/fileStorage');
 
 const app = express();
@@ -19,6 +20,9 @@ app.use(express.urlencoded({ extended: true }));
 app.get('/', (req, res) => {
   res.send('Mind Palette API Gateway is running.');
 });
+
+// 헬스 체크 라우터 연결
+app.use('/health', healthRouter);
 
 // 분석 라우터 연결
 app.use('/analyze', analyzeRouter);

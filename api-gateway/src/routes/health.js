@@ -1,0 +1,67 @@
+const express = require('express');
+const router = express.Router();
+const os = require('os');
+const { execSync } = require('child_process');
+
+/**
+ * GET /health
+ * 서버 상태를 확인하는 헬스 체크 엔드포인트
+ * 
+ * @returns {Object} 서버 상태 정보 (status, uptime, memory, disk)
+ */
+router.get('/', (req, res) => {
+  try {
+    // 서버 가동 시간
+    const uptime = process.uptime();
+    const uptimeMinutes = Math.floor(uptime / 60);
+    const uptimeSeconds = Math.floor(uptime % 60);
+
+    // 메모리 사용량
+    const memoryUsage = process.memoryUsage();
+    const heapUsedMB = (memoryUsage.heapUsed / 1024 / 1024).toFixed(2);
+    const heapTotalMB = (memoryUsage.heapTotal / 1024 / 1024).toFixed(2);
+
+    // 디스크 여유 공간 (Windows/Linux 호환)
+    let diskAvailableGB = 'N/A';
+    try {
+      if (os.platform() === 'win32') {
+        // Windows: wmic 명령어 사용
+        const output = execSync('wmic logicaldisk where "DeviceID=\'C:\'" get FreeSpace', { encoding: 'utf8' });
+        const lines = output.trim().split('\n');
+        if (lines.length > 1) {
+          const freeSpaceBytes = parseInt(lines[1].trim());
+          diskAvailableGB = (freeSpaceBytes / 1024 / 1024 / 1024).toFixed(2) + ' GB';
+        }
+      } else {
+        // Linux/Mac: df 명령어 사용
+        const output = execSync('df -k / | tail -1 | awk \'{print $4}\'', { encoding: 'utf8' });
+        const freeSpaceKB = parseInt(output.trim());
+        diskAvailableGB = (freeSpaceKB / 1024 / 1024).toFixed(2) + ' GB';
+      }
+    } catch (diskError) {
+      // 디스크 체크 실패 시 'N/A'로 표시 (에러 무시)
+      diskAvailableGB = 'N/A';
+    }
+
+    res.json({
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      uptime: `${uptimeMinutes} minutes ${uptimeSeconds} seconds`,
+      memory: {
+        used: `${heapUsedMB} MB`,
+        total: `${heapTotalMB} MB`
+      },
+      disk: {
+        available: diskAvailableGB
+      }
+    });
+  } catch (error) {
+    res.status(503).json({
+      status: 'unhealthy',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+module.exports = router;

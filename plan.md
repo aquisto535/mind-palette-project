@@ -40,7 +40,7 @@
 
 ---
 
-## ⚙️ Phase 3: C++ Preprocessing Server 
+## ⚙️ Phase 3: C++ Preprocessing Server (Target: 2026.01 ~ 02)
 > 목표(계획서 기준): **Crow + OpenCV** 기반 전처리 마이크로서비스를 구축하고, **전처리 속도 < 100ms**를 목표로 멀티스레딩 최적화 및 **정적 분석/테스트(QA)** 를 적용한다.
 
 ### Week 1: REST API 기본 골격 (Crow)
@@ -58,10 +58,12 @@
 - [ ] **노이즈 제거**: GaussianBlur + medianBlur가 적용되어야 한다.
 - [ ] **그레이스케일 변환**: 후속 에지 검출을 위한 grayscale 이미지가 생성되어야 한다.
 
-### Week 3: 에지/배경 제거 고도화
+### Week 3: 에지/배경 제거 고도화 (Advanced OpenCV)
+- [ ] **GrabCut 배경 제거**: 단순 자르기가 아닌 GrabCut 알고리즘을 적용하여 배경을 정밀하게 제거해야 한다. (AI 전처리 최적화)
+- [ ] **정량적 특징 추출(Feature Extraction)**: 필압 분석(히스토그램), 선 떨림 보정(Contour Moment) 등 수치적 특징을 계산하여 AI에 전달해야 한다.
+- [ ] **하이브리드 결과 결합**: C++에서 계산한 기하학적 특징과 AI 추론 결과를 결합하는 로직을 설계해야 한다.
 - [ ] **Canny 에지 검출**: 에지 이미지가 생성되어야 한다.
 - [ ] **윤곽선 강화**: 모폴로지 연산(MORPH_CLOSE 등)이 적용되어야 한다.
-- [ ] **배경 제거**: GrabCut 기반 배경 제거가 적용되어야 한다.
 - [ ] **이진화 및 모폴로지**: 이진화 + 모폴로지 결과를 저장할 수 있어야 한다.
 
 ### Week 4: 멀티스레딩/성능/품질(QA)
@@ -72,10 +74,21 @@
 - [ ] **MSVC Code Analysis + Core Guidelines**: 메모리 누수/오용을 점검하고(RAII 준수, Raw Pointer 최소화) CI 파이프라인에 포함되어야 한다.
 - [ ] **GoogleTest (GTest)**: 이미지 처리 알고리즘 단위 테스트 작성 (회귀 테스트/엣지 케이스 포함)
 
-## 🧠 Phase 4: Python AI Server (예정)
+## 🧠 Phase 4: Python AI Server (Target: 2026.02 ~ 03)
 
-- [ ] (TODO) FastAPI 서버 헬스 체크
-- [ ] (TODO) 추론 요청 테스트
+### Step 1: Base Model (FastAPI + PyTorch)
+- [ ] **FastAPI 서버 구축**: 헬스 체크 및 추론 엔드포인트(`POST /predict`)를 구현해야 한다.
+- [ ] **Toy Model (MVP)**: 단순한 CNN 모델(ResNet18 등)을 로드하여 더미 데이터를 추론할 수 있어야 한다.
+- [ ] **E2E 연동**: Node.js ↔ C++(전처리) ↔ Python(추론) 전체 파이프라인이 동작해야 한다.
+
+### Step 2: Universal Optimization (ONNX)
+- [ ] **ONNX 변환**: 학습된 PyTorch 모델(`.pt`)을 ONNX 포맷(`.onnx`)으로 변환(Export)해야 한다.
+- [ ] **ONNX Runtime 교체**: 추론 엔진을 ONNX Runtime으로 교체하고, 기존 PyTorch 추론 대비 속도 향상을 검증해야 한다.
+
+### Step 3: Extreme Optimization (TensorRT)
+- [ ] **TensorRT Engine 빌드**: ONNX 모델을 NVIDIA TensorRT Engine(`.plan`)으로 변환해야 한다.
+- [ ] **Quantization (FP16)**: FP16(반정밀도) 양자화를 적용하여 추론 속도를 극대화해야 한다.
+- [ ] **최종 벤치마크**: PyTorch vs ONNX vs TensorRT 성능 비교 리포트를 작성해야 한다.
 
 ---
 
@@ -90,3 +103,53 @@
 - [ ] **Mixed Content 방지**: Frontend(HTTPS) ↔ API Gateway(HTTPS) 간 보안 통신 구현.
 - [ ] **Internal Private Network**: API Gateway ↔ C++ ↔ Python 구간은 내부망 HTTP 통신(Plain Text) 유지하여 성능 최적화 (SSL 오버헤드 제거).
 - [ ] **Docker Compose 프로덕션 설정**: `restart: always`, 로깅 드라이버, 볼륨 백업 정책 적용.
+
+---
+
+## 📊 Cross-Cutting Concerns: Logging System
+> 목표: 모든 서비스에 구조화된 로깅(Structured Logging)을 도입하여, 장애 추적 및 성능 분석을 가능하게 한다.
+
+### Node.js (API Gateway) - Winston
+- [ ] **Winston 도입**: JSON 포맷, 파일/콘솔 동시 출력, 로그 레벨(DEBUG/INFO/WARN/ERROR) 설정이 되어야 한다.
+- [ ] **요청/응답 로깅**: 모든 API 요청의 메타데이터(타임스탬프, 파일명, 크기)를 INFO 레벨로 기록해야 한다.
+- [ ] **에러 스택 추적**: 예외 발생 시 전체 스택 트레이스를 ERROR 레벨로 기록해야 한다.
+
+### C++ (Preprocess Server) - spdlog
+- [ ] **spdlog 도입**: vcpkg로 설치하고, 멀티스레드 안전(thread-safe) 로깅이 되어야 한다.
+- [ ] **성능 로깅**: 전처리 소요 시간을 밀리초(ms) 단위로 측정하여 기록해야 한다.
+- [ ] **파일 회전(Rotation)**: 로그 파일이 10MB를 초과하면 자동으로 새 파일로 교체되어야 한다.
+
+### Python (AI Server) - structlog
+- [ ] **structlog 도입**: 구조화된 JSON 로그를 표준 출력(stdout)으로 출력해야 한다.
+- [ ] **추론 추적**: 모델 입력 경로, 추론 결과(점수), 추론 시간을 기록해야 한다.
+- [ ] **컨텍스트 바인딩**: Request ID를 로그에 자동 추가하여 전체 파이프라인 추적이 가능해야 한다.
+
+### 통합 (Cross-Service Integration)
+- [ ] **로그 형식 통일**: 모든 서비스가 `timestamp`, `service`, `level`, `message` 필드를 포함해야 한다.
+- [ ] **Request ID 전파**: Node.js에서 생성한 UUID를 C++, Python까지 헤더로 전달하여 전체 요청 흐름을 추적할 수 있어야 한다.
+- [ ] **에러 알림 시스템(선택)**: CRITICAL 레벨 로그 발생 시 Slack/Email로 알림을 보내는 메커니즘을 구현해야 한다.
+
+---
+
+## 🏥 Cross-Cutting Concerns: System Reliability
+> 목표: 시스템이 24/7 안정적으로 동작하고, 장애 발생 시 즉시 감지할 수 있는 기반을 구축한다.
+
+### Health Checks (헬스 체크) - Tier 1: 필수
+- [x] **C++**: `/health` 엔드포인트가 구현되어 있어야 한다. (완료)
+- [x] **Node.js**: `/health` 엔드포인트가 서버 상태(uptime, 메모리 사용량, 디스크 여유 공간)를 JSON으로 반환해야 한다.
+- [ ] **Python**: `/health` 엔드포인트가 모델 로드 상태 및 GPU 사용 가능 여부를 확인하여 반환해야 한다.
+- [ ] **Docker Healthcheck**: `docker-compose.yml`에 각 서비스의 healthcheck 설정(interval, timeout, retries)이 추가되어야 한다.
+
+### Monitoring (모니터링) - Tier 2: 권장 (Phase 5)
+- [ ] **메트릭 수집**: 각 서버가 요청 수, 처리 시간, 에러 수를 로그에 기록해야 한다.
+- [ ] **Prometheus + Grafana (선택)**: Phase 5에서 메트릭을 Prometheus로 수집하고 Grafana 대시보드로 시각화해야 한다.
+- [ ] **성능 임계값 알림**: 응답 시간이 3초를 초과하면 경고 로그를 남겨야 한다.
+
+### Error Tracking (에러 추적) - Tier 2: 권장 (Phase 5)
+- [ ] **Sentry (Frontend)**: React 앱에서 발생한 에러를 자동으로 Sentry로 전송하여 브라우저별 에러 통계를 수집해야 한다.
+- [ ] **Slack Webhook (선택)**: CRITICAL 레벨 에러 발생 시 Slack 채널로 실시간 알림을 보내야 한다.
+
+### API Documentation (API 문서화) - Tier 2: 권장 (Phase 5)
+- [ ] **FastAPI Swagger**: Python AI 서버의 `/docs` 엔드포인트에서 자동 생성된 Swagger UI를 확인할 수 있어야 한다.
+- [ ] **Node.js API 명세**: Postman Collection 또는 OpenAPI 3.0 스펙을 작성하여 `docs/` 폴더에 저장해야 한다.
+- [ ] **README 업데이트**: API 엔드포인트 목록 및 사용 예시를 README.md에 추가해야 한다.

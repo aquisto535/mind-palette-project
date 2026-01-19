@@ -238,8 +238,8 @@ app.post('/analyze', upload.single('image'), async (req, res) => {
 
 ---
 
-### **Phase 3: C++ 전처리 서버 개발 (3월)**
-- [ ] **Week 1**: C++ REST API 서버 기본 구조 구축
+### **Phase 3: C++ 전처리 서버 개발 (1월 말 ~ 2월)**
+- [ ] **Week 1**: C++ REST API 서버 기본 구조 구축 (완료)
   - C++ HTTP 서버 프레임워크 선택 (Crow, cpp-httplib)
   - 기본 라우팅 설정
   - Node.js 백엔드와 통신 테스트
@@ -289,9 +289,9 @@ grabCut(img, mask, rect, bgModel, fgModel, 5, GC_INIT_WITH_RECT);
 
 ---
 
-### **Phase 4: Python AI 서버 및 모델 학습 (4-5월)**
+### **Phase 4: Python AI 서버 및 모델 학습 (2월 ~ 3월)**
 
-#### **4월: FastAPI 서버 + 초기 모델 구축**
+#### **2월: FastAPI 서버 + 초기 모델 구축 (Toy Model)**
 - [ ] **Week 1**: FastAPI 기반 AI 서버 골격 구축, C++ 서버와 HTTP 연동
   - **Pylint/Black/Mypy 설정**: 초기부터 엄격한 코드 컨벤션 적용
 - [ ] **Week 2**: CNN 백본(ResNet/EfficientNet) 선택 및 전이학습 세팅
@@ -299,7 +299,7 @@ grabCut(img, mask, rect, bgModel, fgModel, 5, GC_INIT_WITH_RECT);
   - **Type Hinting**: 데이터 입출력(Tensor shape 등)에 명시적 타입 적용
 - [ ] **Week 4**: 데이터 파이프라인 정의 (증강, 라벨 검증, 버전 관리)
 
-#### **5월: 모델 학습/고도화 및 평가**
+#### **3월: 모델 학습/고도화 및 평가**
 - [ ] **Week 1**: 학습 데이터 수집·클렌징·증강 시나리오 확정
 - [ ] **Week 2**: 학습 파이프라인 자동화 (PyTorch Lightning/Custom)
 - [ ] **Week 3**: 검증 지표(정확도/신뢰성/타당성) 점검 및 튜닝
@@ -313,7 +313,7 @@ grabCut(img, mask, rect, bgModel, fgModel, 5, GC_INIT_WITH_RECT);
 
 ---
 
-### **Phase 5: 전체 파이프라인 통합 및 서빙 최적화 (6월)**
+### **Phase 5: 전체 파이프라인 통합 및 서빙 최적화 (4월)**
 - [ ] **Week 1**: React → Node.js → C++ → Python 연동 리허설 및 E2E 테스트
 - [ ] **Week 2**: **Inference Optimization (핵심)**
   - PyTorch 모델을 **ONNX 포맷으로 변환(Export)**하여 하드웨어 독립성 확보
@@ -386,18 +386,19 @@ grabCut(img, mask, rect, bgModel, fgModel, 5, GC_INIT_WITH_RECT);
 - 🔄 **1월**: 프론트엔드 UX 최적화 및 Mock API 완성 ✅ **프로토타입 시연 가능**
 
 ### **4개월 마일스톤 (백엔드 완성)**
-- 🔄 **2월**: Node.js 간소화 백엔드 API 완성 ✅ **실제 동작하는 웹 앱 (AI 제외)**
+- 🔄 **1월**: Node.js 간소화 백엔드 API 완성 ✅ **실제 동작하는 웹 앱 (AI 제외)**
 
 ### **6개월 마일스톤 (AI 핵심 기능 완성)**
-- 🔄 **3월**: C++ 전처리 서버 완성 (Crow + OpenCV)
-- 🔄 **4-5월**: FastAPI AI 서버, 모델 학습/검증 파이프라인 완료 ✅ **실제 추론 가능한 AI 엔진 확보**
+- 🔄 **2월**: C++ 전처리 서버 완성, Python AI 서버 기초(FastAPI) 구축
+- 🔄 **3월**: AI 모델 학습(MVP) 및 파이프라인 1차 통합 ✅ **실제 추론 가능한 AI 엔진 확보 (조기 달성)**
 
 ### **8개월 마일스톤 (통합 및 성능 최적화)**
-- 🔄 **6월**: React → Node.js → C++ → Python 전체 통합, 성능 목표 달성 (<3초)
+- 🔄 **4월**: 전체 파이프라인 성능 최적화, ONNX Runtime 도입
+- 🔄 **5-6월**: 안정화 테스트 및 리포트 고도화
 
 ### **10개월 마일스톤 (배포/포트폴리오 마감)**
-- 🔄 **7월**: 안정화·QA·운영 가이드 완료
-- 🔄 **8월**: Docker 패키지 + 포트폴리오 데모 + 문서 세트 완성 ✅ **배포 가능한 프로덕션 + 포트폴리오 제출물**
+- 🔄 **7월**: 운영 가이드, CI/CD 고도화
+- 🔄 **8월**: 최종 데모 패키징 및 발표 준비 ✅ **여유로운 마감 및 퀄리티 업**
 
 ### **Future (2026 대비)**
 - 🚀 **Post-Project**: ONNX/TensorRT 변환 및 서빙 최적화 ✅ **엔지니어링(MLOps) 역량 증명**
