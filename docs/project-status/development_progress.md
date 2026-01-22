@@ -8,15 +8,16 @@
 | | - 요구사항 정의, 아키텍처 설계 | ✅ 완료 | |
 | | - 기술 스택 선정 (React, Node.js, C++, Python) | ✅ 완료 | |
 | | - 개발 환경 설정 (Cursor, Git) | ✅ 완료 | |
-| **Phase 2** | **Frontend & API Gateway (MVP)** | 🔄 진행중 | |
+| **Phase 2** | **Frontend & API Gateway (MVP)** | ✅ 완료 | 2026-01-19 |
 | | - React 프론트엔드 UI 구현 | ✅ 완료 | 2025-12-06 |
 | | - Netlify 배포 및 CI/CD 구축 | ✅ 완료 | 2025-12-06 |
 | | - Node.js API Gateway 기본 구조 | ✅ 완료 | 2025-12-06 |
 | | - 파일 업로드 및 결과 반환 API (Mock) | ✅ 완료 | 2025-12-06 |
 | | - Frontend-Backend 연동 (로컬/Mock 분기) | ✅ 완료 | 2025-12-06 |
+| | - Health Check API 구현 | ✅ 완료 | 2026-01-19 |
 | **Phase 3** | **C++ Preprocessing Server** | 🔄 진행중 | |
-| | - C++ REST API (Crow) 구축 | ✅ 완료 | |
-| | - Node.js ↔ C++ 연동 (JSON Protocol) | ✅ 완료 | |
+| | - C++ REST API (Crow) 구축 | ✅ 완료 | 2026-01-14 |
+| | - Node.js ↔ C++ 연동 (JSON Protocol) | ✅ 완료 | 2026-01-15 |
 | | - 이미지 전처리 (OpenCV) | | |
 | | - 윤곽선 추출 및 노이즈 제거 | | |
 | **Phase 4** | **Python AI Inference Server** | ⏳ 대기 | |
@@ -29,6 +30,47 @@
 ---
 
 ## 📝 상세 진행 로그
+
+### 2026-01-19 (Day 6)
+- **프로젝트 일정 가속화 및 고도화 전략 수립**
+  - **일정 재조정**: PyTorch 학습 속도(2월 2주차 완강 예상)에 맞춰 전체 로드맵을 2개월씩 앞당김.
+    - Phase 3 (C++ 전처리): 3월 → **1월 말~2월**
+    - Phase 4 (AI 서버/모델): 4~5월 → **2월~3월**
+    - Phase 5 (통합/최적화): 6월 → **4월**
+  - **AI 최적화 3단계 로드맵 확립**: PyTorch(Base) → ONNX(Universal) → TensorRT(Extreme) 경로 명확화.
+  - **OpenCV 심화 과정 정의**: GrabCut 배경 제거, 정량적 특징 추출(필압/선 떨림), 하이브리드 결합 로직 계획.
+
+- **개발 인프라 및 품질 보증 체계 구축**
+  - **로깅 시스템 설계**: 
+    - 서비스별 도구 선정 (Node.js: Winston, C++: spdlog, Python: structlog)
+    - Request ID 전파를 통한 분산 추적(Distributed Tracing) 기반 마련
+    - 구조화된 JSON 로그 포맷 통일 (timestamp, service, level, message)
+  - **System Reliability 계획**: Health Checks, Monitoring(Prometheus+Grafana), Error Tracking(Sentry), API Documentation(Swagger) 체계화.
+  - **`.gitignore` 생성**: C++/CMake/Visual Studio 아티팩트 및 `shared_volume` 런타임 데이터 제외 규칙 적용.
+  - **`.cursorrules` 업데이트**: "User Execution Preferred" 규칙 추가 (터미널 명령어는 제안만 하고 사용자가 직접 실행).
+
+- **Node.js API Gateway 완성도 향상**
+  - **Health Check API 구현** (TDD):
+    - `/health` 엔드포인트 추가: 서버 uptime, 메모리 사용량, 디스크 여유 공간을 JSON으로 반환.
+    - Windows/Linux 크로스 플랫폼 디스크 체크 로직 구현 (`wmic` / `df` 명령어 분기).
+    - 5개 테스트 케이스 작성 및 전체 통과 (5/5 passed, 2.694s).
+  - **Phase 2 완료**: API Gateway가 프로덕션 수준의 헬스 체크 및 안정성 기능 확보.
+  - **보안 강화 (Security Hardening)** (TDD):
+    - **입력 검증(Input Validation)**: `multer` 설정을 통해 파일 업로드 보안 강화.
+      - MIME 타입 검사: `image/*` 외 파일 거부 (텍스트 파일 등으로 테스트 검증).
+      - 파일 크기 제한: 5MB 초과 파일 거부.
+      - 안정성 개선: `ECONNRESET` 방지를 위해 `cb(null, false)` 패턴 및 `req.fileValidationError` 플래그 처리 적용.
+    - **테스트 커버리지**: `tests/security.test.js` 추가 및 3개 시나리오(정상, 비이미지, 대용량) 통과.
+  - **업로드 보안 검증 구현 완료**:
+    - `fileFilter` + `limits` 적용으로 업로드 보안 정책을 실제 코드에 반영.
+    - 에러 응답 표준화 (`Only image files are allowed`, `File too large`).
+
+- **문서화 및 계획 고도화**
+  - **`plan.md` 대폭 확장**: 
+    - Cross-Cutting Concerns 섹션 신설 (로깅, 시스템 안정성).
+    - Phase 4 AI 서버 체크리스트를 단계별(Base/ONNX/TensorRT)로 세분화.
+    - Phase 3 OpenCV 체크리스트에 심화 알고리즘 항목 추가.
+  - **프로젝트 계획서 업데이트**: 마일스톤 날짜를 현실 진행 속도에 맞춰 조정.
 
 ### 2026-01-15 (Day 5)
 - **Node.js ↔ C++ 연동 파이프라인 구성**

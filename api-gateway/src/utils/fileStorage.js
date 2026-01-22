@@ -23,7 +23,25 @@ const storage = multer.diskStorage({
   }
 });
 
-const upload = multer({ storage: storage });
+// 파일 필터 (이미지만 허용)
+const fileFilter = (req, file, cb) => {
+  if (file.mimetype.startsWith('image/')) {
+    cb(null, true);
+  } else {
+    // 에러를 던지면 ECONNRESET이 발생할 수 있으므로, 플래그를 설정하고 false 반환
+    req.fileValidationError = 'Only image files are allowed';
+    cb(null, false);
+  }
+};
+
+// Multer 설정 (파일 크기 제한 5MB)
+const upload = multer({ 
+  storage: storage,
+  fileFilter: fileFilter,
+  limits: {
+    fileSize: 5 * 1024 * 1024 // 5MB
+  }
+});
 
 module.exports = {
   upload,

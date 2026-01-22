@@ -50,13 +50,13 @@
 - [x] **Node.js ↔ C++ 통신 테스트**: API Gateway가 C++ 전처리 엔드포인트를 호출해 `processedPath`를 받을 수 있어야 한다.
 
 ### Week 2: OpenCV 전처리(기본) + API
-- [ ] **OpenCV 도입(vcpkg + CMake)**: 전처리 모듈을 빌드에 포함해야 한다.
-- [ ] `POST /preprocess` 요청 시 `imagePath`가 없거나 빈 값이면 400 Bad Request를 반환해야 한다.
-- [ ] `POST /preprocess` 요청 시 존재하지 않는 파일 경로면 404 Not Found를 반환해야 한다.
-- [ ] `POST /preprocess` 요청 시 유효한 이미지 경로면 200 OK와 `processedPath`를 반환해야 한다.
-- [ ] **크기 정규화**: 입력 이미지는 512x512로 리사이즈되어야 한다.
-- [ ] **노이즈 제거**: GaussianBlur + medianBlur가 적용되어야 한다.
-- [ ] **그레이스케일 변환**: 후속 에지 검출을 위한 grayscale 이미지가 생성되어야 한다.
+- [x] **OpenCV 도입(vcpkg + CMake)**: 전처리 모듈을 빌드에 포함해야 한다.
+- [x] `POST /preprocess` 요청 시 `imagePath`가 없거나 빈 값이면 400 Bad Request를 반환해야 한다.
+- [x] `POST /preprocess` 요청 시 존재하지 않는 파일 경로면 404 Not Found를 반환해야 한다.
+- [x] `POST /preprocess` 요청 시 유효한 이미지 경로면 200 OK와 `processedPath`를 반환해야 한다.
+- [x] **크기 정규화**: 입력 이미지는 512x512로 리사이즈되어야 한다.
+- [x] **노이즈 제거**: GaussianBlur + medianBlur가 적용되어야 한다.
+- [x] **그레이스케일 변환**: 후속 에지 검출을 위한 grayscale 이미지가 생성되어야 한다.
 
 ### Week 3: 에지/배경 제거 고도화 (Advanced OpenCV)
 - [ ] **GrabCut 배경 제거**: 단순 자르기가 아닌 GrabCut 알고리즘을 적용하여 배경을 정밀하게 제거해야 한다. (AI 전처리 최적화)
@@ -153,3 +153,30 @@
 - [ ] **FastAPI Swagger**: Python AI 서버의 `/docs` 엔드포인트에서 자동 생성된 Swagger UI를 확인할 수 있어야 한다.
 - [ ] **Node.js API 명세**: Postman Collection 또는 OpenAPI 3.0 스펙을 작성하여 `docs/` 폴더에 저장해야 한다.
 - [ ] **README 업데이트**: API 엔드포인트 목록 및 사용 예시를 README.md에 추가해야 한다.
+
+---
+
+## 🔐 Cross-Cutting Concerns: Security
+> 목표: 입력/저장/전송/의존성 전 구간에서 최소한의 보안 기준을 충족한다.
+
+### 입력 검증 (Input Validation) - Tier 1: 필수
+- [ ] **파일 업로드 검증**: 이미지 파일의 MIME 타입/확장자/매직 바이트를 검증해야 한다.
+- [ ] **파일 크기 제한**: 업로드 크기 상한(예: 10MB)을 설정해야 한다.
+- [ ] **경로 정규화**: `imagePath` 입력은 허용된 디렉토리 하위 경로만 허용해야 한다. (Path Traversal 방지)
+
+### 저장/무결성 (Storage & Integrity) - Tier 1: 필수
+- [ ] **Atomic Write**: 결과 파일 저장 시 `.tmp` → `rename` 방식을 사용해야 한다. (Race Condition 방지)
+- [ ] **해시 무결성**: 전처리 결과물에 대해 SHA-256 해시를 저장/검증해야 한다.
+- [ ] **보관 정책**: 업로드/결과 파일의 보관 기간 및 삭제 정책을 정의해야 한다.
+
+### 전송 보안 (Transport Security) - Tier 2: 권장
+- [ ] **외부 HTTPS**: Frontend ↔ API Gateway는 HTTPS를 사용해야 한다.
+- [ ] **내부망 격리**: API Gateway ↔ C++ ↔ Python 통신은 내부망 HTTP로 제한해야 한다.
+
+### 로깅 보안 (Logging Hygiene) - Tier 2: 권장
+- [ ] **PII 마스킹**: 이름/생년월일 등 개인정보는 로그에 남기지 않거나 마스킹해야 한다.
+- [ ] **에러 메시지 최소화**: 내부 경로/스택 노출을 최소화해야 한다.
+
+### 의존성/공급망 보안 (Dependency Security) - Tier 2: 권장
+- [ ] **정기 점검**: `npm audit`와 CodeQL을 주기적으로 확인해야 한다.
+- [ ] **버전 고정**: vcpkg baseline pinning을 유지하여 빌드 재현성을 확보해야 한다.

@@ -1,0 +1,79 @@
+{
+  "tests": 11,
+  "name": "AllTests",
+  "testsuites": [
+    {
+      "name": "ServerTest",
+      "tests": 5,
+      "testsuite": [
+        {
+          "name": "RootRoute",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
+          "line": 14
+        },
+        {
+          "name": "HealthCheck",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
+          "line": 29
+        },
+        {
+          "name": "Preprocess_MissingImagePath_Returns400",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
+          "line": 44
+        },
+        {
+          "name": "Preprocess_EmptyImagePath_Returns400",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
+          "line": 60
+        },
+        {
+          "name": "Preprocess_NonExistentFile_Returns404",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
+          "line": 76
+        }
+      ]
+    },
+    {
+      "name": "ImageProcessorTest",
+      "tests": 4,
+      "testsuite": [
+        {
+          "name": "Preprocess_ResizesTo512x512",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
+          "line": 107
+        },
+        {
+          "name": "Preprocess_OutputIsGrayscale",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
+          "line": 114
+        },
+        {
+          "name": "Preprocess_EmptyInputReturnsEmpty",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
+          "line": 121
+        },
+        {
+          "name": "Load_NonExistentFileReturnsEmpty",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
+          "line": 128
+        }
+      ]
+    },
+    {
+      "name": "GenerateOutputPathTest",
+      "tests": 2,
+      "testsuite": [
+        {
+          "name": "GeneratesCorrectPath",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
+          "line": 138
+        },
+        {
+          "name": "PreservesExtension",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
+          "line": 149
+        }
+      ]
+    }
+  ]
+}

@@ -18,13 +18,20 @@ cv::Mat ImageProcessor::Preprocess(const cv::Mat& input) {
     }
     
     cv::Mat processed;
-    // TODO: Implement resize, denoise, grayscale
     input.copyTo(processed);
     
-    // Resize to 512x512
+    // Step 1: Resize to 512x512
     cv::resize(processed, processed, cv::Size(kTargetSize, kTargetSize));
     
-    return processed;
+    // Step 2: Noise reduction (GaussianBlur + medianBlur)
+    cv::GaussianBlur(processed, processed, cv::Size(5, 5), 0);
+    cv::medianBlur(processed, processed, 3); 
+    
+    // Step 3: Convert to grayscale for edge detection
+    cv::Mat grayscale;
+    cv::cvtColor(processed, grayscale, cv::COLOR_BGR2GRAY);
+    
+    return grayscale;
 }
 
 bool ImageProcessor::Save(const cv::Mat& image, const std::string& path) {
