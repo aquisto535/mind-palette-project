@@ -5,6 +5,7 @@ The following packages are already installed:
   * asio:x64-windows@1.32.0 -- git+https://github.com/microsoft/vcpkg@d1b402afe0e4c5b8efb08dcc8be6b0c90900a55e
     crow:x64-windows@1.2.1.2 -- git+https://github.com/microsoft/vcpkg@6124f964dc3d0988dd0753968ad38b6d2d7c1c39
   * flatbuffers:x64-windows@25.2.10 -- git+https://github.com/microsoft/vcpkg@10e9aecde053bfab1f5de679ed28060c1304e9bf
+  * fmt:x64-windows@12.0.0 -- git+https://github.com/microsoft/vcpkg@c5dcb90bc1da6e7ba3d6e62e62a0b7df3192f51c
     gtest:x64-windows@1.17.0#1 -- git+https://github.com/microsoft/vcpkg@9ef57e3c1c7484e79ef8dd77e9cb7770f5331248
   * libjpeg-turbo:x64-windows@3.1.2 -- git+https://github.com/microsoft/vcpkg@26b02f049c1cbfc9d996c7b56cfd1f4598f6f158
   * liblzma:x64-windows@5.8.1 -- git+https://github.com/microsoft/vcpkg@55eb3803f1d0388aebca8fd293963721bbf0092c
@@ -14,6 +15,7 @@ The following packages are already installed:
   * opencv4[calib3d,core,directml,dnn,dshow,fs,gapi,highgui,intrinsics,jpeg,msmf,png,quirc,thread,tiff,webp,win32ui]:x64-windows@4.11.0#4 -- git+https://github.com/microsoft/vcpkg@f96663c0d36e2aed2c1519d4138f712055014208
   * protobuf:x64-windows@5.29.5#2 -- git+https://github.com/microsoft/vcpkg@b71ee5bb425cd832ed1615601bd92573f07e9206
   * quirc:x64-windows@1.2 -- git+https://github.com/microsoft/vcpkg@f586c894573b92fc601590eb0e38b3e54e0c7f5c
+    spdlog:x64-windows@1.15.3 -- git+https://github.com/microsoft/vcpkg@c2b47286b0759373acecdfaa3be4219711f6d059
   * tiff[core,jpeg,lzma,zip]:x64-windows@4.7.0 -- git+https://github.com/microsoft/vcpkg@54c1c045d21157ce32df8a1c8b7b9d57b0d5d6ce
   * utf8-range:x64-windows@5.29.5 -- git+https://github.com/microsoft/vcpkg@5d28e170bfcc212d629bb070520e72492240ce65
   * vcpkg-cmake:x64-windows@2024-04-23 -- git+https://github.com/microsoft/vcpkg@e74aa1e8f93278a8e71372f1fa08c3df420eb840
@@ -35,4 +37,13 @@ The package gtest is compatible with built-in CMake targets:
     
     add_test(AllTestsInMain main)
 
-All requested installations completed successfully in: 2.39 ms
+The package spdlog provides CMake targets:
+
+    find_package(spdlog CONFIG REQUIRED)
+    target_link_libraries(main PRIVATE spdlog::spdlog)
+
+    # Or use the header-only version
+    find_package(spdlog CONFIG REQUIRED)
+    target_link_libraries(main PRIVATE spdlog::spdlog_header_only)
+
+All requested installations completed successfully in: 2.62 ms

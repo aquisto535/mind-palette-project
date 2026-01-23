@@ -4,6 +4,7 @@
   "dependencies": [
     "crow",
     "gtest",
-    "opencv"
+    "opencv",
+    "spdlog"
   ]
 }
