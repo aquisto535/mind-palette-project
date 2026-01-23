@@ -2,6 +2,20 @@ const express = require('express');
 const router = express.Router();
 const os = require('os');
 const { execSync } = require('child_process');
+const rateLimit = require('express-rate-limit');
+
+// 헬스 체크 엔드포인트를 위한 전용 레이트 리미터 설정
+// OS 명령(execSync) 실행에 따른 부하를 방지하기 위해 호출 횟수를 제한합니다.
+const healthRateLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1분
+  max: 60,                // IP당 1분에 최대 60번 요청 허용
+  message: {
+    status: 'error',
+    message: 'Too many health check requests, please try again later.'
+  },
+  standardHeaders: true, // `RateLimit-*` 헤더 포함
+  legacyHeaders: false,  // `X-RateLimit-*` 헤더 비활성화
+});
 
 /**
  * GET /health
@@ -9,7 +23,7 @@ const { execSync } = require('child_process');
  * 
  * @returns {Object} 서버 상태 정보 (status, uptime, memory, disk)
  */
-router.get('/', (req, res) => {
+router.get('/', healthRateLimiter, (req, res) => {
   try {
     // 서버 가동 시간
     const uptime = process.uptime();
