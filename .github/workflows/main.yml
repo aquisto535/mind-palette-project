@@ -76,6 +76,7 @@ jobs:
       working-directory: ./api-gateway
       run: |
         npm ci
+        npm run build
         npm start &
         sleep 5 # 서버 시작 대기
         
@@ -84,7 +85,7 @@ jobs:
       working-directory: ./api-gateway
       run: |
         npm ci
-        npm test tests/integration.test.js
+        npm test tests/integration.test.ts
 
   # 4. Security Analysis (CodeQL) - 계획서 반영
   # JavaScript/TypeScript 코드의 보안 취약점을 분석합니다.
