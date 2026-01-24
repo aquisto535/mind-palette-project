@@ -31,6 +31,19 @@
 
 ## 📝 상세 진행 로그
 
+### 2026-01-24 (Day 8)
+- **API Gateway TypeScript 마이그레이션**
+  - **Language Conversion**: Node.js(`server.js`) 기반 프로젝트를 TypeScript(`src/server.ts`)로 100% 변환 완료.
+  - **Type Safety**:
+    - Express (`Request`, `Response`) 및 Multer (`File`) 등 주요 객체에 엄격한 타입 적용.
+    - `CustomRequest` 인터페이스 정의로 커스텀 속성(`fileValidationError`) 타입 안정성 확보.
+  - **Configuration & Build**:
+    - `tsconfig.json` 설정 (ES2020, Strict Mode).
+    - `tsc` 빌드 파이프라인 및 `nodemon` + `ts-node` 개발 환경 구축.
+  - **Test Migration**:
+    - 기존 Jest 테스트 코드(`.js`)를 모두 TypeScript(`.ts`)로 리팩터링.
+    - 5개 테스트 슈트, 14개 테스트 케이스 전원 통과 확인 (`npm test`).
+
 ### 2026-01-23 (Day 7)
 - **API Gateway 안정성 및 보안 강화**
   - **Health Check API 레이트 리미팅 적용**:

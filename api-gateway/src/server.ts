@@ -1,10 +1,10 @@
-const express = require('express');
-const cors = require('cors');
-const morgan = require('morgan');
-const analyzeRouter = require('./src/routes/analyze');
-const healthRouter = require('./src/routes/health');
-const { UPLOAD_DIR, RESULT_DIR } = require('./src/utils/fileStorage');
-const logger = require('./src/utils/logger');
+import express, { Request, Response, NextFunction } from 'express';
+import cors from 'cors';
+import morgan from 'morgan';
+import analyzeRouter from './routes/analyze';
+import healthRouter from './routes/health';
+import { UPLOAD_DIR, RESULT_DIR } from './utils/fileStorage';
+import logger from './utils/logger';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -17,7 +17,7 @@ app.use(express.urlencoded({ extended: true }));
 // HTTP 요청 로깅 (morgan + winston)
 const morganFormat = process.env.NODE_ENV === 'production' ? 'combined' : 'dev';
 app.use(morgan(morganFormat, {
-  stream: { write: (message) => logger.http(message.trim()) }
+  stream: { write: (message: string) => logger.http(message.trim()) }
 }));
 
 // ----------------------------------------------------------------
@@ -25,7 +25,7 @@ app.use(morgan(morganFormat, {
 // ----------------------------------------------------------------
 
 // 기본 상태 확인
-app.get('/', (req, res) => {
+app.get('/', (req: Request, res: Response) => {
   res.send('Mind Palette API Gateway is running.');
 });
 
@@ -36,7 +36,7 @@ app.use('/health', healthRouter);
 app.use('/analyze', analyzeRouter);
 
 // 글로벌 에러 핸들러
-app.use((err, req, res, next) => {
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   logger.error(err.stack);
   res.status(500).json({ error: 'Internal Server Error' });
 });
@@ -50,5 +50,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = app;
-
+export default app;

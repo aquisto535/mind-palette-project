@@ -1,14 +1,7 @@
-const request = require('supertest');
-const path = require('path');
-const fs = require('fs');
-const app = require('../server');
-const { UPLOAD_DIR } = require('../src/utils/fileStorage');
-
-// Mock fileStorage to use a temporary directory for tests
-// Note: We are testing the integration with multer and express, so we use the real file storage
-// but we'll clean up afterwards.
-// However, to mock fileFilter behavior specifically if we were unit testing, we might mock multer.
-// But for integration test, let's use the real app.
+import request from 'supertest';
+import path from 'path';
+import fs from 'fs';
+import app from '../src/server';
 
 describe('File Upload Security', () => {
   const TEST_IMAGE_PATH = path.join(__dirname, 'fixtures', 'test-image.png');
@@ -21,12 +14,9 @@ describe('File Upload Security', () => {
       fs.mkdirSync(path.join(__dirname, 'fixtures'));
     }
     // Create a valid PNG file (with PNG magic bytes if needed, but for now simple content)
-    // Multer's default fileFilter usually checks mimetype based on extension or content-type header
-    // But for stricter security, we might need magic bytes check.
-    // For this TDD, we start with standard checks.
     fs.writeFileSync(TEST_IMAGE_PATH, 'fake-png-content');
     fs.writeFileSync(TEST_TEXT_PATH, 'fake-text-content');
-    
+
     // Create a large file (> 5MB)
     const largeBuffer = Buffer.alloc(6 * 1024 * 1024); // 6MB
     fs.writeFileSync(LARGE_FILE_PATH, largeBuffer);

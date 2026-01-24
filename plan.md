@@ -182,3 +182,16 @@
 ### 의존성/공급망 보안 (Dependency Security) - Tier 2: 권장
 - [ ] **정기 점검**: `npm audit`와 CodeQL을 주기적으로 확인해야 한다.
 - [ ] **버전 고정**: vcpkg baseline pinning을 유지하여 빌드 재현성을 확보해야 한다.
+
+---
+
+## 🧪 Cross-Cutting Concerns: Traffic & Load Testing
+> 목표: 서비스의 안정성을 검증하고, 대량의 로그를 생성하여 시스템의 한계를 테스트한다.
+
+### Traffic Generation (트래픽 생성) - Phase 2~3 (로깅 검증용)
+- [ ] **Node.js Traffic Bot**: `axios`와 `setInterval`을 이용해 주기적으로 `GET /health` 및 `POST /analyze` 요청을 보내는 경량 봇을 구현해야 한다.
+- [ ] **성능 측정용 대량 로그**: 봇을 통해 분당 100회 이상의 요청을 발생시켜 `spdlog`의 파일 회전(10MB) 기능을 검증해야 한다.
+
+### Load Testing (부하 테스트) - Phase 4~5 (성능 최적화용)
+- [ ] **k6 도입**: 초당 수천 건의 동시 접속(VU)을 처리할 수 있는 전문 부하 테스트 도구를 선정해야 한다.
+- [ ] **성능 벤치마크 (Target: < 100ms)**: k6를 통해 전처리 및 추론 파이프라인의 응답 시간을 측정하고 최적화 근거를 마련해야 한다.

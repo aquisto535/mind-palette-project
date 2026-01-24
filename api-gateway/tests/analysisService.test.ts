@@ -1,12 +1,12 @@
-const nock = require('nock');
-const path = require('path');
-const analysisService = require('../src/services/analysisService');
+import nock from 'nock';
+import path from 'path';
+import * as analysisService from '../src/services/analysisService';
 
 describe('Analysis Service', () => {
   const mockFile = {
     path: path.join(__dirname, 'dummy.jpg'),
     originalname: 'dummy.jpg'
-  };
+  } as any;
 
   const PREPROCESS_SERVER_URL = 'http://localhost:8081';
 
@@ -21,7 +21,7 @@ describe('Analysis Service', () => {
 
   test('should call C++ preprocess server and handle success response', async () => {
     const processedPath = '/shared/processed/dummy_clean.jpg';
-    
+
     // Nock 설정: C++ 서버 요청 가로채기
     const scope = nock(PREPROCESS_SERVER_URL)
       .post('/preprocess', {
@@ -35,7 +35,7 @@ describe('Analysis Service', () => {
 
     // Nock이 인터셉트했는지 확인 (즉, 요청이 실제로 발송되었는지)
     expect(scope.isDone()).toBe(true);
-    
+
     // 결과값은 더미 데이터지만 정상 반환되어야 함
     expect(result).toHaveProperty('score');
   });
