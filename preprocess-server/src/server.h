@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <string>
 #include <chrono>
+#include <optional>
 
 namespace fs = std::filesystem;
 
@@ -17,6 +18,93 @@ inline std::string GenerateOutputPath(const std::string& inputPath) {
     fs::path outputDir = "/shared/processed";
     return (outputDir / (stem + "_clean" + ext)).string();
 }
+
+// ============================================================================
+// Helper Functions for /preprocess Route
+// ============================================================================
+
+// Validation result with error details
+struct ValidationResult {
+    bool success;
+    std::string imagePath;
+    int errorCode;         // HTTP status code (400, 404, etc.)
+    std::string errorMessage;
+};
+
+// Returns validation result with appropriate error codes
+inline ValidationResult ValidatePreprocessRequest(const crow::request& req) {
+    auto body = crow::json::load(req.body);
+    if (!body) {
+        LOG_ERROR("Invalid JSON body received");
+        return {false, "", 400, "Invalid JSON"};
+    }
+    
+    if (!body.has("imagePath")) {
+        LOG_ERROR("Missing imagePath in request body");
+        return {false, "", 400, "Missing imagePath"};
+    }
+    
+    std::string imagePath = body["imagePath"].s();
+    if (imagePath.empty()) {
+        LOG_ERROR("imagePath is empty");
+        return {false, "", 400, "imagePath is empty"};
+    }
+    
+    if (!fs::exists(imagePath)) {
+        LOG_ERROR("File not found: {}", imagePath);
+        return {false, "", 404, "File not found"};
+    }
+    
+    return {true, imagePath, 200, ""};
+}
+
+// Returns processed image or nullopt on failure
+inline std::optional<cv::Mat> ProcessImageFile(const std::string& imagePath) {
+    LOG_INFO("Processing file: {}", imagePath);
+    
+    ImageProcessor processor;
+    cv::Mat img = processor.Load(imagePath);
+    if (img.empty()) {
+        LOG_ERROR("Failed to load image: {}", imagePath);
+        return std::nullopt;
+    }
+    
+    cv::Mat processed = processor.Preprocess(img);
+    if (processed.empty()) {
+        LOG_ERROR("Preprocessing failed for: {}", imagePath);
+        return std::nullopt;
+    }
+    
+    return processed;
+}
+
+// Saves processed image with directory creation, returns success status
+inline bool SaveProcessedImage(const cv::Mat& img, const std::string& outputPath) {
+    // Create output directory if not exists
+    fs::path outputDir = fs::path(outputPath).parent_path();
+    if (!fs::exists(outputDir)) {
+        fs::create_directories(outputDir);
+    }
+    
+    ImageProcessor processor;
+    if (!processor.Save(img, outputPath)) {
+        LOG_ERROR("Failed to save processed image to: {}", outputPath);
+        return false;
+    }
+    
+    return true;
+}
+
+// Creates success response with performance metrics
+inline crow::response CreatePreprocessResponse(const std::string& outputPath, int64_t durationMs) {
+    LOG_INFO("Successfully processed image in {}ms. Saved to: {}", durationMs, outputPath);
+    
+    crow::json::wvalue res;
+    res["processedPath"] = outputPath;
+    
+    return crow::response(200, res);
+}
+
 
 inline void setup_routes(crow::SimpleApp& app) {
     CROW_ROUTE(app, "/")([](){
@@ -31,70 +119,30 @@ inline void setup_routes(crow::SimpleApp& app) {
         LOG_INFO("Received preprocess request");
         auto startTime = std::chrono::high_resolution_clock::now();
         
-        auto body = crow::json::load(req.body);
-        if (!body) {
-            LOG_ERROR("Invalid JSON body received");
-            return crow::response(400, "Invalid JSON");
+        // Validate request
+        auto validation = ValidatePreprocessRequest(req);
+        if (!validation.success) {
+            return crow::response(validation.errorCode, validation.errorMessage);
         }
-
-        // Check if imagePath exists in JSON
-        if (!body.has("imagePath")) {
-            LOG_ERROR("Missing imagePath in request body");
-            return crow::response(400, "Missing imagePath");
-        }
+        std::string imagePath = validation.imagePath;
         
-        // Check if imagePath is empty
-        std::string imagePath = body["imagePath"].s();
-        if (imagePath.empty()) {
-            LOG_ERROR("imagePath is empty");
-            return crow::response(400, "imagePath is empty");
+        // Process image
+        auto processedOpt = ProcessImageFile(imagePath);
+        if (!processedOpt) {
+            return crow::response(500, "Processing failed");
         }
         
-        // Check if file exists
-        if (!fs::exists(imagePath)) {
-            LOG_ERROR("File not found: {}", imagePath);
-            return crow::response(404, "File not found");
-        }
-        
-        LOG_INFO("Processing file: {}", imagePath);
-        
-        // Process the image
-        ImageProcessor processor;
-        cv::Mat img = processor.Load(imagePath);
-        if (img.empty()) {
-            LOG_ERROR("Failed to load image: {}", imagePath);
-            return crow::response(400, "Failed to load image");
-        }
-        
-        cv::Mat processed = processor.Preprocess(img);
-        if (processed.empty()) {
-            LOG_ERROR("Preprocessing failed for: {}", imagePath);
-            return crow::response(500, "Preprocessing failed");
-        }
-        
-        // Generate output path and save
+        // Save result
         std::string outputPath = GenerateOutputPath(imagePath);
-        
-        // Create output directory if not exists
-        fs::path outputDir = fs::path(outputPath).parent_path();
-        if (!fs::exists(outputDir)) {
-            fs::create_directories(outputDir);
-        }
-        
-        if (!processor.Save(processed, outputPath)) {
-            LOG_ERROR("Failed to save processed image to: {}", outputPath);
+        if (!SaveProcessedImage(*processedOpt, outputPath)) {
             return crow::response(500, "Failed to save processed image");
         }
         
+        // Build response
         auto endTime = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
         
-        LOG_INFO("Successfully processed image in {}ms. Saved to: {}", duration, outputPath);
-        
-        crow::json::wvalue res;
-        res["processedPath"] = outputPath;
-        
-        return crow::response(200, res);
+        return CreatePreprocessResponse(outputPath, duration);
     });
 }
 

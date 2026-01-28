@@ -43,6 +43,10 @@
   - **Test Migration**:
     - 기존 Jest 테스트 코드(`.js`)를 모두 TypeScript(`.ts`)로 리팩터링.
     - 5개 테스트 슈트, 14개 테스트 케이스 전원 통과 확인 (`npm test`).
+  - **Issue Tracking**:
+    - `npm warn deprecated` (`inflight`, `glob`) 발생 확인.
+    - 원인: `jest@29.7.0`의 내부 의존성 문제(Upstream Issue).
+    - 조치: DevDependency 문제이며 런타임 영향이 없으므로, Upstream 해결 시까지 **무시(Won't Fix)** 결정.
 
 ### 2026-01-23 (Day 7)
 - **API Gateway 안정성 및 보안 강화**

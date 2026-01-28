@@ -90,6 +90,76 @@ TEST(ServerTest, Preprocess_NonExistentFile_Returns404) {
 }
 
 // ============================================================================
+// Helper Function Unit Tests
+// ============================================================================
+
+TEST(ValidatePreprocessRequestTest, ValidRequest_ReturnsSuccess) {
+    crow::request req;
+    req.body = R"({"imagePath": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\shared_volume\\uploads\\wrtFileImageView.jpg"})";
+    
+    auto result = ValidatePreprocessRequest(req);
+    
+    EXPECT_TRUE(result.success);
+    EXPECT_EQ(result.imagePath, "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\shared_volume\\uploads\\wrtFileImageView.jpg");
+    EXPECT_EQ(result.errorCode, 200);
+}
+
+TEST(ValidatePreprocessRequestTest, InvalidJSON_Returns400) {
+    crow::request req;
+    req.body = "invalid json";
+    
+    auto result = ValidatePreprocessRequest(req);
+    
+    EXPECT_FALSE(result.success);
+    EXPECT_EQ(result.errorCode, 400);
+    EXPECT_EQ(result.errorMessage, "Invalid JSON");
+}
+
+TEST(ValidatePreprocessRequestTest, MissingImagePath_Returns400) {
+    crow::request req;
+    req.body = R"({"otherField": "value"})";
+    
+    auto result = ValidatePreprocessRequest(req);
+    
+    EXPECT_FALSE(result.success);
+    EXPECT_EQ(result.errorCode, 400);
+    EXPECT_EQ(result.errorMessage, "Missing imagePath");
+}
+
+TEST(ValidatePreprocessRequestTest, EmptyImagePath_Returns400) {
+    crow::request req;
+    req.body = R"({"imagePath": ""})";
+    
+    auto result = ValidatePreprocessRequest(req);
+    
+    EXPECT_FALSE(result.success);
+    EXPECT_EQ(result.errorCode, 400);
+    EXPECT_EQ(result.errorMessage, "imagePath is empty");
+}
+
+TEST(ValidatePreprocessRequestTest, NonExistentFile_Returns404) {
+    crow::request req;
+    req.body = R"({"imagePath": "/nonexistent/file.jpg"})";
+    
+    auto result = ValidatePreprocessRequest(req);
+    
+    EXPECT_FALSE(result.success);
+    EXPECT_EQ(result.errorCode, 404);
+    EXPECT_EQ(result.errorMessage, "File not found");
+}
+
+TEST(CreatePreprocessResponseTest, CreatesValidJsonResponse) {
+    auto response = CreatePreprocessResponse("/output/test.jpg", 42);
+    
+    EXPECT_EQ(response.code, 200);
+    
+    // Parse response body as JSON
+    auto body = crow::json::load(response.body);
+    EXPECT_TRUE(body);
+    EXPECT_EQ(body["processedPath"].s(), "/output/test.jpg");
+}
+
+// ============================================================================
 // ImageProcessor Unit Tests
 // ============================================================================
 

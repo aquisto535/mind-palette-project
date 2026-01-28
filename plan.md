@@ -5,7 +5,14 @@
 
 ---
 
-## 🚀 Phase 2: API Gateway (Node.js) 개발
+## �️ 개발 방법론 (Methodology)
+- **TDD Cycle**: Always [Red] → [Green] → [Refactor]
+- **Tidy First**: 구조적 변경(Structural)과 기능적 변경(Behavioral)을 분리한다.
+- **MCP Workflow**: [MCP_WORKFLOWS.md](file:///c:/Users/user/Documents/GitHub/mind-palette-project/docs/methodology/MCP_WORKFLOWS.md)에 따라 `shrimp`, `sequential-thinking`, `context7`을 유기적으로 활용한다.
+
+---
+
+## �🚀 Phase 2: API Gateway (Node.js) 개발
 
 ### 기본 서버 설정 및 상태 확인
 - [x] `GET /` 요청 시 200 OK와 함께 서버 상태 메시지를 반환해야 한다.
@@ -58,38 +65,62 @@
 - [x] **노이즈 제거**: GaussianBlur + medianBlur가 적용되어야 한다.
 - [x] **그레이스케일 변환**: 후속 에지 검출을 위한 grayscale 이미지가 생성되어야 한다.
 
-### Week 3: 에지/배경 제거 고도화 (Advanced OpenCV)
-- [ ] **GrabCut 배경 제거**: 단순 자르기가 아닌 GrabCut 알고리즘을 적용하여 배경을 정밀하게 제거해야 한다. (AI 전처리 최적화)
-- [ ] **정량적 특징 추출(Feature Extraction)**: 필압 분석(히스토그램), 선 떨림 보정(Contour Moment) 등 수치적 특징을 계산하여 AI에 전달해야 한다.
-- [ ] **하이브리드 결과 결합**: C++에서 계산한 기하학적 특징과 AI 추론 결과를 결합하는 로직을 설계해야 한다.
-- [ ] **Canny 에지 검출**: 에지 이미지가 생성되어야 한다.
-- [ ] **윤곽선 강화**: 모폴로지 연산(MORPH_CLOSE 등)이 적용되어야 한다.
-- [ ] **이진화 및 모폴로지**: 이진화 + 모폴로지 결과를 저장할 수 있어야 한다.
+### Week 3: 에지/배경 제거 고도화 (Advanced OpenCV + Deep Dive)
+- [ ] **[MCP]** `sequential-thinking`을 사용하여 GrabCut vs DL 기반 배경 제거의 효율성 분석 (제1원칙)
+- [ ] **GrabCut 배경 제거 & 실험**: 
+  - [ ] [TDD] `image_processor_test.cpp`: GrabCut 초기 마스크 생성 및 유효성 검증 테스트 (Red)
+  - [ ] `image_processor.cpp`: GrabCut 알고리즘 기본 구현 (Green)
+  - [ ] **[Deep Dive] Optimization**: `iterCount`(1회 vs 5회)에 따른 수행 시간(ms)과 품질 차이를 주석으로 기록.
+- [ ] **정량적 특징 추출 (Features)**:
+  - [ ] **[MCP]** `context7`으로 Canny 알고리즘의 최신 최적화 파라미터 조사
+  - [ ] [TDD] Canny Threshold(low/high) 변화에 따른 엣지 검출 정량적 정확도 테스트 (Red)
+  - [ ] 필압 분석(히스토그램), 선 떨림 보정(Contour Moment) 등 수치적 특징 계산 로직 구현 (Green)
+- [ ] **하이브리드 결과 결합**: C++ 기하학적 특징 + AI 추론 결과 결합 로직 설계 및 테스트.
+- [ ] **윤곽선 강화**: 모폴로지 연산(MORPH_CLOSE 등) 적용 후 결과 무결성 테스트.
+- [ ] **이진화 및 모폴로지**: 이진화 처리 결과 저장 원자성(Atomicity) 확인.
 
-### Week 4: 멀티스레딩/성능/품질(QA)
-- [ ] **Thread Pool 구현(표준 C++만)**: `std::thread`/`std::mutex`/`std::condition_variable` 기반으로 구현해야 한다. (Windows API 금지)
-- [ ] **배치 처리**: 여러 이미지를 한 번에 처리하여 오버헤드를 줄일 수 있어야 한다.
-- [ ] **성능 벤치마크**: 전처리 1건 처리 시간을 측정하고 < 100ms 목표 달성 근거를 남겨야 한다.
-- [ ] **Atomic Write 구현**: 결과 파일 저장 시 `.tmp`로 쓰고 완료 후 `rename`하여 Python 서버가 미완성 파일을 읽는 경쟁 상태(Race Condition) 방지.
-- [ ] **MSVC Code Analysis + Core Guidelines**: 메모리 누수/오용을 점검하고(RAII 준수, Raw Pointer 최소화) CI 파이프라인에 포함되어야 한다.
-- [ ] **GoogleTest (GTest)**: 이미지 처리 알고리즘 단위 테스트 작성 (회귀 테스트/엣지 케이스 포함)
+### Week 4: 멀티스레딩/성능/품질 (Concurrency Deep Dive)
+- [ ] **Thread Pool 구현 (std::thread)**: 
+  - [ ] [TDD] 스레드 풀 작업 큐의 동기화 및 데드락 방지 단위 테스트 (Red)
+  - [ ] `std::thread`/`mutex`/`condition_variable` 기반 표준 스레드 풀 구현 (Green)
+  - [ ] **[Deep Dive] Scalability Test**: 스레드 개수(1 vs 4 vs 8)에 따른 처리량(Throughput) 비교 벤치마크 수행.
+- [ ] **배치 처리**: 병렬 작업 분할 로직에 대한 데이터 레이스 검증 테스트.
+- [ ] **성능 벤치마크**: [TDT] 전처리 1건 처리 시간 < 100ms 자동 회귀 테스트 구축.
+- [ ] **Atomic Write & Safety**: 
+  - [ ] [TDD] 저장 중 프로세스 종료 시 Corrupted 파일 잔존 여부 테스트 (Red)
+  - [ ] `.tmp` → `rename` 패턴 적용으로 원자성(Atomicity) 보장 (Green)
+- [ ] **[MCP]** MSVC Code Analysis 및 Core Guidelines 위반 사항 `sequential-thinking`분석
+- [ ] **Quality Gates**: CI 파이프라인에 정적 분석 통합 및 통과 확인.
+- [ ] **GoogleTest (GTest)**: 전체 알고리즘에 대한 경계값(Edge Case) 및 회귀 테스트 완료.
 
 ## 🧠 Phase 4: Python AI Server (Target: 2026.02 ~ 03)
 
 ### Step 1: Base Model (FastAPI + PyTorch)
-- [ ] **FastAPI 서버 구축**: 헬스 체크 및 추론 엔드포인트(`POST /predict`)를 구현해야 한다.
-- [ ] **PyTorch 모델 구성**: 학습된 모델의 아키텍처(ResNet/CNN 등)를 정의하고 가중치(`.pt` 또는 `.pth`)를 로드하는 클래스를 작성해야 한다.
-- [ ] **클래스 매핑 및 레이블링**: 모델 출력 텐서를 실제 신체 부위나 분석 항목 명칭으로 변환하는 매핑 로직을 구현해야 한다.
+- [ ] **FastAPI 서버 구축**: 
+  - [ ] [TDD] `/health` 요청 시 200 OK와 모델 로딩 상태 반환 테스트 (Red)
+  - [ ] FastAPI 기본 골격 및 헬스 체크 엔드포인트 구현 (Green)
+- [ ] **PyTorch 모델 구성**: 
+  - [ ] [TDD] 모델 가중치(`.pt`) 파일 무결성 확인 및 아키텍처 일치 테스트 (Red)
+  - [ ] ResNet/CNN 기반 모델 로드 클래스 작성 (Green)
+- [ ] **클래스 매핑 및 레이블링**: 
+  - [ ] [TDD] 출력 텐서 ↔ 레이블 명칭 변환 결과 정확도 테스트 (Red)
+  - [ ] 매핑 로직 및 후처리 클래스 구현 (Green)
 - [ ] **Toy Model (MVP)**: 단순한 CNN 모델(ResNet18 등)을 로드하여 더미 데이터를 추론할 수 있어야 한다.
-- [ ] **E2E 연동**: Node.js ↔ C++(전처리) ↔ Python(추론) 전체 파이프라인이 동작해야 한다.
+- [ ] **E2E 연동**: Node.js ↔ C++(전처리) ↔ Python(추론) 전체 파이프라인 통합 테스트.
 
-### Step 2: Universal Optimization (ONNX)
-- [ ] **ONNX 변환**: 학습된 PyTorch 모델(`.pt`)을 ONNX 포맷(`.onnx`)으로 변환(Export)해야 한다.
-- [ ] **ONNX Runtime 교체**: 추론 엔진을 ONNX Runtime으로 교체하고, 기존 PyTorch 추론 대비 속도 향상을 검증해야 한다.
+### Step 2: Universal Optimization (ONNX + Deep Dive)
+- [ ] **[MCP]** `context7`으로 PyTorch 모델의 ONNX 변환 시 지원되는 최신 Ops 및 호환성 리서치
+- [ ] **ONNX 변환**: 
+  - [ ] [TDD] ONNX 모델과 원본 PyTorch 모델의 추론 결과 오차(Epsilon) 검증 테스트 (Red)
+  - [ ] 모델 변환 및 ONNX Runtime 추론 엔진 구현 (Green)
+- [ ] **[Deep Dive] Latency Analysis**: PyTorch 순정 vs ONNX Runtime 추론 속도 비교 측정 및 주석 기록.
+- [ ] **ONNX Runtime 교체**: 추론 엔진 교체 및 속도 향상 검증.
 
-### Step 3: Extreme Optimization (TensorRT)
-- [ ] **TensorRT Engine 빌드**: ONNX 모델을 NVIDIA TensorRT Engine(`.plan`)으로 변환해야 한다.
-- [ ] **Quantization (FP16)**: FP16(반정밀도) 양자화를 적용하여 추론 속도를 극대화해야 한다.
+### Step 3: Extreme Optimization (TensorRT + Deep Dive)
+- [ ] **[MCP]** `sequential-thinking`을 사용하여 TensorRT 엔진 빌드 시 FP16 양자화에 따른 정확도 손실 분석 (제1원칙)
+- [ ] **TensorRT Engine 빌드**: 
+  - [ ] [TDD] TensorRT 엔진 추론 가용성 및 GPU 메모리 할당 테스트 (Red)
+  - [ ] ONNX ↔ TensorRT 변환 및 Quantization(FP16) 적용 (Green)
 - [ ] **최종 벤치마크**: PyTorch vs ONNX vs TensorRT 성능 비교 리포트를 작성해야 한다.
 
 ---
@@ -97,8 +128,10 @@
 ## 🌐 Phase 5: 통합 및 고도화 (배포 전략)
 
 ### 성능 최적화 (Performance Optimization)
-- [ ] **Hash-based Caching (중복 방지)**: 이미지 업로드 시 SHA-256 해시를 계산하여, 기존에 처리된 이미지(`results/`)가 있다면 분석을 생략하고 즉시 반환.
-- [ ] **Inference Optimization**: Python AI 서버의 추론 엔진을 ONNX Runtime으로 교체.
+- [ ] **Hash-based Caching (중복 방지)**: 
+  - [ ] [TDD] 동일 이미지 업로드 시 캐시 적중(Hit) 및 결과 즉시 반환 테스트 (Red)
+  - [ ] SHA-256 해시 기반 분석 생략 로직 구현 (Green)
+- [ ] **Inference Optimization**: Python AI 서버의 추론 엔진 최종 ONNX/TensorRT 통합 및 회귀 테스트.
 
 ### 배포 아키텍처 및 보안 (Architecture & Security)
 - [ ] **Nginx Reverse Proxy 도입**: AWS EC2 앞단에 Nginx를 배치하여 SSL 인증서(Let's Encrypt) 관리 및 HTTPS 트래픽 처리.
@@ -122,14 +155,18 @@
 - [x] **파일 회전(Rotation)**: 로그 파일이 10MB를 초과하면 자동으로 새 파일로 교체되어야 한다.
 
 ### Python (AI Server) - structlog
-- [ ] **structlog 도입**: 구조화된 JSON 로그를 표준 출력(stdout)으로 출력해야 한다.
+- [ ] **structlog 도입**: 
+  - [ ] [TDD] 로그 출력 시 JSON 포맷 유효성 및 필수 필드 포함 여부 테스트 (Red)
+  - [ ] `structlog` 바인딩 및 표준 출력 설정 구현 (Green)
 - [ ] **추론 추적**: 모델 입력 경로, 추론 결과(점수), 추론 시간을 기록해야 한다.
 - [ ] **컨텍스트 바인딩**: Request ID를 로그에 자동 추가하여 전체 파이프라인 추적이 가능해야 한다.
 
 ### 통합 (Cross-Service Integration)
-- [ ] **로그 형식 통일**: 모든 서비스가 `timestamp`, `service`, `level`, `message` 필드를 포함해야 한다.
-- [ ] **Request ID 전파**: Node.js에서 생성한 UUID를 C++, Python까지 헤더로 전달하여 전체 요청 흐름을 추적할 수 있어야 한다.
-- [ ] **에러 알림 시스템(선택)**: CRITICAL 레벨 로그 발생 시 Slack/Email로 알림을 보내는 메커니즘을 구현해야 한다.
+- [ ] **[MCP]** `sequential-thinking`을 사용하여 수만 건의 로그가 생성될 때의 성능 오버헤드 최소화 전략 분석
+- [ ] **Request ID 전파**: 
+  - [ ] [TDD] Node.js에서 생성한 UUID가 C++, Python 서버 로그에 일관되게 나타나는지 통합 테스트 (Red)
+  - [ ] 헤더 전파 로직 및 각 서비스별 로그 필드 매핑 구현 (Green)
+- [ ] **에러 알림 시스템(선택)**: CRITICAL 레벨 로그 발생 시 Slack/Email 알림 메커니즘 구축.
 
 ---
 
@@ -137,24 +174,20 @@
 > 목표: 시스템이 24/7 안정적으로 동작하고, 장애 발생 시 즉시 감지할 수 있는 기반을 구축한다.
 
 ### Health Checks (헬스 체크) - Tier 1: 필수
-- [x] **C++**: `/health` 엔드포인트가 구현되어 있어야 한다. (완료)
-- [x] **Node.js**: `/health` 엔드포인트가 서버 상태(uptime, 메모리 사용량, 디스크 여유 공간)를 JSON으로 반환해야 한다.
-- [ ] **Python**: `/health` 엔드포인트가 모델 로드 상태 및 GPU 사용 가능 여부를 확인하여 반환해야 한다.
-- [ ] **Docker Healthcheck**: `docker-compose.yml`에 각 서비스의 healthcheck 설정(interval, timeout, retries)이 추가되어야 한다.
+- [x] **C++**: `/health` 엔드포인트 구현 완료.
+- [x] **Node.js**: `/health` 엔드포인트 구현 완료.
+- [ ] **Python**: 
+  - [ ] [TDD] GPU 메모리 고갈 시 503 Service Unavailable 반환 테스트 (Red)
+  - [ ] 모델 로드 상태 및 리소스 확인 헬스 체크 구현 (Green)
+- [ ] **Docker Healthcheck**: 
+  - [ ] [TDD] 컨테이너 비정상 종료 시 Docker Daemon의 재시작 정책 동작 테스트 (Red)
+  - [ ] `docker-compose.yml` 내 healthcheck (interval, timeout) 설정 (Green)
 
-### Monitoring (모니터링) - Tier 2: 권장 (Phase 5)
-- [ ] **메트릭 수집**: 각 서버가 요청 수, 처리 시간, 에러 수를 로그에 기록해야 한다.
-- [ ] **Prometheus + Grafana (선택)**: Phase 5에서 메트릭을 Prometheus로 수집하고 Grafana 대시보드로 시각화해야 한다.
-- [ ] **성능 임계값 알림**: 응답 시간이 3초를 초과하면 경고 로그를 남겨야 한다.
-
-### Error Tracking (에러 추적) - Tier 2: 권장 (Phase 5)
-- [ ] **Sentry (Frontend)**: React 앱에서 발생한 에러를 자동으로 Sentry로 전송하여 브라우저별 에러 통계를 수집해야 한다.
-- [ ] **Slack Webhook (선택)**: CRITICAL 레벨 에러 발생 시 Slack 채널로 실시간 알림을 보내야 한다.
-
-### API Documentation (API 문서화) - Tier 2: 권장 (Phase 5)
-- [ ] **FastAPI Swagger**: Python AI 서버의 `/docs` 엔드포인트에서 자동 생성된 Swagger UI를 확인할 수 있어야 한다.
-- [ ] **Node.js API 명세**: Postman Collection 또는 OpenAPI 3.0 스펙을 작성하여 `docs/` 폴더에 저장해야 한다.
-- [ ] **README 업데이트**: API 엔드포인트 목록 및 사용 예시를 README.md에 추가해야 한다.
+### API Documentation (API 문서화) - Tier 2: 권장
+- [ ] **[MCP]** `context7`으로 OpenAPI 3.0 스펙의 가독성 좋은 문서화 패턴 리서치
+- [ ] **Node.js API 명세**: 
+  - [ ] [TDD] API 명세 파일이 실제 엔드포인트 구조와 일치하는지 자동 검증 테스트 (Red)
+  - [ ] OpenAPI 3.0/Swagger Spec 작성 및 저장 (Green)
 
 ---
 
@@ -162,14 +195,21 @@
 > 목표: 입력/저장/전송/의존성 전 구간에서 최소한의 보안 기준을 충족한다.
 
 ### 입력 검증 (Input Validation) - Tier 1: 필수
-- [ ] **파일 업로드 검증**: 이미지 파일의 MIME 타입/확장자/매직 바이트를 검증해야 한다.
-- [ ] **파일 크기 제한**: 업로드 크기 상한(예: 10MB)을 설정해야 한다.
-- [ ] **경로 정규화**: `imagePath` 입력은 허용된 디렉토리 하위 경로만 허용해야 한다. (Path Traversal 방지)
+- [ ] **[MCP]** `context7`으로 이미지 파일 매직 바이트를 활용한 완벽한 확장자 위조 탐지 기법 리서치
+- [ ] **파일 업로드 검증**: 
+  - [ ] [TDD] .txt 파일을 .jpg로 속여 업로드 시 차단되는지 테스트 (Red)
+  - [ ] MIME 타입/매직 바이트 기반 물리적 검증 로직 구현 (Green)
+- [ ] **경로 정규화**: 
+  - [ ] [TDD] `../../etc/passwd`와 같은 Path Traversal 공격 시 차단 테스트 (Red)
+  - [ ] 입력 경로 정규화 및 화이트리스트 디렉토리 체크 구현 (Green)
 
 ### 저장/무결성 (Storage & Integrity) - Tier 1: 필수
-- [ ] **Atomic Write**: 결과 파일 저장 시 `.tmp` → `rename` 방식을 사용해야 한다. (Race Condition 방지)
-- [ ] **해시 무결성**: 전처리 결과물에 대해 SHA-256 해시를 저장/검증해야 한다.
-- [ ] **보관 정책**: 업로드/결과 파일의 보관 기간 및 삭제 정책을 정의해야 한다.
+- [ ] **Atomic Write & Atomic Delete**: 
+  - [ ] [TDD] 저장/삭제 중 예상치 못한 중단 시 데이터 불일치 여부 테스트 (Red)
+  - [ ] `.tmp` → `rename` 패턴 및 원자적 삭제 로직 보완 (Green)
+- [ ] **해시 무결성**: 
+  - [ ] [TDD] 결과 파일 변조 시 캐시 매칭 실패 및 재분석 트리거 테스트 (Red)
+  - [ ] SHA-256 해시 저장 및 무결성 검증 자동화 (Green)
 
 ### 전송 보안 (Transport Security) - Tier 2: 권장
 - [ ] **외부 HTTPS**: Frontend ↔ API Gateway는 HTTPS를 사용해야 한다.
@@ -188,10 +228,28 @@
 ## 🧪 Cross-Cutting Concerns: Traffic & Load Testing
 > 목표: 서비스의 안정성을 검증하고, 대량의 로그를 생성하여 시스템의 한계를 테스트한다.
 
-### Traffic Generation (트래픽 생성) - Phase 2~3 (로깅 검증용)
-- [ ] **Node.js Traffic Bot**: `axios`와 `setInterval`을 이용해 주기적으로 `GET /health` 및 `POST /analyze` 요청을 보내는 경량 봇을 구현해야 한다.
-- [ ] **성능 측정용 대량 로그**: 봇을 통해 분당 100회 이상의 요청을 발생시켜 `spdlog`의 파일 회전(10MB) 기능을 검증해야 한다.
+### Traffic Generation (트래픽 생성) - Phase 3~4 (검증용)
+- [ ] **[MCP]** `sequential-thinking`을 사용한 대량 로그 발생 시 파일 I/O 병목 및 시스템 영향도 분석
+- [ ] **Node.js Traffic Bot**: 
+  - [ ] [TDD] 봇 가동 시 로그 파일 크기 증가 및 로테이션 발동 여부 테스트 (Red)
+  - [ ] `axios` 기반 주기적 요청 자동화 스크립트 작성 (Green)
 
-### Load Testing (부하 테스트) - Phase 4~5 (성능 최적화용)
-- [ ] **k6 도입**: 초당 수천 건의 동시 접속(VU)을 처리할 수 있는 전문 부하 테스트 도구를 선정해야 한다.
-- [ ] **성능 벤치마크 (Target: < 100ms)**: k6를 통해 전처리 및 추론 파이프라인의 응답 시간을 측정하고 최적화 근거를 마련해야 한다.
+### Load Testing (부하 테스트) - Phase 5 (최종 성능)
+- [ ] **k6 부하 테스트**: 
+  - [ ] [TDT] 동시 접속자 100명 달성 시 응답 지연(P95) 기준 미달 시 실패 처리 (Red)
+  - [ ] k6 시나리오 작성 및 결과 벤치마크 리포트 생성 (Green)
+
+---
+
+## 🎓 Phase 6: System Reliability & Chaos Engineering (Apr ~ Aug)
+> **Goal**: 개별 모듈의 Deep Dive(Phase 3,4)가 끝난 후, 전체 시스템 차원의 안정성과 복구 능력을 검증합니다.
+
+### 🛡️ Reliability & Resilience (복구 탄력성)
+- [ ] **[MCP]** `sequential-thinking`을 사용하여 특정 서비스 지연이 전체 시스템의 '연쇄적 중단(Cascading Failure)'을 일으키는지 분석
+- [ ] **장애 복구(Failover) 시나리오**: 
+  - [ ] [TDD] C++ 서버 가용 불능 시 Node.js Gateway의 Circuit Breaker 오픈 및 대체 메시지 반환 테스트 (Red)
+  - [ ] 재시도(Retry) 및 서킷 브레이커 로직 구현 (Green)
+- [ ] **Chaos Testing**: 
+  - [ ] [TDD] 런타임에 임의의 서비스 강제 종료 시 데이터 유실 없이 자동 복구 테스트 (Red)
+  - [ ] Docker Compose 자동 복구(restart) 및 상태 전파 확인 (Green)
+
