@@ -20,6 +20,16 @@ add_executable(preprocess_server src/main.cpp src/image_processor.cpp src/utils/
 target_link_libraries(preprocess_server PRIVATE Crow::Crow asio::asio Threads::Threads ${OpenCV_LIBS} spdlog::spdlog)
 target_include_directories(preprocess_server PRIVATE src)
 
+# Week 3 Manual Test Executable
+add_executable(test_week3 src/test_week3.cpp src/image_processor.cpp)
+target_link_libraries(test_week3 PRIVATE ${OpenCV_LIBS})
+target_include_directories(test_week3 PRIVATE src)
+
+# Week 3 Pipeline Test
+add_executable(test_pipeline src/test_pipeline.cpp src/image_processor.cpp)
+target_link_libraries(test_pipeline PRIVATE ${OpenCV_LIBS})
+target_include_directories(test_pipeline PRIVATE src)
+
 # Testing
 enable_testing()
 

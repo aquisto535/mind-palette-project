@@ -1,5 +1,5 @@
 {
-  "tests": 17,
+  "tests": 30,
   "name": "AllTests",
   "testsuites": [
     {
@@ -114,6 +114,77 @@
           "name": "PreservesExtension",
           "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
           "line": 219
+        }
+      ]
+    },
+    {
+      "name": "AdvancedImageProcessorTest",
+      "tests": 13,
+      "testsuite": [
+        {
+          "name": "RemoveBackground_ReturnsNonEmptyMask",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
+          "line": 251
+        },
+        {
+          "name": "RemoveBackground_MaskIsSingleChannel",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
+          "line": 258
+        },
+        {
+          "name": "RemoveBackground_MaskHasForegroundPixels",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
+          "line": 264
+        },
+        {
+          "name": "RemoveBackground_EmptyInputReturnsEmpty",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
+          "line": 272
+        },
+        {
+          "name": "DetectEdges_ReturnsNonEmptyOutput",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
+          "line": 281
+        },
+        {
+          "name": "DetectEdges_OutputIsSingleChannel",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
+          "line": 287
+        },
+        {
+          "name": "DetectEdges_DetectsRectangleEdges",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
+          "line": 293
+        },
+        {
+          "name": "DetectEdges_HigherThresholdFewerEdges",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
+          "line": 301
+        },
+        {
+          "name": "EnhanceContours_ReturnsNonEmptyOutput",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
+          "line": 314
+        },
+        {
+          "name": "EnhanceContours_ClosesSmallGaps",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
+          "line": 324
+        },
+        {
+          "name": "Binarize_ReturnsNonEmptyOutput",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
+          "line": 340
+        },
+        {
+          "name": "Binarize_OutputIsSingleChannel",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
+          "line": 346
+        },
+        {
+          "name": "Binarize_OnlyContainsBinaryValues",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
+          "line": 352
         }
       ]
     }

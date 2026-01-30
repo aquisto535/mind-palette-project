@@ -223,6 +223,150 @@ TEST(GenerateOutputPathTest, PreservesExtension) {
     EXPECT_TRUE(result.find(".png") != std::string::npos);
 }
 
+// ============================================================================
+// Week 3: Advanced Image Processing Tests (TDD Red Phase)
+// ============================================================================
+
+class AdvancedImageProcessorTest : public ::testing::Test {
+protected:
+    void SetUp() override {
+        // Create a test image with distinct foreground (center) and background (edges)
+        // Simulates a child's drawing on white paper
+        testImage = cv::Mat(512, 512, CV_8UC3, cv::Scalar(255, 255, 255)); // White background
+        
+        // Draw a colored rectangle in the center (simulating foreground)
+        cv::rectangle(testImage, cv::Rect(100, 100, 312, 312), cv::Scalar(0, 0, 255), -1);
+        
+        // Create grayscale version for edge detection tests
+        cv::cvtColor(testImage, grayscaleImage, cv::COLOR_BGR2GRAY);
+    }
+    
+    cv::Mat testImage;
+    cv::Mat grayscaleImage;
+    ImageProcessor processor;
+};
+
+// --- RemoveBackground Tests ---
+
+TEST_F(AdvancedImageProcessorTest, RemoveBackground_ReturnsNonEmptyMask) {
+    // GrabCut should return a valid foreground mask
+    cv::Mat mask = processor.RemoveBackground(testImage);
+    
+    EXPECT_FALSE(mask.empty());
+}
+
+TEST_F(AdvancedImageProcessorTest, RemoveBackground_MaskIsSingleChannel) {
+    cv::Mat mask = processor.RemoveBackground(testImage);
+    
+    EXPECT_EQ(mask.channels(), 1);
+}
+
+TEST_F(AdvancedImageProcessorTest, RemoveBackground_MaskHasForegroundPixels) {
+    cv::Mat mask = processor.RemoveBackground(testImage);
+    
+    // Count foreground pixels (GC_FGD=1 or GC_PR_FGD=3)
+    int fgCount = cv::countNonZero(mask);
+    EXPECT_GT(fgCount, 0);
+}
+
+TEST_F(AdvancedImageProcessorTest, RemoveBackground_EmptyInputReturnsEmpty) {
+    cv::Mat empty;
+    cv::Mat mask = processor.RemoveBackground(empty);
+    
+    EXPECT_TRUE(mask.empty());
+}
+
+// --- DetectEdges Tests ---
+
+TEST_F(AdvancedImageProcessorTest, DetectEdges_ReturnsNonEmptyOutput) {
+    cv::Mat edges = processor.DetectEdges(grayscaleImage);
+    
+    EXPECT_FALSE(edges.empty());
+}
+
+TEST_F(AdvancedImageProcessorTest, DetectEdges_OutputIsSingleChannel) {
+    cv::Mat edges = processor.DetectEdges(grayscaleImage);
+    
+    EXPECT_EQ(edges.channels(), 1);
+}
+
+TEST_F(AdvancedImageProcessorTest, DetectEdges_DetectsRectangleEdges) {
+    cv::Mat edges = processor.DetectEdges(grayscaleImage);
+    
+    // Rectangle edges should be detected
+    int edgePixels = cv::countNonZero(edges);
+    EXPECT_GT(edgePixels, 100); // At least some edges detected
+}
+
+TEST_F(AdvancedImageProcessorTest, DetectEdges_HigherThresholdFewerEdges) {
+    cv::Mat edgesLow = processor.DetectEdges(grayscaleImage, 30, 90);
+    cv::Mat edgesHigh = processor.DetectEdges(grayscaleImage, 100, 200);
+    
+    int countLow = cv::countNonZero(edgesLow);
+    int countHigh = cv::countNonZero(edgesHigh);
+    
+    // Higher threshold should detect fewer edges
+    EXPECT_GE(countLow, countHigh);
+}
+
+// --- EnhanceContours Tests ---
+
+TEST_F(AdvancedImageProcessorTest, EnhanceContours_ReturnsNonEmptyOutput) {
+    // Create simple binary image for morphology test
+    cv::Mat binary = cv::Mat::zeros(512, 512, CV_8UC1);
+    cv::rectangle(binary, cv::Rect(100, 100, 312, 312), cv::Scalar(255), 1);
+    
+    cv::Mat enhanced = processor.EnhanceContours(binary);
+    
+    EXPECT_FALSE(enhanced.empty());
+}
+
+TEST_F(AdvancedImageProcessorTest, EnhanceContours_ClosesSmallGaps) {
+    // Create binary image with a small gap
+    cv::Mat binary = cv::Mat::zeros(512, 512, CV_8UC1);
+    cv::line(binary, cv::Point(100, 256), cv::Point(250, 256), cv::Scalar(255), 2);
+    cv::line(binary, cv::Point(254, 256), cv::Point(400, 256), cv::Scalar(255), 2); // 4px gap
+    
+    int beforeCount = cv::countNonZero(binary);
+    cv::Mat enhanced = processor.EnhanceContours(binary, 5);
+    int afterCount = cv::countNonZero(enhanced);
+    
+    // MORPH_CLOSE should fill the gap, resulting in more or equal white pixels
+    EXPECT_GE(afterCount, beforeCount);
+}
+
+// --- Binarize Tests ---
+
+TEST_F(AdvancedImageProcessorTest, Binarize_ReturnsNonEmptyOutput) {
+    cv::Mat binary = processor.Binarize(grayscaleImage);
+    
+    EXPECT_FALSE(binary.empty());
+}
+
+TEST_F(AdvancedImageProcessorTest, Binarize_OutputIsSingleChannel) {
+    cv::Mat binary = processor.Binarize(grayscaleImage);
+    
+    EXPECT_EQ(binary.channels(), 1);
+}
+
+TEST_F(AdvancedImageProcessorTest, Binarize_OnlyContainsBinaryValues) {
+    cv::Mat binary = processor.Binarize(grayscaleImage);
+    
+    // All pixel values should be either 0 or 255
+    double minVal, maxVal;
+    cv::minMaxLoc(binary, &minVal, &maxVal);
+    
+    EXPECT_GE(minVal, 0);
+    EXPECT_LE(maxVal, 255);
+    
+    // Check that non-zero values are exactly 255
+    cv::Mat nonZero;
+    cv::threshold(binary, nonZero, 1, 255, cv::THRESH_BINARY);
+    cv::Mat diff;
+    cv::absdiff(binary, nonZero, diff);
+    EXPECT_EQ(cv::countNonZero(diff), 0);
+}
+
 int main(int argc, char **argv) {
     testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
