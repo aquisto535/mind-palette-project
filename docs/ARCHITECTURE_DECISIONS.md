@@ -1302,7 +1302,143 @@ Week 4: 성능 최적화
 
 ---
 
-**마지막 업데이트**: 2026-02-07  
+## ADR-012: Git Workflow로 GitHub Flow (Feature Branch + PR) 채택
+
+### 상태
+✅ **Accepted** (2026-02)
+
+### 컨텍스트 (Context)
+프로젝트의 Git 브랜치 전략을 결정해야 합니다.  
+주요 고려사항:
+- **1인 개발** (현재) + 협업 가능성 (미래)
+- **TDD 중심 개발**: Red → Green → Refactor 사이클
+- **포트폴리오 목적**: 명확한 커밋 이력과 사고 과정 가시화 필요
+- **Phase별 점진적 개발**: Phase 3(C++), Phase 4(Python) 순차 진행
+- **CI/CD 통합**: GitHub Actions 이미 구축됨
+
+주요 후보: **Git Flow**, **GitHub Flow**, **Trunk-Based Development**
+
+### 의사결정 (Decision)
+**GitHub Flow (Feature Branch + Pull Request)** 방식을 채택합니다.
+
+### 근거 (Rationale)
+
+#### 1️⃣ 세 가지 워크플로우 비교
+
+| 기준 | Git Flow | **GitHub Flow** | Trunk-Based |
+|------|----------|-----------------|-------------|
+| **브랜치 타입** | 5가지 (main, develop, feature, release, hotfix) | **2가지 (main, feature/*)** | 1가지 (main + 초단기 feature) |
+| **학습 곡선** | 복잡 (10일+) | **간단 (1-2일)** ⭐ | 어려움 (숙련 필요) |
+| **TDD 호환성** | 보통 | **완벽** ⭐ | 충돌 가능 |
+| **1인 개발 적합성** | 과도함 | **최적** ⭐ | 부담스러움 |
+| **포트폴리오 가시성** | 보통 | **우수** ⭐ | 낮음 (커밋 이력 추적 어려움) |
+| **향후 협업 확장성** | 우수 | **우수** ⭐ | 보통 |
+| **CI/CD 통합** | 복잡 | **자연스러움** ⭐ | 매우 자연스러움 |
+| **릴리즈 관리** | ✅ 우수 (별도 브랜치) | 보통 (태그 기반) | 어려움 |
+
+#### 2️⃣ TDD와의 완벽한 궁합
+```
+[RED] 테스트 작성
+   ↓ (커밋: test: add filter tests)
+[GREEN] 최소 구현
+   ↓ (커밋: feat: implement filter)
+[REFACTOR] 리팩터링
+   ↓ (커밋: refactor: extract helper)
+[PR] 리뷰 및 머지
+```
+→ **TDD 사이클 하나 = Feature Branch 하나**로 자연스럽게 매핑됨
+
+#### 3️⃣ 포트폴리오 효과
+- **PR 이력**: "이 사람이 어떻게 문제를 해결하는가"를 명확히 보여줌
+- **Self-Review**: 리뷰어가 없어도 PR 설명으로 사고 과정 문서화
+- **Draft PR → Ready for Review**: 진행 상황을 투명하게 공개
+
+#### 4️⃣ 미래 확장성
+- 협업자 추가 시 추가 학습 없음 (오픈소스 기여 방식과 동일)
+- 대부분의 현대 스타트업이 사용하는 표준 방식
+- GitHub 네이티브 워크플로우 (플랫폼 기능 최대 활용)
+
+### 대안 및 트레이드오프 (Alternatives)
+
+#### Git Flow (거부됨)
+- ✅ **장점**: 
+  - 여러 버전 동시 지원 가능 (v1.0 유지보수 + v2.0 개발)
+  - 릴리즈 프로세스가 매우 체계적
+  - 대규모 팀에 적합
+- ❌ **Rejected**: 
+  - **과도한 브랜치 관리**: `develop`, `release/*`, `hotfix/*` 브랜치가 1인 개발에는 불필요
+  - **Phase 순차 개발**: Phase 3, Phase 4를 순차 개발하므로 동시 버전 관리 불필요
+  - **배포 전략 불일치**: Docker Compose로 단일 스택 배포하므로 `release` 브랜치 별도 관리 실익 없음
+  - **학습 및 관리 비용**: 5가지 브랜치 타입 학습 및 관리 오버헤드
+
+#### Trunk-Based Development (거부됨)
+- ✅ **장점**: 
+  - 병합 충돌 최소화
+  - 배포 속도 극대화 (하루 여러 번 배포)
+  - CI/CD와 완벽한 통합
+- ❌ **Rejected**: 
+  - **높은 숙련도 요구**: Feature Flag, 빈번한 통합 등 고급 기술 필요
+  - **TDD 사이클 충돌**: "몇 시간 내 머지" 권장하지만, TDD Red → Green → Refactor는 하루 이상 소요 가능
+  - **포트폴리오 가시성 감소**: 너무 빈번한 커밋으로 "무엇을 했는지" 추적 어려움
+  - **강력한 자동화 테스트 필수**: 모든 변경에 대한 완벽한 회귀 테스트 필요 (현재 구축 중)
+
+### 결론 (Consequences)
+
+#### ✅ 장점
+1. **학습 곡선**: 1-2일이면 숙달 가능
+2. **TDD 호환성**: Red/Green/Refactor → PR로 자연스럽게 매핑
+3. **포트폴리오 가치**: PR 이력이 명확한 스토리텔링 제공
+4. **협업 확장성**: 표준 프로세스로 팀 확장 용이
+5. **CI/CD 통합**: GitHub Actions와 완벽한 궁합
+6. **적정 복잡도**: 과하지도 부족하지도 않은 균형
+
+#### ⚠️ 단점
+1. **여러 버전 동시 지원 어려움**: 
+   - **프로젝트 영향**: 현재 Phase 순차 개발로 불필요 → 영향 없음
+2. **릴리즈 관리 제한적**: 
+   - **대책**: Git 태그 + GitHub Releases로 충분히 대체 가능
+
+#### 🚀 워크플로우 실행 예시
+```bash
+# 1. 브랜치 생성
+git checkout -b feature/filter-strategy-pattern
+
+# 2. [RED] 테스트 작성
+git commit -m "test(preprocess): add filter tests (failing)"
+git push -u origin feature/filter-strategy-pattern
+
+# 3. GitHub에서 Draft PR 생성
+# Title: "[WIP] Filter Strategy Pattern"
+# Checklist: [x] Red, [ ] Green, [ ] Refactor
+
+# 4. [GREEN] 최소 구현
+git commit -m "feat(preprocess): implement filter strategy"
+git push
+
+# 5. [REFACTOR] 리팩터링
+git commit -m "refactor(preprocess): extract filter factory"
+git push
+
+# 6. Ready for Review → Merge
+
+# 7. 정리
+git checkout main
+git pull origin main
+git branch -d feature/filter-strategy-pattern
+```
+
+#### 📊 채용 시장 관점
+- **현업 표준**: 대부분의 스타트업 및 중소 기업에서 GitHub Flow 사용
+- **오픈소스**: GitHub 기반 오픈소스 프로젝트의 사실상 표준
+- **포트폴리오**: 면접관이 가장 친숙한 워크플로우 → 코드 리뷰 용이
+
+### 관련 문서
+- [Git Workflow 가이드](project-guides/git-workflow-guide.md)
+- [Git Workflow 실습 가이드](project-guides/git-workflow-integration.md)
+
+---
+
+**마지막 업데이트**: 2026-02-08  
 **작성자**: 정태민 
 **참고 문서**: 
 - [프로젝트 계획서](../아동_인물화_지능측정_AI_시스템_프로젝트_계획서.md)
