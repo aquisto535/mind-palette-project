@@ -59,6 +59,7 @@ inline ValidationResult ValidatePreprocessRequest(const crow::request& req) {
 }
 
 // Returns processed image or nullopt on failure
+// Pipeline: Preprocess → Canny → Morphology → Binarize (GrabCut excluded for performance)
 inline std::optional<cv::Mat> ProcessImageFile(const std::string& imagePath) {
     LOG_INFO("Processing file: {}", imagePath);
     
@@ -69,13 +70,41 @@ inline std::optional<cv::Mat> ProcessImageFile(const std::string& imagePath) {
         return std::nullopt;
     }
     
-    cv::Mat processed = processor.Preprocess(img);
-    if (processed.empty()) {
+    // Step 1: Preprocess (Letterbox resize + Denoise + Grayscale)
+    cv::Mat preprocessed = processor.Preprocess(img);
+    if (preprocessed.empty()) {
         LOG_ERROR("Preprocessing failed for: {}", imagePath);
         return std::nullopt;
     }
     
-    return processed;
+    // Step 2: Canny Edge Detection (threshold 50/150)
+    cv::Mat edges = processor.DetectEdges(preprocessed, 50, 150);
+    if (edges.empty()) {
+        LOG_ERROR("Edge detection failed for: {}", imagePath);
+        return std::nullopt;
+    }
+    
+    // Step 3: Morphology Enhancement (MORPH_CLOSE, kernelSize=3)
+    cv::Mat enhanced = processor.EnhanceContours(edges, 3);
+    if (enhanced.empty()) {
+        LOG_ERROR("Morphology enhancement failed for: {}", imagePath);
+        return std::nullopt;
+    }
+    
+    // Step 4: Adaptive Binarization
+    cv::Mat binarized = processor.Binarize(preprocessed);
+    if (binarized.empty()) {
+        LOG_ERROR("Binarization failed for: {}", imagePath);
+        return std::nullopt;
+    }
+    
+    // Step 5: Convert to RGB 3-channel (required for EfficientNet-B2)
+    // Binarized image is single-channel, convert to 3-channel for AI model compatibility
+    cv::Mat result;
+    cv::cvtColor(binarized, result, cv::COLOR_GRAY2BGR);
+    
+    LOG_INFO("Pipeline complete. Output: {}x{} (3-channel RGB)", result.cols, result.rows);
+    return result;
 }
 
 // Saves processed image with directory creation, returns success status
