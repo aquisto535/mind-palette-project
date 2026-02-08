@@ -21,7 +21,7 @@
 | ADR-010 | Transfer Learning 모델로 EfficientNet-B2 채택 | 2026-02 | ✅ Accepted |
 | ADR-011 | C++ 전처리 파이프라인 결과물 명세 | 2026-02 | ✅ Accepted |
 | ADR-012 | C++ 전처리 서버 개발 로드맵 (Week 2-4) | 2026-02 | ✅ Accepted |
-
+| ADR-013 | Git Workflow로 GitHub Flow (Feature Branch + PR) 채택 | 2026-02 | ✅ Accepted |
 ---
 
 ## ADR-001: 마이크로서비스 아키텍처 채택 (Node.js + C++ + Python)
@@ -1302,7 +1302,7 @@ Week 4: 성능 최적화
 
 ---
 
-## ADR-012: Git Workflow로 GitHub Flow (Feature Branch + PR) 채택
+## ADR-013: Git Workflow로 GitHub Flow (Feature Branch + PR) 채택
 
 ### 상태
 ✅ **Accepted** (2026-02)
