@@ -10,8 +10,7 @@ import { uploadImage } from './api/uploadApi';
 
 type Step = 'hero' | 'form' | 'guide' | 'upload' | 'loading' | 'result';
 
-function App() 
-{
+function App() {
   const [step, setStep] = useState<Step>('hero'); // 현재 진행 중인 단계
   const [childInfo, setChildInfo] = useState<ChildInfo | null>(null); // 자녀 정보
   const [file, setFile] = useState<File | null>(null); // 업로드된 파일
@@ -34,7 +33,7 @@ function App()
     try {
       // API 호출 (Mock 또는 실제)
       const analysisResult = await uploadImage(uploadedFile, childInfo);
-      
+
       setResult(analysisResult);
       setStep('result');
     } catch (error) {
@@ -54,18 +53,18 @@ function App()
 
   return (
     <div className="min-h-screen bg-white text-slate-900">
-      {step === 'hero' && <Hero onStart={() => setStep('form')} />} // 히어로 섹션
-      
-      {step === 'form' && <InfoForm onSubmit={handleInfoSubmit} />} // 정보 입력 섹션
-      
-      {step === 'guide' && <Guide onNext={() => setStep('upload')} />} // 가이드 섹션
-      
-      {step === 'upload' && <Upload onUpload={handleUpload} />} // 업로드 섹션
-      
-      {step === 'loading' && <Loading />} // 로딩 섹션
-      
+      {step === 'hero' && <Hero onStart={() => setStep('form')} />} {/* 히어로 섹션 */}
+
+      {step === 'form' && <InfoForm onSubmit={handleInfoSubmit} />} {/* 정보 입력 섹션 */}
+
+      {step === 'guide' && <Guide onNext={() => setStep('upload')} />} {/* 가이드 섹션 */}
+
+      {step === 'upload' && <Upload onUpload={handleUpload} />} {/* 업로드 섹션 */}
+
+      {step === 'loading' && <Loading />} {/* 로딩 섹션 */}
+
       {step === 'result' && childInfo && result && (
-        <Result 
+        <Result
           childName={childInfo.name} // 자녀 이름
           childGender={childInfo.gender} // 자녀 성별
           childAge={childInfo.birthDate} // Simply passing DOB string for now

@@ -12,13 +12,13 @@ export const Upload: React.FC<UploadProps> = ({ onUpload }) => {
 
   const handleFile = useCallback((file: File) => {
     if (!file.type.startsWith('image/')) return;
-    
+
     const reader = new FileReader();
     reader.onload = (e) => {
       setPreview(e.target?.result as string);
     };
     reader.readAsDataURL(file);
-    
+
     // Delay the actual upload callback slightly for UX
     setTimeout(() => onUpload(file), 1000);
   }, [onUpload]);
@@ -48,14 +48,14 @@ export const Upload: React.FC<UploadProps> = ({ onUpload }) => {
           그림을 올려주세요
         </h2>
 
-        <div
+        <label
+          htmlFor={preview ? undefined : 'file-input'}
           className={`relative aspect-square rounded-3xl border-4 border-dashed flex flex-col items-center justify-center transition-all cursor-pointer overflow-hidden
             ${isDragging ? 'border-primary bg-blue-50' : 'border-slate-200 bg-slate-50 hover:border-primary/50 hover:bg-slate-100'}
           `}
           onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
           onDragLeave={() => setIsDragging(false)}
           onDrop={onDrop}
-          onClick={() => !preview && document.getElementById('file-input')?.click()}
         >
           {preview ? (
             <div className="relative w-full h-full group">
@@ -81,7 +81,7 @@ export const Upload: React.FC<UploadProps> = ({ onUpload }) => {
               <p className="text-slate-400">JPG, PNG 파일 지원</p>
             </>
           )}
-          
+
           <input
             id="file-input"
             type="file"
@@ -89,7 +89,7 @@ export const Upload: React.FC<UploadProps> = ({ onUpload }) => {
             accept="image/*"
             onChange={onChange}
           />
-        </div>
+        </label>
       </motion.div>
     </section>
   );

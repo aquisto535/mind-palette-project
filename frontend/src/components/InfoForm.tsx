@@ -46,33 +46,31 @@ export const InfoForm: React.FC<InfoFormProps> = ({ onSubmit }) => {
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">성별</label>
+          <fieldset className="border-0 p-0 m-0">
+            <legend className="block text-sm font-medium text-slate-700 mb-2">성별</legend>
             <div className="flex gap-4">
               <button
                 type="button"
                 onClick={() => setInfo({ ...info, gender: 'male' })}
-                className={`flex-1 py-3 rounded-lg border transition-all ${
-                  info.gender === 'male'
-                    ? 'bg-blue-50 border-blue-500 text-blue-700 font-semibold'
-                    : 'border-slate-200 text-slate-500 hover:bg-slate-50'
-                }`}
+                className={`flex-1 py-3 rounded-lg border transition-all ${info.gender === 'male'
+                  ? 'bg-blue-50 border-blue-500 text-blue-700 font-semibold'
+                  : 'border-slate-200 text-slate-500 hover:bg-slate-50'
+                  }`}
               >
                 남자
               </button>
               <button
                 type="button"
                 onClick={() => setInfo({ ...info, gender: 'female' })}
-                className={`flex-1 py-3 rounded-lg border transition-all ${
-                  info.gender === 'female'
-                    ? 'bg-pink-50 border-pink-500 text-pink-700 font-semibold'
-                    : 'border-slate-200 text-slate-500 hover:bg-slate-50'
-                }`}
+                className={`flex-1 py-3 rounded-lg border transition-all ${info.gender === 'female'
+                  ? 'bg-pink-50 border-pink-500 text-pink-700 font-semibold'
+                  : 'border-slate-200 text-slate-500 hover:bg-slate-50'
+                  }`}
               >
                 여자
               </button>
             </div>
-          </div>
+          </fieldset>
 
           <div>
             <label htmlFor="birthDate" className="block text-sm font-medium text-slate-700 mb-2">생년월일</label>

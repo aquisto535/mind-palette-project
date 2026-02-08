@@ -8,11 +8,11 @@ vi.mock('../api/uploadApi', () => ({
   uploadImage: vi.fn(),
 }));
 
-// Mocking window.scrollTo
-window.scrollTo = vi.fn();
+// Mocking globalThis.scrollTo
+globalThis.scrollTo = vi.fn() as typeof globalThis.scrollTo;
 
-// Mocking window.alert
-window.alert = vi.fn();
+// Mocking globalThis.alert
+globalThis.alert = vi.fn();
 
 describe('App Integration Test', () => {
   beforeEach(() => {
@@ -21,10 +21,10 @@ describe('App Integration Test', () => {
 
   const navigateToUpload = () => {
     render(<App />);
-    
+
     // 1. Hero -> Form
     fireEvent.click(screen.getByText(/분석 시작하기/i));
-    
+
     // 2. Form -> Guide
     // InfoForm placeholders and labels
     fireEvent.change(screen.getByPlaceholderText(/예: 김사랑/i), {
@@ -34,7 +34,7 @@ describe('App Integration Test', () => {
     fireEvent.change(screen.getByLabelText(/생년월일/i), {
       target: { value: '2020-01-01' },
     });
-    
+
     fireEvent.click(screen.getByText(/다음 단계로/i));
 
     // 3. Guide -> Upload
@@ -97,12 +97,12 @@ describe('App Integration Test', () => {
 
     // Wait for error alert
     await waitFor(() => {
-      expect(window.alert).toHaveBeenCalledWith(expect.stringContaining('오류가 발생했습니다'));
+      expect(globalThis.alert).toHaveBeenCalledWith(expect.stringContaining('오류가 발생했습니다'));
     }, { timeout: 4000 });
 
     // Should be back to upload screen
     await waitFor(() => {
-       expect(screen.getByText(/그림을 올려주세요/i)).toBeInTheDocument();
+      expect(screen.getByText(/그림을 올려주세요/i)).toBeInTheDocument();
     });
   });
 });

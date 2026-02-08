@@ -22,12 +22,12 @@ export const Guide: React.FC<GuideProps> = ({ onNext }) => {
 
         <div className="grid md:grid-cols-3 gap-6 mb-12">
           {[
-            { icon: <Pencil className="w-8 h-8 text-blue-500" />, title: "전신 그리기", desc: "머리부터 발끝까지 사람의 전체 모습을 그려주세요." },
-            { icon: <Sun className="w-8 h-8 text-orange-500" />, title: "자유로운 표현", desc: "지우개를 사용해도 괜찮아요. 아이가 편안하게 그리도록 해주세요." },
-            { icon: <Smile className="w-8 h-8 text-green-500" />, title: "간섭 금지", desc: "부모님의 조언 없이 아이 스스로 그리게 해주세요." },
+            { id: 'guide-full-body', icon: <Pencil className="w-8 h-8 text-blue-500" />, title: "전신 그리기", desc: "머리부터 발끝까지 연필로 사람의 전체 모습을 그려주세요." },
+            { id: 'guide-free-expression', icon: <Sun className="w-8 h-8 text-orange-500" />, title: "자유로운 표현", desc: "지우개를 사용해도 괜찮아요. 아이가 편안하게 그리도록 해주세요." },
+            { id: 'guide-no-interference', icon: <Smile className="w-8 h-8 text-green-500" />, title: "간섭 금지", desc: "부모님의 조언 없이 아이 스스로 그리게 해주세요." },
           ].map((item, idx) => (
             <motion.div
-              key={idx}
+              key={item.id}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
