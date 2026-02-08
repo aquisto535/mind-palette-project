@@ -1,5 +1,5 @@
 {
-  "tests": 30,
+  "tests": 43,
   "name": "AllTests",
   "testsuites": [
     {
@@ -185,6 +185,95 @@
           "name": "Binarize_OnlyContainsBinaryValues",
           "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
           "line": 352
+        }
+      ]
+    },
+    {
+      "name": "FilterTest",
+      "tests": 7,
+      "testsuite": [
+        {
+          "name": "ResizeFilter_512x512",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
+          "line": 15
+        },
+        {
+          "name": "DenoiseFilter_AppliesBlur",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
+          "line": 26
+        },
+        {
+          "name": "GrayscaleFilter_ConvertsToSingleChannel",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
+          "line": 38
+        },
+        {
+          "name": "CannyFilter_DetectsEdges",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
+          "line": 47
+        },
+        {
+          "name": "BinarizeFilter_CreatesBinaryImage",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
+          "line": 59
+        },
+        {
+          "name": "MorphologyFilter_ClosesGaps",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
+          "line": 73
+        },
+        {
+          "name": "RgbConvertFilter_ConvertsTo3Channel",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
+          "line": 83
+        }
+      ]
+    },
+    {
+      "name": "FilterPipelineTest",
+      "tests": 3,
+      "testsuite": [
+        {
+          "name": "AddAndExecute",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
+          "line": 94
+        },
+        {
+          "name": "EmptyPipelineReturnsInput",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
+          "line": 107
+        },
+        {
+          "name": "SizeAndClear",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
+          "line": 116
+        }
+      ]
+    },
+    {
+      "name": "PipelineFactoryTest",
+      "tests": 2,
+      "testsuite": [
+        {
+          "name": "CreatePreprocessPipeline",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
+          "line": 131
+        },
+        {
+          "name": "CreateSketchPipeline",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
+          "line": 144
+        }
+      ]
+    },
+    {
+      "name": "OCPTest",
+      "tests": 1,
+      "testsuite": [
+        {
+          "name": "NewFilterWithoutModifyingExistingCode",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
+          "line": 171
         }
       ]
     }
