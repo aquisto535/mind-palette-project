@@ -18,6 +18,9 @@
 | ADR-007 | TDD 및 Tidy First 방법론 전면 도입 | 2025-11 | ✅ Accepted |
 | ADR-008 | gRPC 대신 HTTP REST API 사용 | 2025-11 | ✅ Accepted |
 | ADR-009 | AI 프레임워크로 PyTorch 채택 | 2025-11 | ✅ Accepted |
+| ADR-010 | Transfer Learning 모델로 EfficientNet-B2 채택 | 2026-02 | ✅ Accepted |
+| ADR-011 | C++ 전처리 파이프라인 결과물 명세 | 2026-02 | ✅ Accepted |
+| ADR-012 | C++ 전처리 서버 개발 로드맵 (Week 2-4) | 2026-02 | ✅ Accepted |
 
 ---
 
@@ -784,6 +787,7 @@ input_tensor.to(device)
 | **TDD + Tidy First** | 회귀 버그 방지 + 리팩터링 안전성 + 채용 시장 가치 |
 | **HTTP REST** | 빠른 개발 + 낮은 학습 곡선 + 범용성 + 디버깅 용이 |
 | **PyTorch 2.0** | torch.compile 성능 + 학계 표준 70% + ONNX 변환 + 빠른 개발 |
+| **EfficientNet-B2** | 파라미터 효율(9.2M) + ONNX/TensorRT 호환 + 스케치 도메인 Fine-tuning 적합 |
 
 ---
 
@@ -802,9 +806,506 @@ input_tensor.to(device)
 
 ---
 
-**마지막 업데이트**: 2026-01-11  
-**작성자**: Mind Palette 개발팀  
+## ADR-010: Transfer Learning 모델로 EfficientNet-B2 채택
+
+### 상태
+✅ **Accepted** (2026-02)
+
+### 컨텍스트 (Context)
+Python AI 서버에서 아동 인물화 지능 측정을 위한 딥러닝 모델을 구축해야 합니다.  
+주요 제약사항:
+- **도메인 특수성**: 아동 인물화 = 스케치/드로잉 형태 (사진과 다른 도메인)
+- **데이터 제한**: 의료/아동 도메인 특성상 대규모 데이터셋 확보 어려움
+- **하드웨어 제약**: RTX 3050 Ti (4GB VRAM)
+- **성능 목표**: 추론 속도 < 2초, ONNX/TensorRT 변환 필수
+- **출력 형태**: Multi-head 분류 (신체 부위별 + 세부 특징 점수)
+
+주요 후보: **EfficientNet**, **ConvNeXt**, **Vision Transformer (ViT)**, **ResNet**
+
+### 의사결정 (Decision)
+**EfficientNet-B2**를 1순위 Transfer Learning 백본(Backbone) 모델로 채택합니다.
+
+### 분석 방법론
+- **Context7**: PyTorch 공식 문서 및 torchvision pretrained 모델 조사
+- **Sequential Thinking**: 제1원칙(First Principles) 기반 체계적 분석
+
+### 근거 (Rationale)
+
+#### 1️⃣ Compound Scaling으로 파라미터 효율성 최고
+| 모델 | 파라미터 | ImageNet Top-1 | 추론속도 (512x512) |
+|------|----------|----------------|-------------------|
+| **EfficientNet-B2** | 9.2M | 80.1% | ~50ms |
+| ConvNeXt-Tiny | 28.6M | 82.1% | ~80ms |
+| ResNet-50 | 25.6M | 76.1% | ~40ms |
+| ViT-B/16 | 86.6M | 77.9% | ~120ms |
+
+- EfficientNet-B2는 ResNet-50의 **36% 파라미터**로 **4% 더 높은 정확도** 달성.
+- 깊이(Depth), 너비(Width), 해상도(Resolution)를 균형있게 스케일링하는 Compound Scaling 기법 적용.
+
+#### 2️⃣ Transfer Learning의 본질 (제1원칙)
+```
+┌─────────────────────────────────────────────────────────────────┐
+│               EfficientNet-B2 (사전학습)                          │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │  🔒 Feature Extractor (동결/재사용)                         │   │
+│  │  - Conv 레이어들                                           │   │
+│  │  - ImageNet 120만장으로 학습된 "눈"                         │   │
+│  │  - 엣지, 텍스처, 패턴 인식 능력 보유                          │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                         ↓                                       │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │  🔓 Classifier Head (새로 학습)                            │   │  ← 여기만 새로 구현!
+│  │  - Multi-head 분류기                                       │   │
+│  │  - 머리/몸통/팔다리 점수 출력                                │   │
+│  │  - 아동 인물화 데이터로 학습                                 │   │
+│  └──────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+- **핵심 원리**: 낮은 레이어(앞쪽)는 엣지/텍스처 같은 **범용적 특징** 학습 → 스케치 도메인에도 적용 가능
+- **비유**: "이미 훈련된 '눈'을 빌려와서, 아동 인물화를 판단하는 '두뇌'만 새로 학습시키는 것"
+
+#### 3️⃣ 적은 데이터 Fine-tuning에 강점
+```python
+# Stage 1: Feature Extractor 동결 (5~10 epochs)
+for param in model.features.parameters():
+    param.requires_grad = False
+
+# 새로운 Multi-head 분류기
+model.classifier = nn.ModuleDict({
+    'head': nn.Linear(1408, 64),       # 머리 점수
+    'body': nn.Linear(1408, 64),       # 몸통 점수
+    'limbs': nn.Linear(1408, 64),      # 팔/다리 점수
+    'total': nn.Linear(1408, 1)        # 종합 점수
+})
+
+# Stage 2: 상위 블록 언동결 (낮은 Learning Rate)
+for param in model.features[-3:].parameters():
+    param.requires_grad = True
+```
+
+#### 4️⃣ ONNX/TensorRT 변환 검증됨
+- EfficientNet 계열은 ONNX/TensorRT 변환 파이프라인이 안정적으로 검증됨.
+- FP16 양자화 시 정확도 손실 최소 (~0.1%).
+
+#### 5️⃣ 하드웨어 제약 충족
+| 지표 | EfficientNet-B2 | ViT-B/16 | 목표 |
+|------|-----------------|----------|------|
+| **VRAM 사용량** | ~1.5GB | ~4GB+ | < 4GB ✅ |
+| **추론 속도** | ~50ms | ~120ms | < 2000ms ✅ |
+
+### 대안 및 트레이드오프 (Alternatives)
+
+#### ConvNeXt-Tiny (2순위)
+- ✅ **장점**: 2022년 최신 CNN 아키텍처, ViT 수준 성능, 기하학적 특징 추출 강점.
+- ❌ **Rejected (1순위에서)**: 파라미터 28.6M으로 EfficientNet-B2(9.2M) 대비 3배.
+- **적합 시나리오**: 데이터가 충분하고 SOTA 성능이 중요한 경우.
+
+#### Vision Transformer (ViT-B/16)
+- ✅ **장점**: Self-Attention으로 전역 패턴 인식, 대규모 데이터에서 CNN 압도.
+- ❌ **Rejected**: 
+  - **과적합 위험**: 적은 데이터셋에서 학습 불안정 ⚠️ 치명적.
+  - **VRAM 제약**: 4GB VRAM에서 배치 크기 제한.
+  - **로컬 특징 약함**: 엣지/윤곽선 인식에 불리 (스케치 도메인에 부적합).
+
+#### ResNet-18/34/50
+- ✅ **장점**: 가장 안정적, 풍부한 레퍼런스, 빠른 추론 속도.
+- ❌ **Rejected**: 최신 모델 대비 성능 한계 (Top-1 3~5% 열위).
+- **적합 용도**: 학습/실험용 베이스라인으로만 권장.
+
+### 결론 (Consequences)
+- ✅ **장점**:
+  - 파라미터 효율성 (ResNet-50의 36%).
+  - 적은 데이터 Fine-tuning 안정성.
+  - ONNX/TensorRT 변환 검증됨.
+  - 4GB VRAM 제약 충족.
+  - Multi-head 분류 구조 용이.
+- ⚠️ **단점**:
+  - ImageNet 사전학습 → 스케치 도메인과 약간의 갭 존재 (데이터 증강으로 완화).
+  - ConvNeXt 대비 1~2% 낮은 정확도 (하지만 속도/효율성으로 보완).
+- **학습 자료**: 
+  - [상세 분석 문서](tech-references/AI/ai_model_recommendation.md)
+  - [PyTorch EfficientNet 공식 문서](https://pytorch.org/vision/stable/models/efficientnet.html)
+
+---
+
+## ADR-011: C++ 전처리 파이프라인 결과물 명세
+
+### 상태
+✅ **Accepted** (2026-02)
+
+### 컨텍스트 (Context)
+C++ 전처리 서버가 Python AI 서버에 전달할 이미지 형식을 결정해야 합니다.  
+주요 제약사항:
+- **AI 모델**: EfficientNet-B2 (ImageNet 사전학습, 3채널 RGB 입력)
+- **도메인**: 연필 스케치 (색상 없음, 선 정보가 핵심)
+- **성능 목표**: 전처리 < 100ms
+
+### 의사결정 (Decision)
+**Binarized 이미지를 RGB 3채널로 변환하여 출력**합니다.
+
+```
+파이프라인: Preprocess → Canny → Morphology → Binarize → RGB 변환
+```
+
+### 근거 (Rationale)
+
+#### 1️⃣ C++ vs Python 역할 분담 (제1원칙)
+| 담당 | 역할 | 이유 |
+|------|------|------|
+| **C++ 전처리** | 기하학적 처리 | 속도 최적화 (OpenCV) |
+| **Python AI** | 의미론적 처리 | 모델 의존적 연산 (PyTorch) |
+
+- **C++ 담당**: 리사이즈, 노이즈 제거, 에지 검출, 이진화
+- **Python 담당**: ImageNet 정규화, Tensor 변환, 추론
+- **경계 원칙**: 정규화는 모델 의존적이므로 Python에서 처리
+
+#### 2️⃣ 도메인 특수성: 연필 스케치
+```
+아동 인물화 특성:
+- 연필 + 지우개로 그림 (색상 정보 없음)
+- 선/윤곽선이 핵심 정보
+- 흰 종이 배경 (복잡한 배경 제거 불필요)
+```
+
+**결론**: 색상 보존보다 **선 정보 강화**가 중요 → Binarize 선택
+
+#### 3️⃣ EfficientNet-B2 입력 호환성
+```python
+# Python AI 전처리 (Context7 확인)
+transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+```
+
+- EfficientNet-B2는 **RGB 3채널** 입력 필요
+- Binarized 이미지(1채널)를 `cv::cvtColor(binarized, result, cv::COLOR_GRAY2BGR)`로 변환
+- 결과: 흰 배경(255, 255, 255) + 검은 선(0, 0, 0)
+
+#### 4️⃣ GrabCut 제외 결정
+| 알고리즘 | 처리 시간 | 필요성 |
+|----------|----------|--------|
+| GrabCut | 4,233ms | ❌ 불필요 (단순 배경) |
+| Canny | ~5ms | ✅ 에지 검출 |
+| Binarize | ~2ms | ✅ 선 강화 |
+
+- **GrabCut**: 복잡한 배경 제거용 → 흰 종이 배경에는 과도함
+- **성능**: 목표 100ms 대비 40배 초과 → 제외
+- **테스트 유지**: 기술 역량 증명을 위해 테스트 코드에는 보존
+
+### 파이프라인 상세
+
+```cpp
+// server.h - ProcessImageFile()
+
+// Step 1: Preprocess (Letterbox 512×512 + Denoise + Grayscale)
+cv::Mat preprocessed = processor.Preprocess(img);
+
+// Step 2: Canny Edge Detection (threshold 50/150)
+cv::Mat edges = processor.DetectEdges(preprocessed, 50, 150);
+
+// Step 3: Morphology Enhancement (MORPH_CLOSE, kernelSize=3)
+cv::Mat enhanced = processor.EnhanceContours(edges, 3);
+
+// Step 4: Adaptive Binarization
+cv::Mat binarized = processor.Binarize(preprocessed);
+
+// Step 5: Convert to RGB 3-channel
+cv::cvtColor(binarized, result, cv::COLOR_GRAY2BGR);
+```
+
+### 결과물 명세
+
+| 항목 | 값 | 이유 |
+|------|-----|------|
+| **파일 형식** | JPEG (품질 95) | 압축 효율, 범용 호환성 |
+| **해상도** | 512×512 | EfficientNet-B2 입력 크기 |
+| **리사이즈** | Letterbox (검은 패딩) | 비율 왜곡 방지 |
+| **채널** | 3채널 RGB | AI 모델 호환성 |
+| **내용** | 흰 배경 + 검은 선 | 선 정보 극대화 |
+
+### 대안 및 트레이드오프 (Alternatives)
+
+#### 옵션 A: 컬러 RGB 출력 (Preprocess 결과)
+- ✅ **장점**: 색상 정보 보존, 색연필/크레파스 그림에 적합
+- ❌ **Rejected**: 연필 스케치 도메인에서는 색상 정보 불필요
+
+#### 옵션 C: 둘 다 출력 (하이브리드)
+- ✅ **장점**: AI 모델이 멀티 입력 활용 가능
+- ❌ **Rejected**: 구현 복잡도 증가, 현재 단계에서 과도한 엔지니어링
+
+### 결론 (Consequences)
+- ✅ **장점**:
+  - 연필 스케치 도메인에 최적화
+  - EfficientNet-B2 입력 호환
+  - 처리 시간 < 100ms 달성
+  - 역할 분담 명확화 (C++ = 기하학, Python = 의미론)
+- ⚠️ **단점**:
+  - 색연필/크레파스 그림에는 부적합 (향후 옵션 A로 전환 가능)
+- **관련 문서**: 
+  - [GrabCut 제외 의사결정](troubleshooting/Week3_Issues.md)
+  - [ADR-010: EfficientNet-B2 채택](#adr-010-transfer-learning-모델로-efficientnet-b2-채택)
+
+---
+
+## ADR-012: C++ 전처리 서버 개발 로드맵 (Week 2-4)
+
+### 상태
+✅ **Accepted** (2026-02)
+
+### 컨텍스트 (Context)
+C++ 전처리 서버 개발을 단계별로 진행하며, 각 주차별 목표와 기술적 근거를 정의해야 합니다.  
+주요 고려사항:
+- **점진적 복잡도 증가**: 기본 → 고급 기능 순서로 구현
+- **포트폴리오 가치**: Modern C++ 스킬, 디자인 패턴, 동시성 역량 증명
+- **TDD 방법론**: 모든 기능은 테스트 우선 개발
+
+### 의사결정 (Decision)
+4주 간의 단계별 개발 로드맵을 정의합니다.
+
+---
+
+### Week 2: OpenCV 전처리(기본) + API
+
+#### 목표
+- OpenCV 도입 및 기본 이미지 처리 기능 구현
+- REST API 엔드포인트 설계 및 구현
+
+#### 기술적 배경
+
+| 요소 | 선택 | 근거 |
+|------|------|------|
+| **빌드 시스템** | vcpkg + CMake | Windows 환경에서 OpenCV 의존성 관리 용이 |
+| **이미지 크기** | 512×512 | EfficientNet-B2 입력 해상도 매칭 |
+| **노이즈 제거** | GaussianBlur + medianBlur | 고주파 노이즈 + salt-and-pepper 노이즈 동시 제거 |
+| **그레이스케일** | cvtColor(BGR2GRAY) | 후속 Canny 에지 검출 전처리 |
+
+#### 제1원칙 분석
+```
+문제: 이미지 전처리를 어떻게 시작할 것인가?
+
+분해:
+1. 입력 정규화 → 일관된 크기로 리사이즈
+2. 노이즈 제거 → 후속 처리 품질 향상
+3. 채널 변환 → 에지 검출 준비
+
+결론: 기본 전처리 3단계 (Resize → Denoise → Grayscale)
+```
+
+---
+
+### Week 3.5: 디자인 패턴 적용 및 아키텍처 리팩터링
+
+#### 목표
+- 유지보수성 향상을 위한 디자인 패턴 적용
+- Week 4 멀티스레딩 구현을 위한 기반 설계
+
+#### 기술적 배경
+
+| 패턴 | 적용 대상 | 근거 |
+|------|----------|------|
+| **Strategy Pattern** | 필터 시스템 | OCP(개방-폐쇄 원칙) 준수, 새 필터 추가 시 기존 코드 수정 불필요 |
+| **Composite Pattern** | 파이프라인 | 필터들을 동적으로 조합하여 파이프라인 구성 |
+| **Factory Pattern** | 파이프라인 생성 | 반복되는 생성 코드 제거, 사전 정의 파이프라인 |
+| **Producer-Consumer** | 태스크 큐 | Week 4 Thread Pool 기반 설계 |
+
+---
+
+#### 1️⃣ Strategy Pattern 선택 이유
+
+**문제**: 현재 `ImageProcessor`에 여러 필터 메서드가 있음
+```cpp
+// 현재 구조 (문제점)
+class ImageProcessor {
+    cv::Mat DetectEdges(...);     // Canny
+    cv::Mat EnhanceContours(...); // Morphology
+    cv::Mat Binarize(...);        // Threshold
+    // 새 필터 추가하려면? → 클래스 수정 필요 (OCP 위반)
+};
+```
+
+**해결**: 각 필터를 독립적인 객체로 분리
+```cpp
+// Strategy Pattern 적용 후
+class IFilter { virtual cv::Mat apply(...) = 0; };
+class CannyFilter : public IFilter { ... };
+class NewFilter : public IFilter { ... };  // 기존 코드 수정 없이 확장!
+```
+
+| 장점 | 설명 |
+|------|------|
+| **OCP 준수** | 새 필터 추가 시 기존 코드 수정 불필요 |
+| **단일 책임** | 각 필터가 하나의 역할만 담당 |
+| **테스트 용이** | 필터별 독립 테스트 가능 |
+
+---
+
+#### 2️⃣ Composite Pattern 선택 이유
+
+**문제**: 필터들을 순차적으로 조합해야 함
+```cpp
+// 현재: 하드코딩된 순서
+cv::Mat result = processor.Preprocess(img);
+result = processor.DetectEdges(result);
+result = processor.Binarize(result);
+// 순서 변경하려면? → 코드 수정 필요
+```
+
+**해결**: 필터들을 동적으로 조합하는 파이프라인
+```cpp
+// Composite Pattern 적용 후
+FilterPipeline pipeline;
+pipeline.add(std::make_unique<ResizeFilter>(512));
+pipeline.add(std::make_unique<CannyFilter>(50, 150));
+// 순서 변경? → 코드 수정 없이 add 순서만 변경
+cv::Mat result = pipeline.execute(input);
+```
+
+| 장점 | 설명 |
+|------|------|
+| **동적 조합** | 런타임에 필터 순서 변경 가능 |
+| **재사용성** | 같은 필터를 여러 파이프라인에서 재사용 |
+| **유연성** | 새 파이프라인 구성이 쉬움 |
+
+---
+
+#### 3️⃣ Factory Pattern 선택 이유
+
+**문제**: 자주 사용하는 필터 조합을 반복 생성해야 함
+```cpp
+// 매번 이렇게 생성?
+FilterPipeline pipeline;
+pipeline.add(std::make_unique<ResizeFilter>(512));
+pipeline.add(std::make_unique<DenoiseFilter>());
+pipeline.add(std::make_unique<GrayscaleFilter>());
+// ... 반복되는 보일러플레이트
+```
+
+**해결**: 사전 정의된 파이프라인을 팩토리로 생성
+```cpp
+// Factory Pattern 적용 후
+auto pipeline = PipelineFactory::createSketchPipeline();  // 한 줄로!
+cv::Mat result = pipeline.execute(input);
+```
+
+| 장점 | 설명 |
+|------|------|
+| **중복 제거** | 반복되는 생성 코드 제거 |
+| **일관성** | 같은 이름의 파이프라인은 항상 같은 구성 |
+| **유지보수** | 파이프라인 구성 변경은 팩토리만 수정 |
+
+---
+
+#### 4️⃣ Producer-Consumer Pattern 선택 이유
+
+**문제**: Week 4에서 멀티스레딩 구현 예정
+```cpp
+// 현재: 단일 스레드, 순차 처리
+for (auto& image : images) {
+    processImage(image);  // 하나씩 처리 (느림)
+}
+```
+
+**해결**: 작업 큐를 미리 설계해두기
+```cpp
+// Producer-Consumer 준비
+ITaskQueue<ImageTask> queue;  // 인터페이스 정의
+// Week 4에서 ThreadPool과 연동
+ThreadPool pool(4);
+pool.submitTo(queue);  // 4개 스레드가 큐에서 작업 가져감
+```
+
+| 장점 | 설명 |
+|------|------|
+| **Week 4 준비** | 멀티스레딩 기반 설계 미리 완료 |
+| **인터페이스 분리** | 단일 스레드 테스트 가능 (`SyncTaskQueue`) |
+| **확장성** | 나중에 `AsyncTaskQueue`로 교체 |
+
+---
+
+#### 포트폴리오 가치
+- **SOLID 원칙 적용**: OCP, SRP, DIP 준수 증명
+- **GoF 디자인 패턴**: Strategy, Composite, Factory 적용
+- **Modern C++ 스킬**: `std::unique_ptr`, `virtual`, interface 설계
+- **확장성**: 새로운 필터 추가 시 기존 코드 수정 없이 확장
+
+---
+
+### Week 4: 멀티스레딩/성능/품질
+
+#### 목표
+- Thread Pool 구현으로 병렬 처리 성능 향상
+- Atomic Write로 파일 무결성 보장
+- 성능 벤치마크 및 품질 게이트 구축
+
+#### 기술적 배경
+
+| 요소 | 선택 | 근거 |
+|------|------|------|
+| **Thread Pool** | `std::thread` + `condition_variable` | 표준 라이브러리만 사용, 외부 의존성 없음 |
+| **Atomic Write** | `.tmp` → `rename` 패턴 | 저장 중 프로세스 종료 시 파일 손상 방지 |
+| **성능 목표** | 전처리 < 100ms | AI 추론 시간 고려, 전체 파이프라인 < 2초 |
+
+#### Thread Pool 선택 이유
+```
+대안 분석:
+1. std::async          → 스레드 수 제어 불가, 오버헤드 발생 가능
+2. OpenMP             → 추가 의존성, 복잡한 설정
+3. Intel TBB          → 과도한 엔지니어링, 학습 비용 높음
+4. 직접 구현 (std::thread) → ✅ 표준 라이브러리, 스킬 증명, 제어력
+
+선택: 직접 구현 (std::thread)
+```
+
+#### Atomic Write 패턴
+```cpp
+// 위험: 직접 저장 (프로세스 종료 시 파일 손상)
+cv::imwrite("output.jpg", img);  // 저장 중 크래시 → 손상된 파일
+
+// 안전: Atomic Write 패턴
+cv::imwrite("output.jpg.tmp", img);           // 1. 임시 파일에 저장
+std::filesystem::rename("output.jpg.tmp",     // 2. 원자적 이름 변경
+                        "output.jpg");
+```
+
+#### 성능 벤치마크 계획
+| 스레드 수 | 예상 처리량 | 비고 |
+|----------|------------|------|
+| 1 | Baseline | 단일 스레드 |
+| 4 | ~3-4x | 일반 데스크톱 |
+| 8 | ~6-7x | 고성능 CPU |
+
+#### 포트폴리오 가치
+- **동시성 역량**: Thread Pool, mutex, condition_variable 활용
+- **데이터 무결성**: Atomic Write 패턴 적용
+- **성능 최적화**: 벤치마크 기반 성능 분석 및 튜닝
+
+---
+
+### 전체 로드맵 요약
+
+```
+Week 2: 기초 다지기
+└─ OpenCV 도입, REST API, 기본 전처리 (Resize/Denoise/Gray)
+
+Week 3: 기능 확장
+└─ GrabCut, Canny, Morphology, Binarize, RGB 변환
+
+Week 3.5: 아키텍처 개선
+└─ Strategy Pattern, Composite Pattern, OCP 준수
+
+Week 4: 성능 최적화
+└─ Thread Pool, Atomic Write, 벤치마크, 품질 게이트
+```
+
+- **관련 문서**: 
+  - [plan.md](../plan.md) - 전체 개발 계획
+  - [ADR-011: 전처리 파이프라인 명세](#adr-011-c-전처리-파이프라인-결과물-명세)
+
+---
+
+**마지막 업데이트**: 2026-02-07  
+**작성자**: 정태민 
 **참고 문서**: 
 - [프로젝트 계획서](../아동_인물화_지능측정_AI_시스템_프로젝트_계획서.md)
 - [개발 진행 상황](project-status/development_progress.md)
-- [C++ 개발자를 위한 Python 학습 가이드](methodology/PYTHON_FOR_CPP_DEVELOPERS.md) ⭐ **신규**
+- [C++ 개발자를 위한 Python 학습 가이드](methodology/PYTHON_FOR_CPP_DEVELOPERS.md)
+- [AI 모델 추천 상세 분석](tech-references/AI/ai_model_recommendation.md)
