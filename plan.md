@@ -65,31 +65,39 @@
 - [x] **노이즈 제거**: GaussianBlur + medianBlur가 적용되어야 한다.
 - [x] **그레이스케일 변환**: 후속 에지 검출을 위한 grayscale 이미지가 생성되어야 한다.
 
-### Week 3: 에지/배경 제거 고도화 (Advanced OpenCV + Deep Dive)
+### Week 3: 에지/배경 제거 고도화 (Advanced OpenCV + Deep Dive) ✅ **완료**
 - [x] **[MCP]** `sequential-thinking`을 사용하여 GrabCut vs DL 기반 배경 제거의 효율성 분석 (제1원칙)
-- [] **GrabCut 배경 제거 & 실험**: 
-  - [] [TDD] `image_processor_test.cpp`: GrabCut 초기 마스크 생성 및 유효성 검증 테스트 (Red)
-  - [] `image_processor.cpp`: GrabCut 알고리즘 기본 구현 (Green)
-  - [] **[Deep Dive] Optimization**: `iterCount`(1회 vs 5회)에 따른 수행 시간(ms)과 품질 차이를 주석으로 기록.
-- [] **정량적 특징 추출 (Features)**:
-  - [] **[MCP]** `context7`으로 Canny 알고리즘의 최신 최적화 파라미터 조사
-  - [] [TDD] Canny Threshold(low/high) 변화에 따른 엣지 검출 정량적 정확도 테스트 (Red)
-  - [ ] 필압 분석(히스토그램), 선 떨림 보정(Contour Moment) 등 수치적 특징 계산 로직 구현 (Green)
-- [ ] **하이브리드 결과 결합**: C++ 기하학적 특징 + AI 추론 결과 결합 로직 설계 및 테스트.
-- [] **윤곽선 강화**: 모폴로지 연산(MORPH_CLOSE 등) 적용 후 결과 무결성 테스트.
-- [] **이진화 및 모폴로지**: 이진화 처리 결과 저장 원자성(Atomicity) 확인.
+- [x] **GrabCut 배경 제거 & 실험**: 
+  - [x] [TDD] `image_processor_test.cpp`: GrabCut 초기 마스크 생성 및 유효성 검증 테스트 (Red)
+  - [x] `image_processor.cpp`: GrabCut 알고리즘 기본 구현 (Green)
+  - [x] **[Deep Dive] Optimization**: `iterCount`(1회 vs 5회)에 따른 수행 시간(ms)과 품질 차이를 주석으로 기록.
+  - [x] ⚠️ **의사결정**: 성능 4.2초 → 도메인 부적합 → 파이프라인 제외, 테스트 유지 (ADR-011)
+- [x] **Canny 에지 검출**:
+  - [x] **[MCP]** `context7`으로 Canny 알고리즘의 최신 최적화 파라미터 조사
+  - [x] [TDD] Canny Threshold(low/high) 변화에 따른 엣지 검출 정량적 정확도 테스트 (Red)
+  - [x] Canny 에지 검출 로직 구현 (Green)
+- [x] **윤곽선 강화**: 모폴로지 연산(MORPH_CLOSE) 적용 및 테스트 완료.
+- [x] **이진화**: Adaptive Threshold 적용 및 테스트 완료.
+- [x] **RGB 변환**: Binarized 이미지 → RGB 3채널 변환 (EfficientNet-B2 호환)
+- [x] **ADR-011 작성**: C++ 전처리 파이프라인 결과물 명세 문서화
+
+#### 연기된 항목 (Phase 4 또는 Week 4에서 처리)
+- [ ] **필압 분석(히스토그램)**: AI와 연계하여 Phase 4에서 구현
+- [ ] **선 떨림 보정(Contour Moment)**: AI 특징 추출과 통합하여 Phase 4에서 구현
+- [ ] **하이브리드 결과 결합**: C++ 기하학적 특징 + AI 추론 결과 → Phase 4 연동 시 설계
+- [ ] **Atomic Write**: Week 4에서 `.tmp` → `rename` 패턴 구현
 
 
 ### Week 3.5: 디자인 패턴 적용 및 아키텍처 리팩터링 (Architecture & Scalability)
-- [ ] **[MCP]** `context7`으로 Modern C++(C++17)에서의 Strategy Pattern 및 Factory Pattern 최적 구현 사례 리서치
-- [ ] **Strategy Pattern (Filter System)**:
-  - [ ] [Refactor] 기존 `if-else` 기반 필터 로직을 `IFilter` 인터페이스 및 구체 클래스(`BlurFilter`, `CannyFilter`)로 분리.
-  - [ ] [TDD] 새로운 필터 추가 시 기존 코드 수정 없이 확장 가능한지 검증하는 테스트 (OCP 준수 확인).
-- [ ] **Pipeline Composite Pattern**:
-  - [ ] [TDD] 여러 필터를 순차적으로 적용하는 `FilterPipeline` 클래스 구현 (Red).
-  - [ ] 동적으로 필터 순서를 조합(예: `Resize` -> `Blur` -> `Canny`)하여 실행하는 로직 구현 (Green).
-- [ ] **Producer-Consumer Pattern (Preparation)**:
-  - [ ] Week 4 멀티스레딩을 위한 `TaskQueue` 인터페이스 설계 및 단일 스레드 기반 모의 구현.
+- [x] **[MCP]** `context7`으로 Modern C++(C++17)에서의 Strategy Pattern 및 Factory Pattern 최적 구현 사례 리서치
+- [x] **Strategy Pattern (Filter System)**:
+  - [x] [Refactor] 기존 `if-else` 기반 필터 로직을 `IFilter` 인터페이스 및 구체 클래스(`BlurFilter`, `CannyFilter`)로 분리.
+  - [x] [TDD] 새로운 필터 추가 시 기존 코드 수정 없이 확장 가능한지 검증하는 테스트 (OCP 준수 확인).
+- [x] **Pipeline Composite Pattern**:
+  - [x] [TDD] 여러 필터를 순차적으로 적용하는 `FilterPipeline` 클래스 구현 (Red).
+  - [x] 동적으로 필터 순서를 조합(예: `Resize` -> `Blur` -> `Canny`)하여 실행하는 로직 구현 (Green).
+- [x] **Producer-Consumer Pattern (Preparation)**:
+  - [x] Week 4 멀티스레딩을 위한 `TaskQueue` 인터페이스 설계 및 단일 스레드 기반 모의 구현.
 
 ### Week 4: 멀티스레딩/성능/품질 (Concurrency Deep Dive)
 - [ ] **Thread Pool 구현 (std::thread)**: 
@@ -111,13 +119,14 @@
 - [ ] **FastAPI 서버 구축**: 
   - [ ] [TDD] `/health` 요청 시 200 OK와 모델 로딩 상태 반환 테스트 (Red)
   - [ ] FastAPI 기본 골격 및 헬스 체크 엔드포인트 구현 (Green)
-- [ ] **PyTorch 모델 구성**: 
-  - [ ] [TDD] 모델 가중치(`.pt`) 파일 무결성 확인 및 아키텍처 일치 테스트 (Red)
-  - [ ] ResNet/CNN 기반 모델 로드 클래스 작성 (Green)
-- [ ] **클래스 매핑 및 레이블링**: 
-  - [ ] [TDD] 출력 텐서 ↔ 레이블 명칭 변환 결과 정확도 테스트 (Red)
-  - [ ] 매핑 로직 및 후처리 클래스 구현 (Green)
-- [ ] **Toy Model (MVP)**: 단순한 CNN 모델(ResNet18 등)을 로드하여 더미 데이터를 추론할 수 있어야 한다.
+- [ ] **PyTorch 모델 구성 (EfficientNet-B2)**: 
+  - [ ] **[MCP]** `context7`으로 EfficientNet-B2의 Feature Extractor 레이어 구조 조사
+  - [ ] [TDD] 모델 가중치(`.pt`) 로드 및 아키텍처(Backbone + Heads) 검증 테스트 (Red)
+  - [ ] EfficientNet-B2 기반 Transfer Learning 모델 클래스 작성 (Green)
+- [ ] **Multi-head 분류 구조 구현**: 
+  - [ ] [TDD] 출력 텐서(머리/몸통/팔다리/종합)의 Shape 및 타입 검증 테스트 (Red)
+  - [ ] Feature Extractor 동결 및 Multi-head Classifier(Linear Layers) 구현 (Green)
+- [ ] **Toy Model (MVP)**: ImageNet Pretrained EfficientNet-B2를 로드하여 더미 데이터 추론 성공.
 - [ ] **E2E 연동**: Node.js ↔ C++(전처리) ↔ Python(추론) 전체 파이프라인 통합 테스트.
 
 ### Step 2: Universal Optimization (ONNX + Deep Dive)
