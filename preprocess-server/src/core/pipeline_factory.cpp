@@ -1,4 +1,4 @@
-#include "pipeline_factory.h"
+﻿#include "core/pipeline_factory.h"
 
 FilterPipeline PipelineFactory::createPreprocessPipeline(int targetSize) {
     FilterPipeline pipeline;
@@ -18,7 +18,7 @@ FilterPipeline PipelineFactory::createSketchPipeline(int targetSize) {
             .add(std::make_unique<GrayscaleFilter>())
             .add(std::make_unique<CannyFilter>(50, 150))
             .add(std::make_unique<MorphologyFilter>(3))
-            .add(std::make_unique<BinarizeFilter>())
+            .add(std::make_unique<InvertFilter>())
             .add(std::make_unique<RgbConvertFilter>());
     
     return pipeline;
@@ -32,3 +32,4 @@ FilterPipeline PipelineFactory::createEdgeDetectionPipeline() {
     
     return pipeline;
 }
+

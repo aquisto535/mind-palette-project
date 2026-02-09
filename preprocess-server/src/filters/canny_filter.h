@@ -1,6 +1,6 @@
-#pragma once
+﻿#pragma once
 
-#include "../filter.h"
+#include "core/filter.h"
 
 /**
  * @brief CannyFilter - Canny edge detection
@@ -16,3 +16,4 @@ private:
     double lowThreshold_;
     double highThreshold_;
 };
+

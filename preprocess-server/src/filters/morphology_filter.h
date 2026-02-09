@@ -1,6 +1,6 @@
-#pragma once
+﻿#pragma once
 
-#include "../filter.h"
+#include "core/filter.h"
 
 /**
  * @brief MorphologyFilter - Morphological operations (MORPH_CLOSE)
@@ -16,3 +16,4 @@ private:
     int kernelSize_;
     int operation_;
 };
+

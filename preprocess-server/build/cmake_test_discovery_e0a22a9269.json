@@ -1,5 +1,5 @@
 {
-  "tests": 43,
+  "tests": 58,
   "name": "AllTests",
   "testsuites": [
     {
@@ -8,27 +8,27 @@
       "testsuite": [
         {
           "name": "RootRoute",
-          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
           "line": 14
         },
         {
           "name": "HealthCheck",
-          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
           "line": 29
         },
         {
           "name": "Preprocess_MissingImagePath_Returns400",
-          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
           "line": 44
         },
         {
           "name": "Preprocess_EmptyImagePath_Returns400",
-          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
           "line": 60
         },
         {
           "name": "Preprocess_NonExistentFile_Returns404",
-          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
           "line": 76
         }
       ]
@@ -39,27 +39,27 @@
       "testsuite": [
         {
           "name": "ValidRequest_ReturnsSuccess",
-          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
           "line": 96
         },
         {
           "name": "InvalidJSON_Returns400",
-          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
           "line": 107
         },
         {
           "name": "MissingImagePath_Returns400",
-          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
           "line": 118
         },
         {
           "name": "EmptyImagePath_Returns400",
-          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
           "line": 129
         },
         {
           "name": "NonExistentFile_Returns404",
-          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
           "line": 140
         }
       ]
@@ -70,7 +70,7 @@
       "testsuite": [
         {
           "name": "CreatesValidJsonResponse",
-          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
           "line": 151
         }
       ]
@@ -81,22 +81,22 @@
       "testsuite": [
         {
           "name": "Preprocess_ResizesTo512x512",
-          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
           "line": 177
         },
         {
           "name": "Preprocess_OutputIsGrayscale",
-          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
           "line": 184
         },
         {
           "name": "Preprocess_EmptyInputReturnsEmpty",
-          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
           "line": 191
         },
         {
           "name": "Load_NonExistentFileReturnsEmpty",
-          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
           "line": 198
         }
       ]
@@ -107,12 +107,12 @@
       "testsuite": [
         {
           "name": "GeneratesCorrectPath",
-          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
           "line": 208
         },
         {
           "name": "PreservesExtension",
-          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
           "line": 219
         }
       ]
@@ -123,109 +123,114 @@
       "testsuite": [
         {
           "name": "RemoveBackground_ReturnsNonEmptyMask",
-          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
           "line": 251
         },
         {
           "name": "RemoveBackground_MaskIsSingleChannel",
-          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
           "line": 258
         },
         {
           "name": "RemoveBackground_MaskHasForegroundPixels",
-          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
           "line": 264
         },
         {
           "name": "RemoveBackground_EmptyInputReturnsEmpty",
-          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
           "line": 272
         },
         {
           "name": "DetectEdges_ReturnsNonEmptyOutput",
-          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
           "line": 281
         },
         {
           "name": "DetectEdges_OutputIsSingleChannel",
-          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
           "line": 287
         },
         {
           "name": "DetectEdges_DetectsRectangleEdges",
-          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
           "line": 293
         },
         {
           "name": "DetectEdges_HigherThresholdFewerEdges",
-          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
           "line": 301
         },
         {
           "name": "EnhanceContours_ReturnsNonEmptyOutput",
-          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
           "line": 314
         },
         {
           "name": "EnhanceContours_ClosesSmallGaps",
-          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
           "line": 324
         },
         {
           "name": "Binarize_ReturnsNonEmptyOutput",
-          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
           "line": 340
         },
         {
           "name": "Binarize_OutputIsSingleChannel",
-          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
           "line": 346
         },
         {
           "name": "Binarize_OnlyContainsBinaryValues",
-          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
           "line": 352
         }
       ]
     },
     {
       "name": "FilterTest",
-      "tests": 7,
+      "tests": 8,
       "testsuite": [
         {
           "name": "ResizeFilter_512x512",
-          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
-          "line": 15
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_filters.cpp",
+          "line": 16
         },
         {
           "name": "DenoiseFilter_AppliesBlur",
-          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
-          "line": 26
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_filters.cpp",
+          "line": 27
         },
         {
           "name": "GrayscaleFilter_ConvertsToSingleChannel",
-          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
-          "line": 38
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_filters.cpp",
+          "line": 39
         },
         {
           "name": "CannyFilter_DetectsEdges",
-          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
-          "line": 47
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_filters.cpp",
+          "line": 48
         },
         {
           "name": "BinarizeFilter_CreatesBinaryImage",
-          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
-          "line": 59
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_filters.cpp",
+          "line": 60
         },
         {
           "name": "MorphologyFilter_ClosesGaps",
-          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
-          "line": 73
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_filters.cpp",
+          "line": 74
         },
         {
           "name": "RgbConvertFilter_ConvertsTo3Channel",
-          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
-          "line": 83
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_filters.cpp",
+          "line": 84
+        },
+        {
+          "name": "InvertFilter_InvertsColors",
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_filters.cpp",
+          "line": 93
         }
       ]
     },
@@ -235,18 +240,18 @@
       "testsuite": [
         {
           "name": "AddAndExecute",
-          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
-          "line": 94
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_filters.cpp",
+          "line": 106
         },
         {
           "name": "EmptyPipelineReturnsInput",
-          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
-          "line": 107
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_filters.cpp",
+          "line": 119
         },
         {
           "name": "SizeAndClear",
-          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
-          "line": 116
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_filters.cpp",
+          "line": 128
         }
       ]
     },
@@ -256,13 +261,13 @@
       "testsuite": [
         {
           "name": "CreatePreprocessPipeline",
-          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
-          "line": 131
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_filters.cpp",
+          "line": 143
         },
         {
           "name": "CreateSketchPipeline",
-          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
-          "line": 144
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_filters.cpp",
+          "line": 156
         }
       ]
     },
@@ -272,8 +277,90 @@
       "testsuite": [
         {
           "name": "NewFilterWithoutModifyingExistingCode",
-          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
-          "line": 171
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_filters.cpp",
+          "line": 183
+        }
+      ]
+    },
+    {
+      "name": "ThreadPoolTest",
+      "tests": 8,
+      "testsuite": [
+        {
+          "name": "CreateAndDestroy",
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_thread_pool.cpp",
+          "line": 9
+        },
+        {
+          "name": "EnqueueSingleTask",
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_thread_pool.cpp",
+          "line": 14
+        },
+        {
+          "name": "EnqueueMultipleTasks",
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_thread_pool.cpp",
+          "line": 26
+        },
+        {
+          "name": "NoDataRace",
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_thread_pool.cpp",
+          "line": 43
+        },
+        {
+          "name": "NoDeadlock",
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_thread_pool.cpp",
+          "line": 60
+        },
+        {
+          "name": "EmptyPoolShutdown",
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_thread_pool.cpp",
+          "line": 83
+        },
+        {
+          "name": "ZeroThreadsFallback",
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_thread_pool.cpp",
+          "line": 90
+        },
+        {
+          "name": "WorkDistribution",
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_thread_pool.cpp",
+          "line": 98
+        }
+      ]
+    },
+    {
+      "name": "AtomicWriterTest",
+      "tests": 6,
+      "testsuite": [
+        {
+          "name": "WriteText_CreatesFile",
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_atomic_writer.cpp",
+          "line": 26
+        },
+        {
+          "name": "WriteText_NoTmpFileRemains",
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_atomic_writer.cpp",
+          "line": 42
+        },
+        {
+          "name": "WriteText_OverwritesExisting",
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_atomic_writer.cpp",
+          "line": 53
+        },
+        {
+          "name": "WriteText_CreatesParentDirectory",
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_atomic_writer.cpp",
+          "line": 65
+        },
+        {
+          "name": "WriteImage_EmptyImageFails",
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_atomic_writer.cpp",
+          "line": 78
+        },
+        {
+          "name": "DISABLED_WriteImage_CreatesFile",
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_atomic_writer.cpp",
+          "line": 89
         }
       ]
     }

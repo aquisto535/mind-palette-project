@@ -1,6 +1,6 @@
-#pragma once
+﻿#pragma once
 
-#include "filter_pipeline.h"
+#include "core/filter_pipeline.h"
 #include "filters/resize_filter.h"
 #include "filters/denoise_filter.h"
 #include "filters/grayscale_filter.h"
@@ -8,6 +8,7 @@
 #include "filters/binarize_filter.h"
 #include "filters/morphology_filter.h"
 #include "filters/rgb_convert_filter.h"
+#include "filters/invert_filter.h"
 
 /**
  * @brief PipelineFactory - Factory Pattern for pre-defined pipelines
@@ -25,7 +26,7 @@ public:
     
     /**
      * @brief Create sketch analysis pipeline (Week 3)
-     * Resize -> Denoise -> Grayscale -> Canny -> Morphology -> Binarize -> RGB
+     * Resize -> Denoise -> Grayscale -> Canny -> Morphology -> Invert -> RGB
      */
     static FilterPipeline createSketchPipeline(int targetSize = 512);
     
@@ -35,3 +36,4 @@ public:
      */
     static FilterPipeline createEdgeDetectionPipeline();
 };
+

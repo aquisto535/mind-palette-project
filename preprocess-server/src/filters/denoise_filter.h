@@ -1,6 +1,6 @@
-#pragma once
+﻿#pragma once
 
-#include "../filter.h"
+#include "core/filter.h"
 
 /**
  * @brief DenoiseFilter - Gaussian + Median blur for noise reduction
@@ -18,3 +18,4 @@ private:
     int gaussianSize_;
     int medianSize_;
 };
+

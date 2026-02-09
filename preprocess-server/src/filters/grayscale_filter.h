@@ -1,6 +1,6 @@
-#pragma once
+﻿#pragma once
 
-#include "../filter.h"
+#include "core/filter.h"
 
 /**
  * @brief GrayscaleFilter - Convert BGR to Grayscale
@@ -12,3 +12,4 @@ public:
     cv::Mat apply(const cv::Mat& input) const override;
     std::string name() const override { return "GrayscaleFilter"; }
 };
+
