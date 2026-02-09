@@ -1,6 +1,6 @@
-#pragma once
+﻿#pragma once
 
-#include "filter.h"
+#include "core/filter.h"
 #include <vector>
 
 /**
@@ -53,3 +53,4 @@ public:
 private:
     std::vector<FilterPtr> filters_;
 };
+

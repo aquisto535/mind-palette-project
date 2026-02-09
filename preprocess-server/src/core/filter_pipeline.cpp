@@ -1,4 +1,4 @@
-#include "filter_pipeline.h"
+﻿#include "core/filter_pipeline.h"
 #include <iostream>
 
 FilterPipeline& FilterPipeline::add(FilterPtr filter) {
@@ -30,3 +30,4 @@ cv::Mat FilterPipeline::execute(const cv::Mat& input) const {
 void FilterPipeline::clear() {
     filters_.clear();
 }
+

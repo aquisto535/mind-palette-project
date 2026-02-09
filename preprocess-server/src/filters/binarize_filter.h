@@ -1,6 +1,6 @@
-#pragma once
+﻿#pragma once
 
-#include "../filter.h"
+#include "core/filter.h"
 
 /**
  * @brief BinarizeFilter - Adaptive thresholding for binarization
@@ -16,3 +16,4 @@ private:
     int blockSize_;
     int c_;
 };
+

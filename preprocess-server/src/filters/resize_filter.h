@@ -1,6 +1,6 @@
-#pragma once
+﻿#pragma once
 
-#include "../filter.h"
+#include "core/filter.h"
 
 /**
  * @brief ResizeFilter - Letterbox resize with aspect ratio preservation
@@ -18,3 +18,4 @@ public:
 private:
     int targetSize_;
 };
+

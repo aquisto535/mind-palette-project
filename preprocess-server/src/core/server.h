@@ -1,6 +1,6 @@
 #pragma once
 #include "crow.h"
-#include "image_processor.h"
+#include "core/image_processor.h"
 #include "utils/Logger.h"
 #include <filesystem>
 #include <string>

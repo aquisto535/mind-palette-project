@@ -1,4 +1,4 @@
-#include "image_processor.h"
+#include "core/image_processor.h"
 #include <iostream>
 
 ImageProcessor::ImageProcessor() {

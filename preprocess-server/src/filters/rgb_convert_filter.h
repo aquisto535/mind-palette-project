@@ -1,6 +1,6 @@
-#pragma once
+﻿#pragma once
 
-#include "../filter.h"
+#include "core/filter.h"
 
 /**
  * @brief RgbConvertFilter - Convert grayscale/binary to RGB 3-channel
@@ -14,3 +14,4 @@ public:
     cv::Mat apply(const cv::Mat& input) const override;
     std::string name() const override { return "RgbConvertFilter"; }
 };
+

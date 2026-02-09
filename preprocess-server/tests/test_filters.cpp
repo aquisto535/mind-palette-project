@@ -9,6 +9,7 @@
 #include "filters/binarize_filter.h"
 #include "filters/morphology_filter.h"
 #include "filters/rgb_convert_filter.h"
+#include "filters/invert_filter.h"
 
 // ==================== IFilter Tests ====================
 
@@ -89,6 +90,17 @@ TEST(FilterTest, RgbConvertFilter_ConvertsTo3Channel) {
     EXPECT_EQ(result.channels(), 3);
 }
 
+TEST(FilterTest, InvertFilter_InvertsColors) {
+    cv::Mat input = cv::Mat::zeros(100, 100, CV_8UC1);
+    InvertFilter filter;
+    
+    cv::Mat result = filter.apply(input);
+    
+    EXPECT_FALSE(result.empty());
+    // Inverting 0 (black) should give 255 (white)
+    EXPECT_EQ(result.at<uchar>(50, 50), 255);
+}
+
 // ==================== FilterPipeline Tests ====================
 
 TEST(FilterPipelineTest, AddAndExecute) {
@@ -157,7 +169,7 @@ TEST(PipelineFactoryTest, CreateSketchPipeline) {
 // ==================== OCP Verification Test ====================
 
 // This test verifies OCP: Adding a new filter without modifying existing code
-class InvertFilter : public IFilter {
+class MockNewFilter : public IFilter {
 public:
     cv::Mat apply(const cv::Mat& input) const override {
         if (input.empty()) return cv::Mat();
@@ -165,7 +177,7 @@ public:
         cv::bitwise_not(input, result);
         return result;
     }
-    std::string name() const override { return "InvertFilter"; }
+    std::string name() const override { return "MockNewFilter"; }
 };
 
 TEST(OCPTest, NewFilterWithoutModifyingExistingCode) {
@@ -174,8 +186,8 @@ TEST(OCPTest, NewFilterWithoutModifyingExistingCode) {
     // Add existing filters
     pipeline.add(std::make_unique<GrayscaleFilter>());
     
-    // Add NEW filter (InvertFilter) - no modification to existing code!
-    pipeline.add(std::make_unique<InvertFilter>());
+    // Add NEW filter (MockNewFilter) - no modification to existing code!
+    pipeline.add(std::make_unique<MockNewFilter>());
     
     cv::Mat input = cv::Mat::ones(100, 100, CV_8UC3) * 128;
     cv::Mat result = pipeline.execute(input);
