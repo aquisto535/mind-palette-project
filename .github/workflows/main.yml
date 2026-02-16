@@ -116,7 +116,11 @@ jobs:
           automake \
           libtool \
           python3-pip \
-          python3-setuptools
+          python3-setuptools \
+          bison \
+          flex \
+          gperf \
+          perl
         sudo pip3 install meson
 
     - name: Restore vcpkg artifacts
@@ -184,7 +188,11 @@ jobs:
           automake \
           libtool \
           python3-pip \
-          python3-setuptools
+          python3-setuptools \
+          bison \
+          flex \
+          gperf \
+          perl
         sudo pip3 install meson
 
 
