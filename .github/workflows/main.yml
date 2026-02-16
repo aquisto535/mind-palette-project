@@ -126,7 +126,8 @@ jobs:
           autopoint \
           texinfo \
           libtool-bin \
-          libcrypt-dev
+          libcrypt-dev \
+          libltdl-dev
         sudo pip3 install meson
 
     - name: Restore vcpkg artifacts
@@ -204,7 +205,8 @@ jobs:
           autopoint \
           texinfo \
           libtool-bin \
-          libcrypt-dev
+          libcrypt-dev \
+          libltdl-dev
         sudo pip3 install meson
 
 
