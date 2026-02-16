@@ -99,36 +99,9 @@ jobs:
           ninja-build \
           pkg-config \
           build-essential \
-          curl \
-          zip \
-          unzip \
-          tar \
-          libx11-dev \
-          libxft-dev \
-          libxext-dev \
-          libwayland-dev \
-          libxrandr-dev \
-          libxi-dev \
-          libxcursor-dev \
-          libxdamage-dev \
-          libxinerama-dev \
-          autoconf \
-          automake \
-          libtool \
-          python3-pip \
-          python3-setuptools \
-          bison \
-          flex \
-          gperf \
-          perl \
-          autoconf-archive \
-          gettext \
-          autopoint \
-          texinfo \
-          libtool-bin \
-          libcrypt-dev \
-          libltdl-dev
-        sudo pip3 install meson
+          curl zip unzip tar \
+          autoconf automake libtool \
+          nasm yasm
 
     - name: Restore vcpkg artifacts
       uses: actions/cache@v3
@@ -158,8 +131,8 @@ jobs:
       working-directory: preprocess-server/build
       run: ctest --output-on-failure
 
-  # 5. Security Analysis (CodeQL)
-  # JavaScript/TypeScript 및 C++ 코드의 보안 취약점을 분석합니다.
+  # 5. Security Analysis (CodeQL - JavaScript/TypeScript only)
+  # C++ CodeQL은 vcpkg 복잡한 의존성으로 인해 별도 Docker 기반 워크플로우 권장
   security-analysis:
     runs-on: ubuntu-latest
     permissions:
@@ -171,74 +144,10 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Install System Dependencies (for C++ Analysis)
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y \
-          ninja-build \
-          pkg-config \
-          build-essential \
-          curl \
-          zip \
-          unzip \
-          tar \
-          libx11-dev \
-          libxft-dev \
-          libxext-dev \
-          libwayland-dev \
-          libxrandr-dev \
-          libxi-dev \
-          libxcursor-dev \
-          libxdamage-dev \
-          libxinerama-dev \
-          autoconf \
-          automake \
-          libtool \
-          python3-pip \
-          python3-setuptools \
-          bison \
-          flex \
-          gperf \
-          perl \
-          autoconf-archive \
-          gettext \
-          autopoint \
-          texinfo \
-          libtool-bin \
-          libcrypt-dev \
-          libltdl-dev
-        sudo pip3 install meson
-
-
-
-    - name: Setup vcpkg (for C++ Analysis)
-      uses: lukka/run-vcpkg@v11
-      with:
-        vcpkgDirectory: ${{ github.workspace }}/vcpkg
-        vcpkgJsonGlob: 'preprocess-server/vcpkg.json'
-
-    - name: Restore vcpkg artifacts (for Analysis)
-      uses: actions/cache@v3
-      with:
-        path: |
-          ~/.cache/vcpkg/archives
-          ${{ env.VCPKG_ROOT }}
-        key: ${{ runner.os }}-vcpkg-analysis-${{ hashFiles('preprocess-server/vcpkg.json') }}
-        restore-keys: |
-          ${{ runner.os }}-vcpkg-analysis-
-
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v4
       with:
-        languages: javascript, c-cpp
-
-    - name: Configure CMake (for Analysis)
-      run: |
-        cmake -S preprocess-server -B preprocess-server/build -G Ninja \
-          -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake
-
-    - name: Build (for Analysis)
-      run: cmake --build preprocess-server/build
+        languages: javascript-typescript
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v4

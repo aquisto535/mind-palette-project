@@ -4,9 +4,8 @@
   "dependencies": [
     "crow",
     "gtest",
-    "gtest",
     {
-      "name": "opencv",
+      "name": "opencv4",
       "default-features": false,
       "features": [
         "dnn",
