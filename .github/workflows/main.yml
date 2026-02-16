@@ -122,7 +122,11 @@ jobs:
           gperf \
           perl \
           autoconf-archive \
-          gettext
+          gettext \
+          autopoint \
+          texinfo \
+          libtool-bin \
+          libcrypt-dev
         sudo pip3 install meson
 
     - name: Restore vcpkg artifacts
@@ -196,7 +200,11 @@ jobs:
           gperf \
           perl \
           autoconf-archive \
-          gettext
+          gettext \
+          autopoint \
+          texinfo \
+          libtool-bin \
+          libcrypt-dev
         sudo pip3 install meson
 
 
