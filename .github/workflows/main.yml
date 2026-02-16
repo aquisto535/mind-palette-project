@@ -149,13 +149,28 @@ jobs:
         vcpkgDirectory: ${{ github.workspace }}/vcpkg
         vcpkgJsonGlob: 'preprocess-server/vcpkg.json'
 
+    - name: Restore vcpkg artifacts (for Analysis)
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cache/vcpkg/archives
+          ${{ env.VCPKG_ROOT }}
+        key: ${{ runner.os }}-vcpkg-analysis-${{ hashFiles('preprocess-server/vcpkg.json') }}
+        restore-keys: |
+          ${{ runner.os }}-vcpkg-analysis-
+
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v4
       with:
         languages: javascript, c-cpp
-        # C++ 분석을 위해 vcpkg 의존성 경로 등을 포함한 빌드 커맨드가 필요할 수 있음
-        # CodeQL Autobuild가 똑똑하게 처리하길 기대하거나, 매뉴얼 빌드 스텝을 추가해야 함.
-        # 여기서는 Autobuild를 시도.
+
+    - name: Configure CMake (for Analysis)
+      run: |
+        cmake -S preprocess-server -B preprocess-server/build -G Ninja \
+          -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake
+
+    - name: Build (for Analysis)
+      run: cmake --build preprocess-server/build
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v4
