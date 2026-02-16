@@ -120,7 +120,9 @@ jobs:
           bison \
           flex \
           gperf \
-          perl
+          perl \
+          autoconf-archive \
+          gettext
         sudo pip3 install meson
 
     - name: Restore vcpkg artifacts
@@ -192,7 +194,9 @@ jobs:
           bison \
           flex \
           gperf \
-          perl
+          perl \
+          autoconf-archive \
+          gettext
         sudo pip3 install meson
 
 
