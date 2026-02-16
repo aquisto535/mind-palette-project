@@ -95,7 +95,29 @@ jobs:
     - name: Install System Dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y ninja-build pkg-config build-essential curl zip unzip tar
+        sudo apt-get install -y \
+          ninja-build \
+          pkg-config \
+          build-essential \
+          curl \
+          zip \
+          unzip \
+          tar \
+          libx11-dev \
+          libxft-dev \
+          libxext-dev \
+          libwayland-dev \
+          libxrandr-dev \
+          libxi-dev \
+          libxcursor-dev \
+          libxdamage-dev \
+          libxinerama-dev \
+          autoconf \
+          automake \
+          libtool \
+          python3-pip \
+          python3-setuptools
+        sudo pip3 install meson
 
     - name: Restore vcpkg artifacts
       uses: actions/cache@v3
@@ -141,7 +163,29 @@ jobs:
     - name: Install System Dependencies (for C++ Analysis)
       run: |
         sudo apt-get update
-        sudo apt-get install -y ninja-build pkg-config build-essential curl zip unzip tar
+        sudo apt-get install -y \
+          ninja-build \
+          pkg-config \
+          build-essential \
+          curl \
+          zip \
+          unzip \
+          tar \
+          libx11-dev \
+          libxft-dev \
+          libxext-dev \
+          libwayland-dev \
+          libxrandr-dev \
+          libxi-dev \
+          libxcursor-dev \
+          libxdamage-dev \
+          libxinerama-dev \
+          autoconf \
+          automake \
+          libtool \
+          python3-pip \
+          python3-setuptools
+        sudo pip3 install meson
 
 
 
