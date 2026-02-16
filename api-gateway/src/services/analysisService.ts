@@ -1,7 +1,8 @@
-import path from 'path';
-import fs from 'fs';
+import path from 'node:path';
+import fs from 'node:fs/promises';
 import axios from 'axios';
 import { RESULT_DIR } from '../utils/fileStorage';
+import logger from '../utils/logger';
 
 const PREPROCESS_SERVER_URL = process.env.PREPROCESS_SERVER_URL || 'http://localhost:8081';
 
@@ -19,7 +20,7 @@ interface AnalysisResult {
 
 /**
  * 더미 분석 결과를 생성합니다.
- * TODO: 실제 AI 모델 연동 시 제거 또는 Mocking 용도로 사용
+ * 실제 AI 모델 연동 시 제거 또는 Mocking 용도로 사용
  */
 function generateDummyResult(): AnalysisResult {
   return {
@@ -45,7 +46,7 @@ export const processAnalysis = async (file: Express.Multer.File): Promise<Analys
     throw new Error('NO_FILE');
   }
 
-  console.log('Image uploaded:', file.path);
+  logger.info('Image uploaded:', { path: file.path });
 
   const timestamp = Date.now();
   const resultPath = path.join(RESULT_DIR, `${timestamp}_result.json`);
@@ -57,24 +58,24 @@ export const processAnalysis = async (file: Express.Multer.File): Promise<Analys
       imagePath: file.path
     });
 
-    if (preprocessRes.data && preprocessRes.data.processedPath) {
+    if (preprocessRes.data?.processedPath) {
       processedImagePath = preprocessRes.data.processedPath;
-      console.log('Preprocessing completed:', processedImagePath);
+      logger.info('Preprocessing completed:', { processedPath: processedImagePath });
     }
-  } catch (error: any) {
-    console.warn('Preprocessing failed, using original image:', error.message);
+  } catch (error: unknown) {
+    logger.warn('Preprocessing failed, using original image:', { error: error instanceof Error ? error.message : String(error) });
     // 전처리 실패 시에도 일단 원본으로 계속 진행 (또는 에러 throw 선택 가능)
     // 현재는 테스트 단계이므로 로그만 남김
   }
 
-  // TODO: Phase 4 - Python AI 서버 호출
+  // Phase 4 - Python AI 서버 호출
 
   // [Phase 2] 임시 더미 데이터 생성
   const resultData = generateDummyResult();
 
   // 결과 JSON 파일 저장
-  fs.writeFileSync(resultPath, JSON.stringify(resultData, null, 2));
-  console.log('Result saved:', resultPath);
+  await fs.writeFile(resultPath, JSON.stringify(resultData, null, 2));
+  logger.info('Result saved:', { path: resultPath });
 
   return resultData;
 };

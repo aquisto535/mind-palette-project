@@ -22,6 +22,8 @@
 | ADR-011 | C++ 전처리 파이프라인 결과물 명세 | 2026-02 | ✅ Accepted |
 | ADR-012 | C++ 전처리 서버 개발 로드맵 (Week 2-4) | 2026-02 | ✅ Accepted |
 | ADR-013 | Git Workflow로 GitHub Flow (Feature Branch + PR) 채택 | 2026-02 | ✅ Accepted |
+| ADR-014 | AWS EC2와 Docker 연결 구조 (Port Mapping & Bridge Network) | 2026-02 | ✅ Accepted |
+| ADR-015 | 하이브리드 배포 전략 (Local GPU 개발 vs EC2 CPU 배포) | 2026-02 | ✅ Accepted |
 ---
 
 ## ADR-001: 마이크로서비스 아키텍처 채택 (Node.js + C++ + Python)
@@ -1438,10 +1440,207 @@ git branch -d feature/filter-strategy-pattern
 
 ---
 
-**마지막 업데이트**: 2026-02-08  
+## ADR-014: AWS EC2와 Docker 연결 구조 (Port Mapping & Bridge Network)
+
+### 상태
+✅ **Accepted** (2026-02)
+
+### 컨텍스트 (Context)
+AWS EC2 인스턴스 내에서 Docker 컨테이너들이 어떻게 실행되고, 외부 네트워크와 어떻게 연결되는지에 대한 구조적 이해가 필요했습니다. 특히, "EC2도 서버고 Docker도 서버인데 서로 어떻게 연결되는가?"에 대한 혼란을 해소하고, 보안과 효율성을 고려한 연결 방식을 확정해야 했습니다.
+
+### 의사결정 (Decision)
+**Port Mapping**과 **Docker Bridge Network**를 조합하여 다음과 같은 연결 구조를 채택합니다:
+
+1.  **외부 연결 (EC2 ↔ Docker)**:
+    - AWS Security Group에서 **443 포트(HTTPS)**만 개방합니다.
+    - EC2의 443 포트를 **Nginx 컨테이너**의 443 포트로 포워딩합니다 (`ports: - "443:443"`).
+    - 그 외의 모든 포트는 외부에서 접근 불가능하게 막습니다.
+
+2.  **내부 연결 (Docker ↔ Docker)**:
+    - **Docker Bridge Network**라는 가상의 사설망을 사용합니다.
+    - Node.js, C++ 전처리 서버, Python AI 서버는 이 내부망에 연결됩니다.
+    - 이들은 호스트(EC2)의 포트를 점유하지 않으며, 오직 **Nginx를 통해서만** 외부 트래픽을 받을 수 있습니다.
+
+### 아키텍처 다이어그램 (Architectural Diagram)
+
+```mermaid
+graph TD
+    User(("👤 사용자")) -->|"1. URL 접속 (HTTPS)"| Internet["인터넷"]
+    
+    subgraph AWS_Cloud ["☁️ AWS 클라우드"]
+        subgraph EC2_Instance ["🖥️ EC2 리눅스 컴퓨터"]
+            style EC2_Instance fill:#f9f9f9,stroke:#333,stroke-width:4px
+            
+            subgraph Security_Group ["🛡️ 방화벽(Security Group)"]
+                direction TB
+                Port443["포트 443 (HTTPS) 열림"]
+            end
+
+            subgraph Docker_Engine ["🐳 도커 (실행 환경)"]
+                style Docker_Engine fill:#e3f2fd,stroke:#2496ed,stroke-width:2px
+                
+                subgraph Docker_Compose ["Docker Compose 묶음"]
+                    style Docker_Compose fill:#e8f5e9,stroke:#4caf50,stroke-width:2px,stroke-dasharray: 5 5
+                    
+                    Nginx["👮 Nginx (리버스 프록시)<br/>외부 요청을 받는 문지기"]
+                    
+                    Node["🚀 Node.js Gateway<br/>(메인 서버)"]
+                    Cpp["⚙️ C++ 전처리<br/>(내부 작업자 1)"]
+                    Py["🧠 Python AI<br/>(내부 작업자 2)"]
+                    
+                    %% 내부 통신
+                    Port443 -->|"전달"| Nginx
+                    
+                    Nginx -->|"2. 내부 전달 (HTTP)"| Node
+                    Node -->|"3. 작업 요청"| Cpp
+                    Node -->|"3. 작업 요청"| Py
+                end
+            end
+        end
+    end
+```
+
+### 근거 (Rationale)
+
+#### 1️⃣ 보안성 (Security via Isolation)
+- **제1원칙**: "보안 사고는 공격 표면(Attack Surface)을 줄일수록 예방된다."
+- 내부 서버(Node.js, C++, Python)는 오직 Docker 내부망에만 존재하므로, 외부 해커가 직접 접속할 경로가 원천적으로 차단됩니다.
+- 오직 검증된 **Nginx(Reverse Proxy)**만이 유일한 출입구 역할을 수행합니다.
+
+#### 2️⃣ 이식성 (Portability via Abstraction)
+- `docker-compose.yml` 파일 하나에 전체 네트워크 토폴로지가 정의됩니다.
+- EC2 인스턴스가 바뀌거나 로컬 개발 환경으로 이동해도, 네트워크 설정은 동일하게 유지됩니다 ("Write Once, Run Anywhere").
+
+#### 3️⃣ 관리 단순성 (Simplicity)
+- 복잡한 AWS VPC 설정이나 라우팅 테이블 변경 없이, Docker 수준에서 논리적인 망 분리가 가능합니다.
+- 포트 충돌 문제(Port Conflict)를 걱정할 필요가 없습니다 (내부망에서는 각 컨테이너가 독립 IP를 가짐).
+
+### 대안 및 트레이드오프 (Alternatives)
+- **Host Network Mode**: 컨테이너가 호스트의 네트워크 스택을 공유.
+  - ❌ **Rejected**: 포트 충돌 위험이 있고, 보안 격리가 약해짐.
+- **Port Mapping for All Services**: 모든 서비스의 포트(3000, 8081, 8082)를 외부로 노출.
+  - ❌ **Rejected**: 보안상 매우 취약하며, 불필요한 공격 표면을 노출함.
+- **Cloudflare Workers & Vercel**: "유명 웹 개발자(노마드코더)가 추천하는 무료 백엔드 툴"이라서 고려.
+  - ❌ **Rejected (Fundamental Mismatch)**:
+    - **실체**: JS 런타임(Workers)이나 Serverless 함수(Vercel)로, 가볍고 빠른 웹 요청 처리에 최적화됨.
+    - **제약 1 (OS 부재)**: 리눅스 OS 제어권이 없어 **C++ OpenCV**나 **Python PyTorch** 같은 네이티브 라이브러리 설치 불가.
+    - **제약 2 (리소스 제한)**: Vercel 함수 용량 250MB 제한(PyTorch 모델 초과), Workers CPU 시간 10ms 제한(이미지 분석 2~5초 불가).
+    - **결론**: 본 프로젝트의 무거운 AI 연산(Deep Learning Inference)에는 **AWS EC2(지속 실행형 컴퓨터)**가 필수불가결함.
+
+### 결론 (Consequences)
+- ✅ **장점**: 강력한 보안 격리, 환경 일관성, 구성 관리의 단순화.
+- ⚠️ **단점**: 디버깅 시 내부 컨테이너에 직접 접속하려면 `docker exec` 등을 사용해야 함 (약간의 불편함).
+
+---
+
+---
+
+## ADR-015: 하이브리드 배포 전략 (Local GPU 개발 vs EC2 CPU 배포)
+
+### 상태
+✅ **Accepted** (2026-02)
+
+### 컨텍스트 (Context)
+개발 환경(Local Windows)에는 NVIDIA GPU(RTX 3060 등)가 있어 CUDA 가속이 가능하지만, 배포 환경(AWS EC2)은 비용 문제로 인해 **GPU 인스턴스(g4dn.xlarge, 월 $300+)** 사용이 부담스러운 상황입니다. 
+
+"로컬에서 개발한 CUDA 코드를 EC2 일반 인스턴스(t3.medium, 월 $30)에 올리면 GPU를 못 쓰는 것 아닌가?"라는 우려와 함께, **비용 효율적인 AI 서빙 전략** 수립이 필요했습니다.
+
+### 의사결정 (Decision)
+**하이브리드 전략(Hybrid Strategy)**을 채택합니다:
+
+1.  **개발(Development) & 학습(Training)**: 
+    - **Local GPU 활용**: Windows/WSL2 환경에서 NVIDIA GPU를 사용하여 빠른 모델 학습 및 프로토타이핑 수행.
+    - **Docker Support**: `nvidia-docker`를 사용하여 로컬에서는 GPU 컨테이너를 구동.
+
+2.  **배포(Deployment) & 추론(Inference)**:
+    - **EC2 CPU 활용**: 초기 단계(Phase 1~4)에서는 값비싼 GPU 인스턴스 대신, 저렴한 **t3.medium (vCPU 2, RAM 4GB)** 인스턴스를 기본으로 사용.
+    - **ONNX Runtime 최적화**: PyTorch 모델을 ONNX로 변환하여 CPU 추론 속도를 극대화 (약 2~3배 향상 예상).
+    - **확장 및 비용 최적화 계획 (Future Work)**: 
+      - 현재는 안정성을 위해 4GB 램을 확보하지만, 최적화 수준에 따라 **t3.small (RAM 2GB)**로 다운그레이드 고려.
+      - 테스트 환경에는 **Spot Instance** (70~90% 할인) 적극 도입.
+      - 장기적으로 **Oracle Cloud Free Tier (ARM 4 Core, 24GB RAM)**로의 마이그레이션 가능성 열어둠.
+
+### 근거 (Rationale)
+
+#### 1️⃣ 비용 효율성 (Cost Efficiency)
+- **EC2 g4dn.xlarge (GPU)**: 시간당 약 $0.526 (서울 리전) → 월 **약 45~50만 원**.
+- **EC2 t3.medium (CPU)**: 시간당 약 $0.052 → 월 **약 4~5만 원** (초기 확정).
+- **EC2 t2.micro (Free Tier)**: RAM 1GB로 PyTorch 모델 구동 불가 (OOM 발생).
+- 초기 스타트업/토이 프로젝트 단계에서 10배 넘는 비용 차이는 감당하기 어려움.
+
+#### 2️⃣ 기술적 타당성 (Technical Feasibility)
+- **제1원칙**: "소프트웨어 최적화로 하드웨어 제약을 극복한다."
+- 이미지 분석(EfficientNet-B0/B2)은 **상대적으로 가벼운 모델**입니다.
+- **ONNX Runtime + Quantization(INT8)** 적용 시, CPU에서도 **장당 200~500ms** 이내 처리가 가능할 것으로 예상됩니다 (목표: < 1초).
+
+#### 3️⃣ 로컬 GPU의 활용 (Development Velocity)
+- 개발자는 로컬 GPU의 강력한 성능을 이용해 모델을 빠르게 학습시키고 튜닝할 수 있습니다.
+- 배포 시에는 모델 파일(.onnx)만 서버로 전송하므로, 개발 생산성은 유지하면서 배포 비용은 절감됩니다.
+
+### 대안 및 트레이드오프 (Alternatives)
+- **AWS g4dn 인스턴스 사용**: 처음부터 GPU 서버 대여.
+  - ❌ **Rejected**: 비용 과다. 트래픽이 적은 초기에는 낭비.
+- **AWS Lambda (Serverless Inference)**: 요청 시에만 과금.
+  - ❌ **Rejected**: Cold Start 문제(모델 로딩 10초+), PyTorch/Opencv 라이브러리 용량 제한(250MB).
+
+### 결론 (Consequences)
+- ✅ **장점**: 압도적인 비용 절감, 유연한 확장성.
+- ⚠️ **단점**: CPU 추론 최적화(ONNX 변환) 작업이 추가로 필요함.
+- **실행 계획**: Phase 4(Python AI Server) 단계에서 `torch.onnx.export` 및 `onnxruntime` 적용 필수.
+
+---
+
+## ADR-016: Antigravity Awesome Skills 도입 및 코드베이스 현대화
+
+### 상태
+✅ **Accepted** (2026-02)
+
+### 컨텍스트 (Context)
+프로젝트 규모가 커짐에 따라 TypeScript, React, Node.js, C++ 등 멀티 언어 환경에서의 품질 관리와 모범 사례(Best Practices) 준수가 중요해졌습니다. 단순한 기능 구현을 넘어, 시니어 수준의 엔지니어링 표준을 유지하기 위해 전문화된 가이드라인 시스템 도입이 필요했습니다.
+
+### 의사결정 (Decision)
+**Antigravity Awesome Skills**를 도입하고, 이를 핵심 기술 스택에 맞춰 커스터마이징하여 적용합니다.
+
+1.  **스킬 선택 및 설치**:
+    - `typescript-expert`: 고급 타입 패턴 및 성능 최적화
+    - `react-best-practices`: 렌더링 최적화 및 구조화
+    - `nodejs-best-practices`: 백엔드 아키텍처 및 보안
+    - `cpp-pro`: 현대적 C++ 표준 준수 (C++17로 커스터마이징)
+
+2.  **프로젝트 규칙 우선 순위**:
+    - 프로젝트 고유의 `code-style-guide.md` (TDD, Tidy First)를 최우선으로 하며, 스킬셋은 이를 보완하는 가이드라인으로 활용함.
+
+### 개선 내역 (Improvements)
+
+#### 1️⃣ api-gateway (Node.js/TypeScript)
+- **타입 안전성**: `any` 타입을 제거하고 `Error`, `unknown` 및 `instanceof` 기반의 런타임 타입 가드를 도입함.
+- **로깅 표준화**: `console.log` 사용을 금지하고 기존 `winston` 로거로 통합하여 운영 환경 가시성을 확보함.
+- **비동기 비차단(Non-blocking)**: `fs.writeFileSync` 등 동기 메서드를 `fs.promises.writeFile`로 전환하여 이벤트 루프 차단을 방지함.
+- **Node.js 현대화**: 내장 모듈 임포트 시 `node:` 프리픽스를 명시적으로 사용함.
+
+#### 2️⃣ frontend (React/TypeScript)
+- **렌더링 최적화**: `&&` 연산자를 이용한 조건부 렌더링을 삼항 연산자(`? : null`)로 전환하여 falsy 값(0, "")의 의도치 않은 렌더링 버그를 방지함.
+
+#### 3️⃣ 공통 (tsconfig)
+- **엄격한 타입 체크**: `noUncheckedIndexedAccess`, `noImplicitOverride` 옵션을 활성화하여 런타임 에러 가능성을 컴파일 단계에서 차단함.
+
+### 근거 (Rationale)
+- **품질 일관성**: AI 어시스턴트가 코드를 작성할 때 일관된 시니어 수준의 코드를 출력하도록 강제함.
+- **안정성**: `strict` 옵션 강화를 통해 잠재적인 undefined 접근을 사전에 차단함.
+- **성능**: 이벤트 루프 비차단 및 React 렌더링 최적화 규칙 적용으로 엔드투엔드 성능 개선.
+
+### 결론 (Consequences)
+- ✅ **장점**: 기술 부채 예방, 시니어 수준의 코드 품질 유지, 타입 안전성 극대화.
+- ⚠️ **단점**: `noUncheckedIndexedAccess` 도입으로 인해 배열 인덱스 접근 시 추가적인 검증 코드가 필요함 (약간의 코드량 증가).
+
+---
+
+**마지막 업데이트**: 2026-02-16  
+
 **작성자**: 정태민 
 **참고 문서**: 
-- [프로젝트 계획서](../아동_인물화_지능측정_AI_시스템_프로젝트_계획서.md)
-- [개발 진행 상황](project-status/development_progress.md)
-- [C++ 개발자를 위한 Python 학습 가이드](methodology/PYTHON_FOR_CPP_DEVELOPERS.md)
-- [AI 모델 추천 상세 분석](tech-references/AI/ai_model_recommendation.md)
+- [implementation_plan.md](../.gemini/antigravity/brain/25394dd5-b6fa-4aac-8d14-3ffee0e6e7f0/implementation_plan.md)
+- [walkthrough.md](../.gemini/antigravity/brain/25394dd5-b6fa-4aac-8d14-3ffee0e6e7f0/walkthrough.md)
+- [code-style-guide.md](../.agent/rules/code-style-guide.md)
+- [ADR-013: GitHub Flow 채택](#adr-013-git-workflow로-github-flow-feature-branch--pr-채택)
+

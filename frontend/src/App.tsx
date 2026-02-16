@@ -53,26 +53,26 @@ function App() {
 
   return (
     <div className="min-h-screen bg-white text-slate-900">
-      {step === 'hero' && <Hero onStart={() => setStep('form')} />} {/* 히어로 섹션 */}
+      {step === 'hero' ? <Hero onStart={() => setStep('form')} /> : null}
 
-      {step === 'form' && <InfoForm onSubmit={handleInfoSubmit} />} {/* 정보 입력 섹션 */}
+      {step === 'form' ? <InfoForm onSubmit={handleInfoSubmit} /> : null}
 
-      {step === 'guide' && <Guide onNext={() => setStep('upload')} />} {/* 가이드 섹션 */}
+      {step === 'guide' ? <Guide onNext={() => setStep('upload')} /> : null}
 
-      {step === 'upload' && <Upload onUpload={handleUpload} />} {/* 업로드 섹션 */}
+      {step === 'upload' ? <Upload onUpload={handleUpload} /> : null}
 
-      {step === 'loading' && <Loading />} {/* 로딩 섹션 */}
+      {step === 'loading' ? <Loading /> : null}
 
-      {step === 'result' && childInfo && result && (
+      {step === 'result' && childInfo && result ? (
         <Result
-          childName={childInfo.name} // 자녀 이름
-          childGender={childInfo.gender} // 자녀 성별
-          childAge={childInfo.birthDate} // Simply passing DOB string for now
-          imageFile={file} // 업로드된 파일
+          childName={childInfo.name}
+          childGender={childInfo.gender}
+          childAge={childInfo.birthDate}
+          imageFile={file}
           result={result}
-          onReset={handleReset} // 초기화 핸들러
+          onReset={handleReset}
         />
-      )}
+      ) : null}
     </div>
   );
 }

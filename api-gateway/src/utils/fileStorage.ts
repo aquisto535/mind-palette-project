@@ -1,6 +1,6 @@
 import multer, { FileFilterCallback } from 'multer';
-import path from 'path';
-import fs from 'fs';
+import path from 'node:path';
+import fs from 'node:fs';
 import { Request } from 'express';
 
 // Extend Request to include fileValidationError

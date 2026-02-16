@@ -17,13 +17,8 @@ public:
     // Save image to path
     bool Save(const cv::Mat& image, const std::string& path);
 
-    // === Week 3: Advanced Preprocessing ===
-    
-    // GrabCut background removal
-    // Returns foreground mask (0=background, 255=foreground)
-    // @param input: BGR input image
-    // @param iterCount: GrabCut iteration count (default 3, trade-off: speed vs quality)
-    cv::Mat RemoveBackground(const cv::Mat& input, int iterCount = 3);
+// [DEAD CODE] Disabled for performance reasons
+    // cv::Mat RemoveBackground(const cv::Mat& input, int iterCount = 3);
 
     // Canny edge detection
     // @param grayscale: Single-channel grayscale image

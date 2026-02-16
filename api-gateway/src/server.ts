@@ -36,7 +36,7 @@ app.use('/health', healthRouter);
 app.use('/analyze', analyzeRouter);
 
 // 글로벌 에러 핸들러
-app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   logger.error(err.stack);
   res.status(500).json({ error: 'Internal Server Error' });
 });

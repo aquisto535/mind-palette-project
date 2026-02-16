@@ -86,9 +86,53 @@ jobs:
       run: |
         npm ci
         npm test tests/integration.test.ts
+  # 4. C++ Preprocess Server CI
+  preprocess-ci:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
 
-  # 4. Security Analysis (CodeQL) - 계획서 반영
-  # JavaScript/TypeScript 코드의 보안 취약점을 분석합니다.
+    - name: Install System Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          ninja-build \
+          pkg-config \
+          build-essential \
+          curl zip unzip tar \
+          autoconf automake libtool \
+          nasm yasm
+
+    - name: Restore vcpkg artifacts
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cache/vcpkg/archives
+          ${{ env.VCPKG_ROOT }}
+        key: ${{ runner.os }}-vcpkg-${{ hashFiles('preprocess-server/vcpkg.json') }}
+        restore-keys: |
+          ${{ runner.os }}-vcpkg-
+
+    - name: Setup vcpkg
+      uses: lukka/run-vcpkg@v11
+      with:
+        vcpkgDirectory: ${{ github.workspace }}/vcpkg
+        vcpkgJsonGlob: 'preprocess-server/vcpkg.json'
+
+    - name: Configure CMake
+      run: |
+        cmake -S preprocess-server -B preprocess-server/build -G Ninja \
+          -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake
+
+    - name: Build
+      run: cmake --build preprocess-server/build
+
+    - name: Run Tests
+      working-directory: preprocess-server/build
+      run: ctest --output-on-failure
+
+  # 5. Security Analysis (CodeQL - JavaScript/TypeScript only)
+  # C++ CodeQL은 vcpkg 복잡한 의존성으로 인해 별도 Docker 기반 워크플로우 권장
   security-analysis:
     runs-on: ubuntu-latest
     permissions:
@@ -103,8 +147,7 @@ jobs:
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v4
       with:
-        # 현재 분석 대상 언어 (C++은 추후 추가)
-        languages: javascript 
+        languages: javascript-typescript
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v4

@@ -43,6 +43,8 @@ bool ImageProcessor::Save(const cv::Mat& image, const std::string& path) {
 
 // === Week 3: Advanced Preprocessing Implementation ===
 
+#if 0 
+// [DEAD CODE] GrabCut Background Removal - Disabled
 cv::Mat ImageProcessor::RemoveBackground(const cv::Mat& input, int iterCount) {
     if (input.empty()) {
         return cv::Mat();
@@ -82,6 +84,7 @@ cv::Mat ImageProcessor::RemoveBackground(const cv::Mat& input, int iterCount) {
     
     return result;
 }
+#endif
 
 cv::Mat ImageProcessor::DetectEdges(const cv::Mat& grayscale, double lowThreshold, double highThreshold) {
     if (grayscale.empty()) {
