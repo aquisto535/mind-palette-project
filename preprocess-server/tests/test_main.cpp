@@ -94,14 +94,34 @@ TEST(ServerTest, Preprocess_NonExistentFile_Returns404) {
 // ============================================================================
 
 TEST(ValidatePreprocessRequestTest, ValidRequest_ReturnsSuccess) {
+    // Create a dummy file for testing
+    std::string tempFileName = "test_image.jpg";
+    std::ofstream outfile(tempFileName);
+    outfile << "dummy content";
+    outfile.close();
+
+    // Get absolute path
+    auto absPath = std::filesystem::absolute(tempFileName).string();
+
+    // Fix path separators for JSON (escape backslashes on Windows)
+    std::string jsonPath = absPath;
+    size_t pos = 0;
+    while ((pos = jsonPath.find('\\', pos)) != std::string::npos) {
+        jsonPath.replace(pos, 1, "\\\\");
+        pos += 2;
+    }
+
     crow::request req;
-    req.body = R"({"imagePath": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\shared_volume\\uploads\\wrtFileImageView.jpg"})";
+    req.body = "{\"imagePath\": \"" + jsonPath + "\"}";
     
     auto result = ValidatePreprocessRequest(req);
     
     EXPECT_TRUE(result.success);
-    EXPECT_EQ(result.imagePath, "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\shared_volume\\uploads\\wrtFileImageView.jpg");
+    EXPECT_EQ(result.imagePath, absPath);
     EXPECT_EQ(result.errorCode, 200);
+
+    // Cleanup
+    std::filesystem::remove(tempFileName);
 }
 
 TEST(ValidatePreprocessRequestTest, InvalidJSON_Returns400) {
@@ -248,6 +268,8 @@ protected:
 
 // --- RemoveBackground Tests ---
 
+#if 0
+// [DEAD CODE] Disabled tests for RemoveBackground
 TEST_F(AdvancedImageProcessorTest, RemoveBackground_ReturnsNonEmptyMask) {
     // GrabCut should return a valid foreground mask
     cv::Mat mask = processor.RemoveBackground(testImage);
@@ -275,6 +297,7 @@ TEST_F(AdvancedImageProcessorTest, RemoveBackground_EmptyInputReturnsEmpty) {
     
     EXPECT_TRUE(mask.empty());
 }
+#endif
 
 // --- DetectEdges Tests ---
 

@@ -86,9 +86,47 @@ jobs:
       run: |
         npm ci
         npm test tests/integration.test.ts
+  # 4. C++ Preprocess Server CI
+  preprocess-ci:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
 
-  # 4. Security Analysis (CodeQL) - 계획서 반영
-  # JavaScript/TypeScript 코드의 보안 취약점을 분석합니다.
+    - name: Install System Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ninja-build
+
+    - name: Restore vcpkg artifacts
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cache/vcpkg/archives
+          ${{ env.VCPKG_ROOT }}
+        key: ${{ runner.os }}-vcpkg-${{ hashFiles('preprocess-server/vcpkg.json') }}
+        restore-keys: |
+          ${{ runner.os }}-vcpkg-
+
+    - name: Setup vcpkg
+      uses: lukka/run-vcpkg@v11
+      with:
+        vcpkgDirectory: ${{ github.workspace }}/vcpkg
+        vcpkgJsonGlob: 'preprocess-server/vcpkg.json'
+
+    - name: Configure CMake
+      run: |
+        cmake -S preprocess-server -B preprocess-server/build -G Ninja \
+          -DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/vcpkg/scripts/buildsystems/vcpkg.cmake
+
+    - name: Build
+      run: cmake --build preprocess-server/build
+
+    - name: Run Tests
+      working-directory: preprocess-server/build
+      run: ctest --output-on-failure
+
+  # 5. Security Analysis (CodeQL)
+  # JavaScript/TypeScript 및 C++ 코드의 보안 취약점을 분석합니다.
   security-analysis:
     runs-on: ubuntu-latest
     permissions:
@@ -100,11 +138,24 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
+    - name: Install System Dependencies (for C++ Analysis)
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ninja-build
+
+    - name: Setup vcpkg (for C++ Analysis)
+      uses: lukka/run-vcpkg@v11
+      with:
+        vcpkgDirectory: ${{ github.workspace }}/vcpkg
+        vcpkgJsonGlob: 'preprocess-server/vcpkg.json'
+
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v4
       with:
-        # 현재 분석 대상 언어 (C++은 추후 추가)
-        languages: javascript 
+        languages: javascript, c-cpp
+        # C++ 분석을 위해 vcpkg 의존성 경로 등을 포함한 빌드 커맨드가 필요할 수 있음
+        # CodeQL Autobuild가 똑똑하게 처리하길 기대하거나, 매뉴얼 빌드 스텝을 추가해야 함.
+        # 여기서는 Autobuild를 시도.
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v4

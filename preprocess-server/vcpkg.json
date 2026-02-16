@@ -4,7 +4,19 @@
   "dependencies": [
     "crow",
     "gtest",
-    "opencv",
+    "gtest",
+    {
+      "name": "opencv",
+      "default-features": false,
+      "features": [
+        "dnn",
+        "jpeg",
+        "png",
+        "tiff",
+        "webp",
+        "thread"
+      ]
+    },
     "spdlog"
   ]
 }

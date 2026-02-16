@@ -1,6 +1,6 @@
 import express, { Request, Response } from 'express';
-import os from 'os';
-import { execSync } from 'child_process';
+import os from 'node:os';
+import { execSync } from 'node:child_process';
 import rateLimit from 'express-rate-limit';
 
 const router = express.Router();
@@ -10,10 +10,10 @@ const router = express.Router();
 const healthRateLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1분
   max: 60,                // IP당 1분에 최대 60번 요청 허용
-  message: {
+  message: JSON.stringify({
     status: 'error',
     message: 'Too many health check requests, please try again later.'
-  } as any,
+  }),
   standardHeaders: true, // `RateLimit-*` 헤더 포함
   legacyHeaders: false,  // `X-RateLimit-*` 헤더 비활성화
 });
@@ -44,17 +44,20 @@ router.get('/', healthRateLimiter, (req: Request, res: Response) => {
         const output = execSync('wmic logicaldisk where "DeviceID=\'C:\'" get FreeSpace', { encoding: 'utf8' });
         const lines = output.trim().split('\n');
         if (lines.length > 1) {
-          const freeSpaceBytes = parseInt(lines[1].trim());
-          diskAvailableGB = (freeSpaceBytes / 1024 / 1024 / 1024).toFixed(2) + ' GB';
+          const rawLine = lines[1];
+          if (rawLine) {
+            const freeSpaceBytes = Number.parseInt(rawLine.trim());
+            diskAvailableGB = (freeSpaceBytes / 1024 / 1024 / 1024).toFixed(2) + ' GB';
+          }
         }
       } else {
         // Linux/Mac: df 명령어 사용
         const output = execSync('df -k / | tail -1 | awk \'{print $4}\'', { encoding: 'utf8' });
-        const freeSpaceKB = parseInt(output.trim());
+        const freeSpaceKB = Number.parseInt(output.trim());
         diskAvailableGB = (freeSpaceKB / 1024 / 1024).toFixed(2) + ' GB';
       }
-    } catch (diskError) {
-      // 디스크 체크 실패 시 'N/A'로 표시 (에러 무시)
+    } catch {
+      // 디스크 체크 실패 시 'N/A'로 표시 (비핵심 정보이므로 무시)
       diskAvailableGB = 'N/A';
     }
 
@@ -70,10 +73,10 @@ router.get('/', healthRateLimiter, (req: Request, res: Response) => {
         available: diskAvailableGB
       }
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     res.status(503).json({
       status: 'unhealthy',
-      error: error.message,
+      error: error instanceof Error ? error.message : 'Unknown error',
       timestamp: new Date().toISOString()
     });
   }

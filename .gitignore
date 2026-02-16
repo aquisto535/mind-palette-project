@@ -64,3 +64,9 @@ Thumbs.db
 **/logs/
 *.log
 *_error.txt
+*.vcxproj
+*.filters
+*.recipe
+*.json
+
+.agent/

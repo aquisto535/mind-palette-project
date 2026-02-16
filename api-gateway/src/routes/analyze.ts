@@ -1,14 +1,16 @@
 import express, { Request, Response, NextFunction } from 'express';
+import multer from 'multer';
 import { upload, CustomRequest } from '../utils/fileStorage';
 import { processAnalysis } from '../services/analysisService';
+import logger from '../utils/logger';
 
 const router = express.Router();
 
 // POST /analyze
 router.post('/', (req: Request, res: Response, next: NextFunction) => {
-  upload.single('image')(req, res, (err: any) => {
+  upload.single('image')(req, res, (err) => {
     if (err) {
-      if (err.code === 'LIMIT_FILE_SIZE') {
+      if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
         return res.status(400).json({ error: 'File too large (limit: 5MB)' });
       }
       return res.status(400).json({ error: err.message });
@@ -29,8 +31,8 @@ router.post('/', (req: Request, res: Response, next: NextFunction) => {
 
     const result = await processAnalysis(req.file);
     res.json(result);
-  } catch (error: any) {
-    console.error('Analysis Error:', error);
+  } catch (error: unknown) {
+    logger.error('Analysis Error:', { error: error instanceof Error ? error.message : String(error) });
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });

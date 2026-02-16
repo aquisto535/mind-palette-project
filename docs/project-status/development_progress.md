@@ -15,21 +15,38 @@
 | | - 파일 업로드 및 결과 반환 API (Mock) | ✅ 완료 | 2025-12-06 |
 | | - Frontend-Backend 연동 (로컬/Mock 분기) | ✅ 완료 | 2025-12-06 |
 | | - Health Check API 구현 | ✅ 완료 | 2026-01-19 |
-| **Phase 3** | **C++ Preprocessing Server** | 🔄 진행중 | |
+| **Phase 3** | **C++ Preprocessing Server** | ✅ 완료 | 2026-02-10 |
 | | - C++ REST API (Crow) 구축 | ✅ 완료 | 2026-01-14 |
 | | - Node.js ↔ C++ 연동 (JSON Protocol) | ✅ 완료 | 2026-01-15 |
-| | - 이미지 전처리 (OpenCV) | | |
-| | - 윤곽선 추출 및 노이즈 제거 | | |
+| | - 이미지 전처리 (OpenCV) 파이프라인 | ✅ 완료 | 2026-02-09 |
+| | - 멀티스레딩 기반 성능 최적화 | ✅ 완료 | 2026-02-10 |
 | **Phase 4** | **Python AI Inference Server** | ⏳ 대기 | |
 | | - PyTorch 모델 서빙 | | |
 | | - HTP/KFD 분석 알고리즘 구현 | | |
 | **Phase 5** | **통합 및 고도화** | ⏳ 대기 | |
 | | - 전체 파이프라인 연동 | | |
-| | - 성능 최적화 및 보안 강화 | | |
+| | - 보안 강화 및 배포 안정화 | | |
 
 ---
 
 ## 📝 상세 진행 로그
+
+### 2026-02-10 (Day 9)
+- **C++ 전처리 서버 성능 최적화 및 아키텍처 정립 (Week 4)**
+  - **멀티스레딩 성능 향상 (Parallel Processing)**:
+    - **ThreadPool & AsyncTaskQueue**: `std::thread`, `mutex`, `condition_variable`을 이용한 독자적인 스레드 풀 및 작업 큐 구현.
+    - **성능 지표**: 8코어 환경에서 싱글 스레드 대비 **약 108% 성능 향상** (throughput 기준 2.1배 개선).
+    - **처리 속도**: 
+      - 기본 전처리(Resize/Denoise/Gray): **25.49ms** (목표 100ms 이내 달성)
+      - 스케치 파이프라인(Canny/Morph/Invert): **36.56ms** (목표 100ms 이내 달성)
+  - **시스템 안정성 및 데이터 무결성 강화**:
+    - **Atomic Write**: `.tmp` 파일 생성 후 `rename`하는 원자적 쓰기 패턴(`AtomicFileWriter`) 적용으로 파일 손상 방지.
+    - **Windows Local Dev Setup**: 로컬 개발(Windows) 시의 편의성을 위해 MSVC 정적 링크를 적용함 (Linux 배포 환경과는 무관).
+  - **아키텍처 리팩터링 및 구조화**:
+    - **소스 재정리**: `src` 폴더를 `core`(핵심 로직)와 `infra`(시스템 유틸리티)로 분리하고, 테스트 파일을 `examples/`로 이동시켜 유지보수성 향상.
+    - **디자인 패턴 적용**: Strategy Pattern(Filter)과 Composite Pattern(Pipeline)을 정립하여 필터 확장성 확보.
+    - **로직 복구**: Week 3.5 사양인 `InvertFilter`를 복원하여 AI 모델용 스케치(흰 배경, 검은 선) 아웃풋 무결성 확보.
+  - **Quality Gates**: 전체 57개 유닛 테스트 및 `IMG_1294.jpg` 실전 통합 테스트 전원 통과.
 
 ### 2026-01-24 (Day 8)
 - **API Gateway TypeScript 마이그레이션**

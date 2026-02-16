@@ -34,7 +34,7 @@
 - [x] GitHub Actions 워크플로우(`.github/workflows/main.yml`)가 정상적으로 동작해야 한다.
 - [x] Backend 및 Frontend 단위 테스트가 CI에서 자동 실행되어야 한다.
 - [x] 통합 테스트(Integration Test)가 CI에서 자동 실행되어야 한다.
-- [x] **CodeQL (Security Analysis)**: JavaScript/TypeScript 코드의 보안 취약점 분석이 CI에 포함되어야 한다.
+- [x] **CodeQL (Security Analysis)**: JavaScript/TypeScript 및 C++ 코드의 보안 취약점 분석이 CI에 포함되어야 한다.
 
 ---
 
@@ -100,18 +100,18 @@
   - [x] Week 4 멀티스레딩을 위한 `TaskQueue` 인터페이스 설계 및 단일 스레드 기반 모의 구현.
 
 ### Week 4: 멀티스레딩/성능/품질 (Concurrency Deep Dive)
-- [ ] **Thread Pool 구현 (std::thread)**: 
-  - [ ] [TDD] 스레드 풀 작업 큐의 동기화 및 데드락 방지 단위 테스트 (Red)
-  - [ ] `std::thread`/`mutex`/`condition_variable` 기반 표준 스레드 풀 구현 (Green)
-  - [ ] **[Deep Dive] Scalability Test**: 스레드 개수(1 vs 4 vs 8)에 따른 처리량(Throughput) 비교 벤치마크 수행.
-- [ ] **배치 처리**: 병렬 작업 분할 로직에 대한 데이터 레이스 검증 테스트.
-- [ ] **성능 벤치마크**: [TDT] 전처리 1건 처리 시간 < 100ms 자동 회귀 테스트 구축.
-- [ ] **Atomic Write & Safety**: 
-  - [ ] [TDD] 저장 중 프로세스 종료 시 Corrupted 파일 잔존 여부 테스트 (Red)
-  - [ ] `.tmp` → `rename` 패턴 적용으로 원자성(Atomicity) 보장 (Green)
-- [ ] **[MCP]** MSVC Code Analysis 및 Core Guidelines 위반 사항 `sequential-thinking`분석
-- [ ] **Quality Gates**: CI 파이프라인에 정적 분석 통합 및 통과 확인.
-- [ ] **GoogleTest (GTest)**: 전체 알고리즘에 대한 경계값(Edge Case) 및 회귀 테스트 완료.
+- [x] **Thread Pool 구현 (std::thread)**: 
+  - [x] [TDD] 스레드 풀 작업 큐의 동기화 및 데드락 방지 단위 테스트 (Red)
+  - [x] `std::thread`/`mutex`/`condition_variable` 기반 표준 스레드 풀 구현 (Green)
+  - [x] **[Deep Dive] Scalability Test**: 스레드 개수(1 vs 4 vs 8)에 따른 처리량(Throughput) 비교 벤치마크 수행.
+- [x] **배치 처리**: 병렬 작업 분할 로직에 대한 데이터 레이스 검증 테스트.
+- [x] **성능 벤치마크**: [TDT] 전처리 1건 처리 시간 < 100ms 자동 회귀 테스트 구축.
+- [x] **Atomic Write & Safety**: 
+  - [x] [TDD] 저장 중 프로세스 종료 시 Corrupted 파일 잔존 여부 테스트 (Red)
+  - [x] `.tmp` → `rename` 패턴 적용으로 원자성(Atomicity) 보장 (Green)
+- [x] **[MCP]** MSVC Code Analysis 및 Core Guidelines 위반 사항 `sequential-thinking`분석
+- [x] **Quality Gates**: CI 파이프라인에 정적 분석 통합 및 통과 확인.
+- [x] **GoogleTest (GTest)**: 전체 알고리즘에 대한 경계값(Edge Case) 및 회귀 테스트 완료.
 
 ## 🧠 Phase 4: Python AI Server (Target: 2026.02 ~ 03)
 
