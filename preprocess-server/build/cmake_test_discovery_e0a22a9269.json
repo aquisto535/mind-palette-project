@@ -1,5 +1,5 @@
 {
-  "tests": 40,
+  "tests": 41,
   "name": "AllTests",
   "testsuites": [
     {
@@ -19,17 +19,17 @@
         {
           "name": "Preprocess_MissingImagePath_Returns400",
           "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
-          "line": 44
+          "line": 50
         },
         {
           "name": "Preprocess_EmptyImagePath_Returns400",
           "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
-          "line": 60
+          "line": 66
         },
         {
           "name": "Preprocess_NonExistentFile_Returns404",
           "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
-          "line": 76
+          "line": 82
         }
       ]
     },
@@ -40,27 +40,27 @@
         {
           "name": "ValidRequest_ReturnsSuccess",
           "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
-          "line": 96
+          "line": 102
         },
         {
           "name": "InvalidJSON_Returns400",
           "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
-          "line": 127
+          "line": 133
         },
         {
           "name": "MissingImagePath_Returns400",
           "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
-          "line": 138
+          "line": 144
         },
         {
           "name": "EmptyImagePath_Returns400",
           "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
-          "line": 149
+          "line": 155
         },
         {
           "name": "NonExistentFile_Returns404",
           "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
-          "line": 160
+          "line": 166
         }
       ]
     },
@@ -71,33 +71,38 @@
         {
           "name": "CreatesValidJsonResponse",
           "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
-          "line": 171
+          "line": 177
         }
       ]
     },
     {
       "name": "ImageProcessorTest",
-      "tests": 4,
+      "tests": 5,
       "testsuite": [
         {
           "name": "Preprocess_ResizesTo512x512",
           "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
-          "line": 197
+          "line": 205
         },
         {
-          "name": "Preprocess_OutputIsGrayscale",
+          "name": "Preprocess_OutputIsBGR",
           "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
-          "line": 204
+          "line": 212
+        },
+        {
+          "name": "Preprocess_OutputHasWhiteBackground",
+          "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
+          "line": 219
         },
         {
           "name": "Preprocess_EmptyInputReturnsEmpty",
           "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
-          "line": 211
+          "line": 231
         },
         {
           "name": "Load_NonExistentFileReturnsEmpty",
           "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
-          "line": 218
+          "line": 238
         }
       ]
     },
@@ -108,12 +113,12 @@
         {
           "name": "GeneratesCorrectPath",
           "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
-          "line": 228
+          "line": 248
         },
         {
           "name": "PreservesExtension",
           "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
-          "line": 239
+          "line": 259
         }
       ]
     },
@@ -124,47 +129,47 @@
         {
           "name": "DetectEdges_ReturnsNonEmptyOutput",
           "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
-          "line": 304
+          "line": 324
         },
         {
           "name": "DetectEdges_OutputIsSingleChannel",
           "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
-          "line": 310
+          "line": 330
         },
         {
           "name": "DetectEdges_DetectsRectangleEdges",
           "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
-          "line": 316
+          "line": 336
         },
         {
           "name": "DetectEdges_HigherThresholdFewerEdges",
           "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
-          "line": 324
+          "line": 344
         },
         {
           "name": "EnhanceContours_ReturnsNonEmptyOutput",
           "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
-          "line": 337
+          "line": 357
         },
         {
           "name": "EnhanceContours_ClosesSmallGaps",
           "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
-          "line": 347
+          "line": 367
         },
         {
           "name": "Binarize_ReturnsNonEmptyOutput",
           "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
-          "line": 363
+          "line": 383
         },
         {
           "name": "Binarize_OutputIsSingleChannel",
           "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
-          "line": 369
+          "line": 389
         },
         {
           "name": "Binarize_OnlyContainsBinaryValues",
           "file": "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\preprocess-server\\tests\\test_main.cpp",
-          "line": 375
+          "line": 395
         }
       ]
     },

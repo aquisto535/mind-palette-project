@@ -4,11 +4,13 @@
 #include "filters/resize_filter.h"
 #include "filters/denoise_filter.h"
 #include "filters/grayscale_filter.h"
-#include "filters/canny_filter.h"
+#include "filters/grayscale_filter.h"
 #include "filters/binarize_filter.h"
 #include "filters/morphology_filter.h"
 #include "filters/rgb_convert_filter.h"
+#include "filters/rgb_convert_filter.h"
 #include "filters/invert_filter.h"
+#include "filters/hybrid_preprocess_filter.h"
 
 /**
  * @brief PipelineFactory - Factory Pattern for pre-defined pipelines
@@ -24,16 +26,12 @@ public:
      */
     static FilterPipeline createPreprocessPipeline(int targetSize = 512);
     
+
+
     /**
-     * @brief Create sketch analysis pipeline (Week 3)
-     * Resize -> Denoise -> Grayscale -> Canny -> Morphology -> Invert -> RGB
+     * @brief Create Hybrid 3-Channel Strategy Pipeline (Phase 3 Completed)
+     * Resize(1024) -> Denoise(Gaussian) -> HybridPreprocess(SmartCrop+Merge)
      */
-    static FilterPipeline createSketchPipeline(int targetSize = 512);
-    
-    /**
-     * @brief Create edge detection only pipeline
-     * Grayscale -> Canny
-     */
-    static FilterPipeline createEdgeDetectionPipeline();
+    static FilterPipeline createHybridPipeline();
 };
 

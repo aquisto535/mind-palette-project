@@ -15,7 +15,9 @@ cv::Mat DenoiseFilter::apply(const cv::Mat& input) const {
     cv::GaussianBlur(result, result, cv::Size(gaussianSize_, gaussianSize_), 0);
     
     // medianBlur for salt-and-pepper noise
-    cv::medianBlur(result, result, medianSize_);
+    if (medianSize_ > 0) {
+        cv::medianBlur(result, result, medianSize_);
+    }
     
     return result;
 }

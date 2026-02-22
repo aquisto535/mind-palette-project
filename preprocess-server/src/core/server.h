@@ -1,13 +1,31 @@
 #pragma once
 #include "crow.h"
 #include "core/image_processor.h"
+#include "infra/thread_pool.h"
+#include "infra/atomic_writer.h"
 #include "utils/Logger.h"
 #include <filesystem>
 #include <string>
 #include <chrono>
 #include <optional>
+#include <future>
+#include <memory>
 
 namespace fs = std::filesystem;
+
+// ============================================================================
+// Global Thread Pool (Worker threads for CPU-bound image processing)
+// Separates heavy processing from Crow's I/O threads
+// ============================================================================
+inline ThreadPool& GetWorkerPool() {
+    // hardware_concurrency workers (typically 4-8)
+    static ThreadPool pool(0);
+    return pool;
+}
+
+// ============================================================================
+// Helper Functions for /preprocess Route
+// ============================================================================
 
 // Generate output path from input path
 // /shared/uploads/test.jpg -> /shared/processed/test_clean.jpg
@@ -18,10 +36,6 @@ inline std::string GenerateOutputPath(const std::string& inputPath) {
     fs::path outputDir = "/shared/processed";
     return (outputDir / (stem + "_clean" + ext)).string();
 }
-
-// ============================================================================
-// Helper Functions for /preprocess Route
-// ============================================================================
 
 // Validation result with error details
 struct ValidationResult {
@@ -70,57 +84,28 @@ inline std::optional<cv::Mat> ProcessImageFile(const std::string& imagePath) {
         return std::nullopt;
     }
     
-    // Step 1: Preprocess (Letterbox resize + Denoise + Grayscale)
-    cv::Mat preprocessed = processor.Preprocess(img);
-    if (preprocessed.empty()) {
+    // All preprocessing steps (Smart Crop, Invert, BGR Convert) are now encapsulated
+    cv::Mat result = processor.Preprocess(img);
+    if (result.empty()) {
         LOG_ERROR("Preprocessing failed for: {}", imagePath);
         return std::nullopt;
     }
-    
-    // Step 2: Canny Edge Detection (threshold 50/150)
-    cv::Mat edges = processor.DetectEdges(preprocessed, 50, 150);
-    if (edges.empty()) {
-        LOG_ERROR("Edge detection failed for: {}", imagePath);
-        return std::nullopt;
-    }
-    
-    // Step 3: Morphology Enhancement (MORPH_CLOSE, kernelSize=3)
-    cv::Mat enhanced = processor.EnhanceContours(edges, 3);
-    if (enhanced.empty()) {
-        LOG_ERROR("Morphology enhancement failed for: {}", imagePath);
-        return std::nullopt;
-    }
-    
-    // Step 4: Adaptive Binarization
-    cv::Mat binarized = processor.Binarize(preprocessed);
-    if (binarized.empty()) {
-        LOG_ERROR("Binarization failed for: {}", imagePath);
-        return std::nullopt;
-    }
-    
-    // Step 5: Convert to RGB 3-channel (required for EfficientNet-B2)
-    // Binarized image is single-channel, convert to 3-channel for AI model compatibility
-    cv::Mat result;
-    cv::cvtColor(binarized, result, cv::COLOR_GRAY2BGR);
     
     LOG_INFO("Pipeline complete. Output: {}x{} (3-channel RGB)", result.cols, result.rows);
     return result;
 }
 
-// Saves processed image with directory creation, returns success status
+// Saves processed image atomically (.tmp → rename pattern)
+// Prevents corrupted files if process crashes during write
 inline bool SaveProcessedImage(const cv::Mat& img, const std::string& outputPath) {
-    // Create output directory if not exists
-    fs::path outputDir = fs::path(outputPath).parent_path();
-    if (!fs::exists(outputDir)) {
-        fs::create_directories(outputDir);
-    }
+    LOG_INFO("Saving with atomic write: {}", outputPath);
     
-    ImageProcessor processor;
-    if (!processor.Save(img, outputPath)) {
-        LOG_ERROR("Failed to save processed image to: {}", outputPath);
+    if (!AtomicFileWriter::write(img, outputPath)) {
+        LOG_ERROR("Atomic write failed for: {}", outputPath);
         return false;
     }
     
+    LOG_INFO("Atomic write success: {}", outputPath);
     return true;
 }
 
@@ -135,34 +120,50 @@ inline crow::response CreatePreprocessResponse(const std::string& outputPath, in
 }
 
 
+// ============================================================================
+// Route Setup
+// ============================================================================
+
 inline void setup_routes(crow::SimpleApp& app) {
     CROW_ROUTE(app, "/")([](){
         return "Preprocess Server is running!";
     });
 
     CROW_ROUTE(app, "/health")([](){
-        return crow::response(200, "OK");
+        crow::json::wvalue res;
+        res["status"] = "OK";
+        res["threadPoolSize"] = static_cast<int>(GetWorkerPool().size());
+        return crow::response(200, res);
     });
 
     CROW_ROUTE(app, "/preprocess").methods(crow::HTTPMethod::POST)([](const crow::request& req){
         LOG_INFO("Received preprocess request");
         auto startTime = std::chrono::high_resolution_clock::now();
         
-        // Validate request
+        // Validate request (on I/O thread - lightweight)
         auto validation = ValidatePreprocessRequest(req);
         if (!validation.success) {
             return crow::response(validation.errorCode, validation.errorMessage);
         }
         std::string imagePath = validation.imagePath;
+        std::string outputPath = GenerateOutputPath(imagePath);
         
-        // Process image
-        auto processedOpt = ProcessImageFile(imagePath);
+        // Offload CPU-bound image processing to worker thread pool
+        // Uses promise/future to bridge async ThreadPool with sync HTTP response
+        auto promise = std::make_shared<std::promise<std::optional<cv::Mat>>>();
+        auto future = promise->get_future();
+        
+        GetWorkerPool().enqueue([promise, imagePath]() {
+            promise->set_value(ProcessImageFile(imagePath));
+        });
+        
+        // Wait for worker thread to complete processing
+        auto processedOpt = future.get();
         if (!processedOpt) {
             return crow::response(500, "Processing failed");
         }
         
-        // Save result
-        std::string outputPath = GenerateOutputPath(imagePath);
+        // Save result with atomic write (.tmp → rename)
         if (!SaveProcessedImage(*processedOpt, outputPath)) {
             return crow::response(500, "Failed to save processed image");
         }
@@ -174,4 +175,3 @@ inline void setup_routes(crow::SimpleApp& app) {
         return CreatePreprocessResponse(outputPath, duration);
     });
 }
-
