@@ -68,7 +68,7 @@ target_include_directories(preprocess_server PRIVATE src src/core src/infra)
 
 # Week 3 Canny Pipeline Test (GrabCut excluded - production version)
 add_executable(test_canny_pipeline examples/test_canny_pipeline.cpp src/core/image_processor.cpp)
-target_link_libraries(test_canny_pipeline PRIVATE ${OpenCV_LIBS})
+target_link_libraries(test_canny_pipeline PRIVATE ${OpenCV_LIBS} spdlog::spdlog)
 target_include_directories(test_canny_pipeline PRIVATE src src/core)
 
 # OpenCV Parameter Benchmark (Code Review Evidence)
@@ -124,5 +124,5 @@ gtest_discover_tests(unit_tests)
 
 # Visualize Pipeline Tool (Temporary)
 add_executable(visualize_pipeline src/utils/visualize_pipeline.cpp src/core/image_processor.cpp)
-target_link_libraries(visualize_pipeline PRIVATE ${OpenCV_LIBS})
+target_link_libraries(visualize_pipeline PRIVATE ${OpenCV_LIBS} spdlog::spdlog)
 target_include_directories(visualize_pipeline PRIVATE src src/core)
