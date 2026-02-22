@@ -69,4 +69,9 @@ Thumbs.db
 *.recipe
 *.json
 
-.agent/
+JOB_SEARCH_STRATEGY.md
+*.jpg
+SKILL.md
+# Antigravity/Claude 스킬 파일은 추적 필요
+!.agent/skills/**/SKILL.md
+!.claude/skills/**/SKILL.md

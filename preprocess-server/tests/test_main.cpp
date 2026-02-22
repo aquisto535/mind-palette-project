@@ -38,7 +38,13 @@ TEST(ServerTest, HealthCheck) {
     app.handle_full(req, res);
     
     EXPECT_EQ(res.code, 200);
-    EXPECT_EQ(res.body, "OK");
+    EXPECT_EQ(res.code, 200);
+    
+    // Verify JSON response
+    auto body = crow::json::load(res.body);
+    EXPECT_TRUE(body);
+    EXPECT_EQ(body["status"].s(), "OK");
+    EXPECT_GE(body["threadPoolSize"].i(), 1);
 }
 
 TEST(ServerTest, Preprocess_MissingImagePath_Returns400) {
@@ -186,8 +192,10 @@ TEST(CreatePreprocessResponseTest, CreatesValidJsonResponse) {
 class ImageProcessorTest : public ::testing::Test {
 protected:
     void SetUp() override {
-        // Create a test image (100x100 BGR)
-        testImage = cv::Mat(100, 100, CV_8UC3, cv::Scalar(255, 128, 64));
+        // Create a test image (512x512 White Background with Black Rectangle)
+        // Simulates a simple sketch
+        testImage = cv::Mat(512, 512, CV_8UC3, cv::Scalar(255, 255, 255));
+        cv::rectangle(testImage, cv::Rect(100, 100, 200, 200), cv::Scalar(0, 0, 0), 5);
     }
     
     cv::Mat testImage;
@@ -201,11 +209,23 @@ TEST_F(ImageProcessorTest, Preprocess_ResizesTo512x512) {
     EXPECT_EQ(result.cols, 512);
 }
 
-TEST_F(ImageProcessorTest, Preprocess_OutputIsGrayscale) {
+TEST_F(ImageProcessorTest, Preprocess_OutputIsBGR) {
     cv::Mat result = processor.Preprocess(testImage);
     
-    // Grayscale image has 1 channel
-    EXPECT_EQ(result.channels(), 1);
+    // Output should be BGR (3 channels) for AI model compatibility
+    EXPECT_EQ(result.channels(), 3);
+}
+
+TEST_F(ImageProcessorTest, Preprocess_OutputHasWhiteBackground) {
+    cv::Mat result = processor.Preprocess(testImage);
+    
+    // Check corner pixel (should be background -> white)
+    // Since we invert at the end, the background (originally white paper) 
+    // should remain white in the final output.
+    cv::Vec3b pixel = result.at<cv::Vec3b>(0, 0);
+    EXPECT_GE(pixel[0], 240); // B
+    EXPECT_GE(pixel[1], 240); // G
+    EXPECT_GE(pixel[2], 240); // R
 }
 
 TEST_F(ImageProcessorTest, Preprocess_EmptyInputReturnsEmpty) {

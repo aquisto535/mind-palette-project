@@ -31,18 +31,19 @@ find_package(spdlog CONFIG REQUIRED)
 
 # Main Executable
 # [DORMANT CODE] Week 3 Filter Pattern Sources (Disabled)
-# set(FILTER_SOURCES
-#     src/filters/resize_filter.cpp
-#     src/filters/denoise_filter.cpp
-#     src/filters/grayscale_filter.cpp
-#     src/filters/canny_filter.cpp
-#     src/filters/binarize_filter.cpp
-#     src/filters/morphology_filter.cpp
-#     src/filters/invert_filter.cpp
-#     src/filters/rgb_convert_filter.cpp
-#     src/core/filter_pipeline.cpp
-#     src/core/pipeline_factory.cpp
-# )
+# [ACTIVE CODE] Refactored Filter Architecture (Week 3.5)
+set(FILTER_SOURCES
+    src/filters/resize_filter.cpp
+    src/filters/denoise_filter.cpp
+    src/filters/grayscale_filter.cpp
+    src/filters/binarize_filter.cpp
+    src/filters/morphology_filter.cpp
+    src/filters/invert_filter.cpp
+    src/filters/rgb_convert_filter.cpp
+    src/filters/hybrid_preprocess_filter.cpp
+    src/core/filter_pipeline.cpp
+    src/core/pipeline_factory.cpp
+)
 
 # Week 4 Concurrency Sources
 set(WEEK4_SOURCES
@@ -51,7 +52,7 @@ set(WEEK4_SOURCES
     src/infra/benchmark.cpp
 )
 
-add_executable(preprocess_server src/main.cpp src/core/image_processor.cpp src/utils/Logger.cpp) # Removed ${FILTER_SOURCES}
+add_executable(preprocess_server src/main.cpp src/core/image_processor.cpp src/utils/Logger.cpp ${WEEK4_SOURCES} ${FILTER_SOURCES})
 target_link_libraries(preprocess_server PRIVATE Crow::Crow asio::asio Threads::Threads ${OpenCV_LIBS} spdlog::spdlog)
 target_include_directories(preprocess_server PRIVATE src src/core src/infra)
 
@@ -69,6 +70,16 @@ target_include_directories(preprocess_server PRIVATE src src/core src/infra)
 add_executable(test_canny_pipeline examples/test_canny_pipeline.cpp src/core/image_processor.cpp)
 target_link_libraries(test_canny_pipeline PRIVATE ${OpenCV_LIBS})
 target_include_directories(test_canny_pipeline PRIVATE src src/core)
+
+# OpenCV Parameter Benchmark (Code Review Evidence)
+add_executable(opencv_benchmark benchmark/opencv_benchmark.cpp)
+target_link_libraries(opencv_benchmark PRIVATE ${OpenCV_LIBS})
+target_include_directories(opencv_benchmark PRIVATE src src/core)
+
+# Canny Threshold Benchmark (Code Review Evidence)
+add_executable(canny_benchmark benchmark/canny_benchmark.cpp)
+target_link_libraries(canny_benchmark PRIVATE ${OpenCV_LIBS})
+target_include_directories(canny_benchmark PRIVATE src src/core)
 
 # Week 3.5 Filter Pipeline Test (Design Patterns) - Disabled
 # add_executable(test_filter_pipeline examples/test_filter_pipeline.cpp ${FILTER_SOURCES})
@@ -102,7 +113,7 @@ add_executable(unit_tests
     tests/test_atomic_writer.cpp
     src/core/image_processor.cpp 
     src/utils/Logger.cpp
-    # ${FILTER_SOURCES} (Disabled)
+    ${FILTER_SOURCES}
     ${WEEK4_SOURCES}
 )
 target_link_libraries(unit_tests PRIVATE Crow::Crow asio::asio GTest::gtest_main Threads::Threads ${OpenCV_LIBS} spdlog::spdlog)
@@ -110,3 +121,8 @@ target_include_directories(unit_tests PRIVATE src src/core src/infra)
 
 include(GoogleTest)
 gtest_discover_tests(unit_tests)
+
+# Visualize Pipeline Tool (Temporary)
+add_executable(visualize_pipeline src/utils/visualize_pipeline.cpp src/core/image_processor.cpp)
+target_link_libraries(visualize_pipeline PRIVATE ${OpenCV_LIBS})
+target_include_directories(visualize_pipeline PRIVATE src src/core)

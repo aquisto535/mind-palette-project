@@ -9,8 +9,8 @@
 namespace fs = std::filesystem;
 
 int main() {
-    std::string inputPath = "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\shared_volume\\uploads\\IMG_1294.jpg";
-    std::string outputDir = "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\shared_volume\\processed\\canny_pipeline_img1294";
+    std::string inputPath = "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\shared_volume\\processed\\canny_pipeline_img1294\\0_original.jpg";
+    std::string outputDir = "C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\shared_volume\\processed\\canny_pipeline_img1294_combined";
     
     // Create output directory
     fs::create_directories(outputDir);
@@ -66,10 +66,17 @@ int main() {
     std::cout << "[4] Binarize (Adaptive): " << duration << "ms" << std::endl;
     processor.Save(step4_binary, outputDir + "\\4_binarized.jpg");
     
+    // === Step 4.5: Combine Binarized + Morphology (The Fix) ===
+    cv::Mat step4_combined;
+    // Both are binary images (0 or 255). We want to keep white pixels from BOTH.
+    cv::bitwise_or(step4_binary, step3_enhanced, step4_combined);
+    processor.Save(step4_combined, outputDir + "\\4_5_combined.jpg");
+    std::cout << "[4.5] Combined (Bitwise OR): integrated Canny edges" << std::endl;
+    
     // === Step 5: Convert to RGB 3-channel (for EfficientNet-B2) ===
     start = std::chrono::high_resolution_clock::now();
     cv::Mat step5_rgb;
-    cv::cvtColor(step4_binary, step5_rgb, cv::COLOR_GRAY2BGR);
+    cv::cvtColor(step4_combined, step5_rgb, cv::COLOR_GRAY2BGR);
     end = std::chrono::high_resolution_clock::now();
     duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
     std::cout << "[5] RGB Convert (3-channel): " << duration << "ms, channels=" << step5_rgb.channels() << std::endl;

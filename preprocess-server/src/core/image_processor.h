@@ -41,6 +41,12 @@ public:
     // @param targetSize: Target width/height (default 512)
     cv::Mat ResizeKeepingAspectRatio(const cv::Mat& input, int targetSize = 512);
 
+    // Calculate ROI containing all significant contours
+    cv::Rect GetContentROI(const cv::Mat& binary);
+
+    // Crop image to ROI
+    cv::Mat Crop(const cv::Mat& image, const cv::Rect& roi);
+
 private:
-    const int kTargetSize = 512;
+    static constexpr int kTargetSize = 512;
 };
