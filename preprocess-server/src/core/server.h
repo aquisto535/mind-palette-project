@@ -153,18 +153,21 @@ inline void setup_routes(crow::SimpleApp& app) {
         auto promise = std::make_shared<std::promise<std::optional<cv::Mat>>>();
         auto future = promise->get_future();
         
-        GetWorkerPool().enqueue([promise, imagePath]() {
+        GetWorkerPool().enqueue([promise, imagePath]() 
+        {
             promise->set_value(ProcessImageFile(imagePath));
         });
         
         // Wait for worker thread to complete processing
         auto processedOpt = future.get();
-        if (!processedOpt) {
+        if (!processedOpt) 
+        {
             return crow::response(500, "Processing failed");
         }
         
         // Save result with atomic write (.tmp → rename)
-        if (!SaveProcessedImage(*processedOpt, outputPath)) {
+        if (!SaveProcessedImage(*processedOpt, outputPath)) 
+        {
             return crow::response(500, "Failed to save processed image");
         }
         

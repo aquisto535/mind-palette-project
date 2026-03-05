@@ -12,11 +12,11 @@ FastAPI + PyTorch + ONNX 기반 TDD 패턴과 Best Practices를 제공합니다.
 
 ## Phase 4 컨텍스트
 
-### Phase 4 체크리스트 (plan.md 발췌)
-!`sed -n '/## 🧠 Phase 4: Python AI Server/,/## ⚙️ Phase 3/p' plan.md | head -n -1 2>/dev/null || echo "Phase 4 섹션 없음"`
+### Phase 4 체크리스트
+(plan.md의 Phase 4 섹션을 Read 도구로 확인하세요)
 
 ### Python 서버 파일 현황
-!`find ai-server -name "*.py" -type f 2>/dev/null | head -10 || echo "ai-server 디렉토리 없음"`
+(ai-server 디렉토리를 Glob 도구로 확인하세요: `ai-server/**/*.py`)
 
 ---
 

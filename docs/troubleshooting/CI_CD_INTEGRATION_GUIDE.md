@@ -500,6 +500,27 @@ Warning: CodeQL Action v3 will be deprecated in December 2026.
   - [ ] 컨테이너 내부에서 vcpkg로 의존성을 설치한다. (호스트 `C:\opencv`는 컨테이너에서 사용 불가)
   - [ ] Linux 컨테이너 기준 `x64-linux` triplet을 사용한다.
 
+### 6.7 CI (또는 로컬) 빌드 실패: `spdlog/spdlog.h: No such file or directory`
+
+**에러**:
+```
+fatal error: spdlog/spdlog.h: No such file or directory
+#include <spdlog/spdlog.h>
+```
+
+**원인**:
+- CMake는 철저하게 **타겟(Target) 중심**입니다. 최상단에서 `find_package(spdlog CONFIG REQUIRED)`를 호출했더라도, 해당 라이브러리를 실제로 사용하는 소스코드(예: `image_processor.cpp`)를 컴파일하는 **모든 개별 실행 파일/테스트 타겟**에 의존성을 명시적으로 주입(Link)하지 않으면 컴파일러가 헤더 경로를 알 수 없습니다.
+
+**해결**:
+- 문제가 발생한 소스코드를 공유하여 빌드하는 모든 타겟(테스트 예제 등)의 `target_link_libraries`에 `spdlog::spdlog`를 추가합니다.
+
+```cmake
+# CMakeLists.txt 예시
+add_executable(test_canny_pipeline examples/test_canny_pipeline.cpp src/core/image_processor.cpp)
+- target_link_libraries(test_canny_pipeline PRIVATE ${OpenCV_LIBS})
++ target_link_libraries(test_canny_pipeline PRIVATE ${OpenCV_LIBS} spdlog::spdlog)
+```
+
 ---
 
 ## 📚 참고 자료

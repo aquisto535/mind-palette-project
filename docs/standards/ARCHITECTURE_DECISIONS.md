@@ -24,6 +24,9 @@
 | ADR-013 | Git Workflow로 GitHub Flow (Feature Branch + PR) 채택 | 2026-02 | ✅ Accepted |
 | ADR-014 | AWS EC2와 Docker 연결 구조 (Port Mapping & Bridge Network) | 2026-02 | ✅ Accepted |
 | ADR-015 | 하이브리드 배포 전략 (Local GPU 개발 vs EC2 CPU 배포) | 2026-02 | ✅ Accepted |
+| ADR-016 | Antigravity Awesome Skills 도입 및 코드베이스 현대화 | 2026-02 | ✅ Accepted |
+| ADR-017 | AI 코딩 도구(Antigravity vs Claude Code) 역할 분담 전략 도입 | 2026-03 | ✅ Accepted |
+| ADR-018 | HFD 도메인 기반 Multi-label Binary Classification 아키텍처 채택 | 2026-03 | ✅ Accepted |
 ---
 
 ## ADR-001: 마이크로서비스 아키텍처 채택 (Node.js + C++ + Python)
@@ -1644,3 +1647,83 @@ graph TD
 - [code-style-guide.md](../.agent/rules/code-style-guide.md)
 - [ADR-013: GitHub Flow 채택](#adr-013-git-workflow로-github-flow-feature-branch--pr-채택)
 
+---
+
+## ADR-017: AI 코딩 도구(Antigravity vs Claude Code) 역할 분담 전략 도입
+
+### 상태
+✅ **Accepted** (2026-03)
+
+### 컨텍스트 (Context)
+개발 생산성 향상을 위해 **Antigravity(VSCode 내장, Gemini 기반)**와 **Claude Code(CLI 기반)** 두 시스템을 병행 사용 중이었습니다.
+그러나, 다음과 같은 문제들이 발생했습니다:
+1. **이중 관리 비용**: TDD 원칙과 C++ 코딩 가이드라인이 `CLAUDE.md`, `CLAUDE_origin.md`, `.cursorrules`, `.gemini/settings.json` 등 4곳이상 중복 정의되어 있었습니다.
+2. **역할 혼선(충돌)**: 두 도구가 같은 파일을 동시에 수정하거나, 강하지 않은 분야의 작업을 맡게 되어 비효율이 발생할 우려가 있었습니다.
+
+### 의사결정 (Decision)
+**단일 진실 소스(SSOT) 기반 설정 통합**과 **도구별 강점 기반 역할 분담 전략**을 채택합니다.
+
+1. **SSOT 문서 도입**: 모든 코딩/설계 규칙은 `docs/CODING_STANDARDS.md` 하나로 통합하여 선언합니다.
+2. **역할 분담 (Role Separation)**:
+   - **Antigravity (설계/분석/문서화 전담)**:
+     - `AGENTS.md`를 통해 역할 인식. 
+     - 아키텍처 설계, 기술 리서치, 시각적 검증(UI), 시스템 분석 등 넓은 컨텍스트가 필요한 작업 수행.
+     - `sequential-thinking`, `context7` 등 MCP 도구 적극 활용.
+   - **Claude Code (구현/테스트 반복 전담)**:
+     - `CLAUDE.md`를 통해 역할 인식.
+     - TDD 사이클(Red-Green-Refactor)의 빠른 피드백 반복, 터미널 명령을 통한 C++ 빌드/테스트 루프 제어, 구조적 커밋 분리.
+
+### 근거 (Rationale)
+
+#### 1️⃣ 제1원칙: "AI 도구란 무엇인가?"
+- Antigravity는 **IDE 상태와 시각적 브라우저 제어**에 특화되어 크로스-모듈 간 맥락 이해 및 설계, 검증에 압도적 강점을 지닙니다.
+- 반면 Claude Code는 **CLI 네이티브 도구**로, 터미널 테스트 실행, 오류 즉각 수정 등 **빠른 TDD 코딩 반복 사이클**에 최적화되어 있습니다.
+- 따라서 "같이 무언가를 하게" 두는 것이 아니라 각자 잘하는 도메인으로 역할을 명확히 쪼개야 효율성이 극대화됩니다.
+
+#### 2️⃣ SSOT (Single Source of Truth) 확보
+- TDD나 언어 스펙 규정 등 **"어떻게 코딩할 것인가"**는 시스템에 상관없이 동일해야 합니다. 
+- 복수 구성 파일들이 `CODING_STANDARDS.md`만 바라보게 수정하여, 향후 정책 수정 시 문서 하나만 관리하면 자동 적용되도록 아키텍처를 개선했습니다.
+
+### 대안 및 트레이드오프 (Alternatives)
+- **하나의 AI 도구로 통일 (단일화)**:
+  - ❌ **Rejected**: 어느 한쪽 도구만 쓰기엔 놓치는 강점이 큽니다. (ex. Antigravity의 시각 검증, Claude Code의 CLI 빠른 루프)
+- **규칙 파일 동기화 스크립트 작성**:
+  - ❌ **Rejected**: 유지 보수 복잡도만 올리고, 근본 원인(지시 내용 중복)을 해결하지 못함.
+
+### 결론 (Consequences)
+- ✅ **장점**: 
+  - 관리 포인트(SSOT) 단일화로 유지 보수 용이
+  - 목적성에 맞는 AI 사용으로 오류 발생 감소 및 작업 효율 대폭 상승
+- ⚠️ **주의사항**: 
+  - 동시에 동일한 소스 파일(`*.cpp`, `*.ts` 등)에 대한 작업을 지시하지 않도록 사용자(프로젝트 오너)의 작업 배분 통제가 중요합니다.
+
+---
+
+## ADR-018: HFD 도메인 기반 Multi-label Binary Classification 아키텍처 채택
+
+### 상태
+✅ **Accepted** (2026-03)
+
+### 컨텍스트 (Context)
+아동 인물화 지능 측정(HFD) 시스템의 AI 모듈을 개발하는 단계에서, 채점 기준(총 60문항)에 맞는 신경망 출력 구조 설계가 필요했습니다. 기존 계획은 Softmax(합계 1.0)를 가정한 Multi-class 구조였으나, 60개 각 항목(예: 눈 존재, 코 2차원 등) 유무를 독립적으로 판별해야 하는 도메인 특성과 맞지 않았습니다.
+
+### 의사결정 (Decision)
+1. **분류 방식**: Multi-class(Softmax) 대신 각 문항을 독립적으로 0/1 판별하는 **Multi-label Binary Classification (Sigmoid)** 채택
+2. **Head 구성**: 60개 문항을 원본 지침서 기준에 따라 4개의 특화된 Head (19/14/16/11)로 분리 배정
+3. **입력 해상도**: 512x512 원본 대신 EfficientNet-B2의 기본 해상도인 **260x260**으로의 리사이즈를 Python AI 서버 내 전처리 파이프라인에서 수행
+4. **남녀 모델 분리**: 남자상과 여자상의 채점 항목 차이를 고려해, 단일 모델이 아닌 성별 별도 모델 파일(`male.onnx`, `female.onnx`)로 학습 및 서빙 분기
+
+### 근거 (Rationale)
+
+#### 1️⃣ 도메인 정합성 (Multi-label Binary)
+- HFD 채점은 하나의 클래스를 맞추는 것이 아니라 60개 개별 항목의 달성 여부(Pass/Fail)를 체크하는 구조이므로 Sigmoid + BCEWithLogitsLoss 조합이 수학적/논리적으로 정확합니다.
+
+#### 2️⃣ 학습 효율성 및 공간적 특성 반영 (4-Head 구조)
+- 특징이 서로 다른 머리/얼굴(19), 몸통/비례(14), 사지/말단(16), 의복/질적수준(11)으로 분리하여 학습을 효율화합니다.
+
+#### 3️⃣ 마이크로서비스 유연성 (입력 해상도 처리)
+- C++ 전처리 서버는 모델에 종속되지 않는 고품질의 512x512 패딩/보정 이미지만 생성하고, AI 서버(FastAPI)가 모델 아키텍처(260x260)에 맞게 리사이즈함으로써 이후 모델 교체 시의 유연성(Loose Coupling)을 보장합니다.
+
+### 결론 (Consequences)
+- ✅ **장점**: 지능 검사 도메인 및 ONNX 변환과 완벽히 호환되는 정확도 높은 모델 아키텍처 확립. 모델 변경에 유연한 마이크로서비스 아키텍처 유지.
+- ⚠️ **적용**: 훈련 시 클래스 불균형에 대응하여 적절한 Class Weight 적용 필요.

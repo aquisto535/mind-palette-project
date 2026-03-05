@@ -8,7 +8,7 @@ ___
 **2025년 11월 ~ 2026년 8월 (10개월)**
 
 ### 🎯 프로젝트 목표 (Vision 2026)
-단순한 지능 측정 자동화를 넘어, **Traditional Vision AI(정량적 분석)**와 **Modern Multimodal AI(정성적 해석)**의 결합을 통해 아동의 인지 및 심리 상태를 통합 진단하는 **Hybrid AI Core** 구축.
+단순한 지능 측정 자동화를 넘어, **Traditional Vision AI(정량적 분석)**와 **Modern Multimodal AI(정성적 해석)**의 결합을 통해 아동의 인지 상태를 통합 진단하는 **Hybrid AI Core** 구축.
 
 향후 26만 GPU 시대의 대규모 인프라 환경에서의 확장을 고려한 **Scalable MLOps 파이프라인** 설계 및 **Data-Centric AI(합성 데이터 활용)** 방법론 도입의 초석 마련.
 

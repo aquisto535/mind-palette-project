@@ -44,9 +44,9 @@ Track 2 (복습 20%): C++ 디테일 보강
 ### 🗓️ Week 1 즉시 착수 체크리스트 (2026.02 3주차)
 
 **주력 (80%):**
-- [ ] FastAPI 서버 골격 구축 (아래 Step 1 참조)
-- [ ] EfficientNet-B2 아키텍처 조사 (MCP context7 활용)
-- [ ] PyTorch 환경 설정 및 Hello World (더미 텐서 추론 성공)
+- [x] FastAPI 서버 골격 구축 (아래 Step 1 참조)
+- [x] EfficientNet-B2 아키텍처 조사 (MCP context7 활용)
+- [x] PyTorch 환경 설정 및 Hello World (더미 텐서 추론 성공)
 
 **복습 (20%):**
 - [ ] C++ 전처리 코드 1개 파일 정독 (`filter_pipeline.h` 권장)
@@ -58,50 +58,50 @@ Track 2 (복습 20%): C++ 디테일 보강
 > 테스트 깊이 분류: **L1**(데이터 구조/형태) → **L2**(변환 로직) → **L3**(제약/경계)
 
 #### L1: 데이터 구조 (What) — "형태가 올바른가?"
-- [ ] **FastAPI 서버 구축**:
-  - [ ] [TDD][L1] `/health` 응답 구조 테스트: 200 OK, `{ "status": str, "model_loaded": bool }` 필드 존재 및 타입 (Red)
-  - [ ] FastAPI 기본 골격 및 헬스 체크 엔드포인트 구현 (Green)
-- [ ] **PyTorch 모델 구성 (EfficientNet-B2)**:
-  - [ ] **[MCP]** `context7`으로 EfficientNet-B2의 Feature Extractor 레이어 구조 조사
-  - [ ] [TDD][L1] 모델 아키텍처 구조 테스트: 가중치(`.pt`) 로드, Backbone 레이어 존재, Head 개수 == 4 검증 (Red)
-  - [ ] EfficientNet-B2 기반 Transfer Learning 모델 클래스 작성 (Green)
-- [ ] **Multi-head 분류 구조 구현**:
-  - [ ] [TDD][L1] 출력 텐서 Shape 테스트: 더미 입력 `(1,3,512,512)` → 각 head output `(1, num_classes)`, dtype=float32 (Red)
-  - [ ] Feature Extractor 동결 및 Multi-head Classifier(Linear Layers) 구현 (Green)
-- [ ] **3-Channel 입력 이미지 구조**:
-  - [ ] [TDD][L1] C++ 전처리 결과 이미지 구조 테스트: shape==(H,W,3), dtype==uint8, 채널 의미(R=gray, G=binary, B=distance) (Red)
+- [x] **FastAPI 서버 구축**:
+  - [x] [TDD][L1] `/health` 응답 구조 테스트: 200 OK, `{ "status": str, "model_loaded": bool }` 필드 존재 및 타입 (Red)
+  - [x] FastAPI 기본 골격 및 헬스 체크 엔드포인트 구현 (Green)
+- [x] **PyTorch 모델 구성 (EfficientNet-B2)**:
+  - [x] **[MCP]** `context7`으로 EfficientNet-B2의 Feature Extractor 레이어 구조 조사
+  - [x] [TDD][L1] 모델 아키텍처 구조 테스트: 가중치(`.pt`) 로드, Backbone 레이어 존재, Head 개수 == 4 검증 (Red)
+  - [x] EfficientNet-B2 기반 Transfer Learning 모델 클래스 작성 (Green)
+- [x] **Multi-head 분류 구조 구현**:
+  - [x] [TDD][L1] 출력 텐서 Shape 테스트: 더미 입력 `(1,3,260,260)` → Head A `(1,19)`, Head B `(1,14)`, Head C `(1,16)`, Head D `(1,11)`, dtype=float32 (Red)
+  - [x] Feature Extractor 동결 및 Multi-head Classifier(Linear Layers) 구현 (Green)
+- [x] **3-Channel 입력 이미지 구조**:
+  - [x] [TDD][L1] C++ 전처리 결과 이미지 구조 테스트: shape==(H,W,3), dtype==uint8, 채널 의미(R=gray, G=binary, B=distance) (Red)
 
 #### L2: 변환 로직 (How) — "변환이 정확한가?"
-- [ ] **이미지 전처리 파이프라인**:
-  - [ ] [TDD][L2] Resize→Normalize→ToTensor 변환 테스트: 출력 shape==(1,3,224,224), 값 범위 검증 (Red)
-- [ ] **Feature Extractor 동결 검증**:
-  - [ ] [TDD][L2] backbone.parameters()의 requires_grad==False 검증 (Red)
-- [ ] **Multi-head 추론 정확성**:
-  - [ ] [TDD][L2] 고정 seed 입력 → 각 head softmax 출력 합 == 1.0 검증 (Red)
+- [x] **이미지 전처리 파이프라인**:
+  - [x] [TDD][L2] Resize→Normalize→ToTensor 변환 테스트: 출력 shape==(1,3,260,260), 값 범위 [0,1] 검증 (Red)
+- [x] **Feature Extractor 동결 검증**:
+  - [x] [TDD][L2] backbone.parameters()의 requires_grad==False 검증 (Red)
+- [x] **Multi-head 추론 정확성**:
+  - [x] [TDD][L2] 고정 seed 입력 → 각 head sigmoid 출력 값이 모두 [0, 1] 범위 내 검증 (Red)
 - [ ] **Multi-Channel 입력 최적화 (Ablation Study)**:
   - [ ] **[Deep Dive]** `R=binary, G=gray, B=distance_transform` 3채널 입력 방식 vs 단일 이진화 입력 방식의 분류 정확도 비교
   - [ ] 스케치 데이터셋 mean/std 산출 후 ImageNet 정규화 파라미터 대체 (`mean=[0.485,0.456,0.406]` → 스케치 기반 값으로 재계산)
   - [ ] 최적 채널 조합을 C++ 전처리 파이프라인에 반영 (Phase 3 Multi-Channel Merge 완성)
-- [ ] **Toy Model (MVP)**: ImageNet Pretrained EfficientNet-B2를 로드하여 더미 데이터 추론 성공.
+- [x] **Toy Model (MVP)**: ImageNet Pretrained EfficientNet-B2를 로드하여 더미 데이터 추론 성공.
 - [ ] **E2E 연동**:
   - [ ] [TDD][L2] Node.js ↔ C++(전처리) ↔ Python(추론) 전체 파이프라인 통합 테스트: 최종 JSON에 4개 head 분류 결과 포함 검증 (Red)
 
 #### L3: 제약과 검증 (Why) — "경계에서도 안전한가?"
 - [ ] **비정상 입력 처리**:
   - [ ] [TDD][L3] 손상된 파일, 0바이트 파일, 비이미지 파일 입력 시 400/422 반환 및 서버 무중단 테스트 (Red)
-- [ ] **모델 미로드 상태**:
-  - [ ] [TDD][L3] 모델 파일 경로 오류 시 /health에서 model_loaded==false, 서버 기동 유지 테스트 (Red)
+- [x] **모델 미로드 상태**:
+  - [x] [TDD][L3] 모델 파일 경로 오류 시 /health에서 model_loaded==false, 서버 기동 유지 테스트 (Red)
 - [ ] **GPU 메모리 고갈**:
   - [ ] [TDD][L3] OOM 시뮬레이션 시 503 Service Unavailable 반환 및 로그 기록 테스트 (Red)
-- [ ] **정규화 파라미터 불변식**:
-  - [ ] [TDD][L3] mean/std 값이 config에서 로드되는지 검증, 하드코딩 방지 테스트 (Red)
+- [x] **정규화 파라미터 불변식**:
+  - [x] [TDD][L3] mean/std 값이 config에서 로드되는지 검증, 하드코딩 방지 테스트 (Red)
 
 ### Step 2: Universal Optimization (ONNX + Deep Dive)
 
 #### L1: 데이터 구조 (What)
 - [ ] **[MCP]** `context7`으로 PyTorch 모델의 ONNX 변환 시 지원되는 최신 Ops 및 호환성 리서치
 - [ ] **ONNX 모델 파일 구조**:
-  - [ ] [TDD][L1] 변환된 .onnx 파일의 입력 노드 shape==(1,3,224,224), 출력 노드 개수==4 검증 (Red)
+  - [ ] [TDD][L1] 변환된 .onnx 파일의 입력 노드 shape==(1,3,260,260), 출력 노드 개수==4 검증 (Red)
 - [ ] **ONNX Runtime 세션**:
   - [ ] [TDD][L1] InferenceSession 객체 생성 성공 및 provider 확인 테스트 (Red)
 
@@ -222,9 +222,9 @@ Track 2 (복습 20%): C++ 디테일 보강
 #### Health Checks - Tier 1: 필수
 - [x] **C++**: `/health` 엔드포인트 구현 완료.
 - [x] **Node.js**: `/health` 엔드포인트 구현 완료.
-- [ ] **Python**:
-  - [ ] [TDD] GPU 메모리 고갈 시 503 Service Unavailable 반환 테스트 (Red)
-  - [ ] 모델 로드 상태 및 리소스 확인 헬스 체크 구현 (Green)
+- [x] **Python**:
+  - [ ] [TDD] GPU 메모리 고갈 시 503 Service Unavailable 반환 테스트 (Red) — Phase 5 이후
+  - [x] 모델 로드 상태 및 리소스 확인 헬스 체크 구현 (Green)
 - [ ] **Docker Healthcheck**:
   - [ ] [TDD] 컨테이너 비정상 종료 시 Docker Daemon의 재시작 정책 동작 테스트 (Red)
   - [ ] `docker-compose.yml` 내 healthcheck (interval, timeout) 설정 (Green)
