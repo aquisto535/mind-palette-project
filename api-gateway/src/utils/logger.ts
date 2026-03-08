@@ -5,9 +5,15 @@ const { combine, timestamp, printf, colorize, json } = winston.format;
 
 // 로그 포맷 정의
 const logFormat = printf(({ level, message, timestamp, ...metadata }) => {
-    let msg = `${timestamp} [${level}] : ${message}`;
-    if (Object.keys(metadata).length > 0) {
-        msg += ` ${JSON.stringify(metadata)}`;
+    const requestId = metadata.requestId ? ` [${metadata.requestId}]` : '';
+    let msg = `${timestamp}${requestId} [${level}] : ${message}`;
+
+    // requestId는 이미 출력했으므로 메타데이터 복사본에서 삭제하여 중복 출력 방지
+    const meta = { ...metadata };
+    delete meta.requestId;
+
+    if (Object.keys(meta).length > 0) {
+        msg += ` ${JSON.stringify(meta)}`;
     }
     return msg;
 });

@@ -29,7 +29,8 @@ router.post('/', (req: Request, res: Response, next: NextFunction) => {
       return res.status(400).json({ error: 'No image file uploaded' });
     }
 
-    const result = await processAnalysis(req.file);
+    const requestId = (req as any).requestId;
+    const result = await processAnalysis(req.file, requestId);
     res.json(result);
   } catch (error: unknown) {
     logger.error('Analysis Error:', { error: error instanceof Error ? error.message : String(error) });

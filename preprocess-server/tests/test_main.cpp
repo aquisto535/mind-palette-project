@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include "crow.h"
-#include "server.h"
-#include "image_processor.h"
+#include "core/server.h"
+#include "core/image_processor.h"
 #include <filesystem>
 #include <fstream>
 
@@ -194,7 +194,7 @@ protected:
     void SetUp() override {
         // Create a test image (512x512 White Background with Black Rectangle)
         // Simulates a simple sketch
-        testImage = cv::Mat(512, 512, CV_8UC3, cv::Scalar(255, 255, 255));
+        testImage = cv::Mat(512, 512, CV_8UC3, cv::Scalar(255, 255, 255)); // 512x512, CV_8UC3(3채널 RGB), 흰색(255,255,255)
         cv::rectangle(testImage, cv::Rect(100, 100, 200, 200), cv::Scalar(0, 0, 0), 5);
     }
     
@@ -272,7 +272,7 @@ protected:
     void SetUp() override {
         // Create a test image with distinct foreground (center) and background (edges)
         // Simulates a child's drawing on white paper
-        testImage = cv::Mat(512, 512, CV_8UC3, cv::Scalar(255, 255, 255)); // White background
+        testImage = cv::Mat(512, 512, CV_8UC3, cv::Scalar(255, 255, 255)); // 512x512, CV_8UC3(3채널 RGB), 흰색(255,255,255)
         
         // Draw a colored rectangle in the center (simulating foreground)
         cv::rectangle(testImage, cv::Rect(100, 100, 312, 312), cv::Scalar(0, 0, 255), -1);

@@ -1,21 +1,21 @@
-import torch
-from dataclasses import dataclass
-from typing import Dict, Any, Optional
+"""모델 로드 및 상태 관리.
+
+남녀 모델을 독립적으로 로드하고 상태를 추적한다.
+가중치 파일이 없어도 서버는 정상 기동한다.
+"""
+
+import logging
+from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Optional
+
+import torch
+
 from src.config import ModelConfig
-from src.infra.logger import get_logger
+from src.core.model import HFDClassifier
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
-# HFDClassifier 클래스가 다른 곳에 정의되어 있지 않으므로, 
-# 최소한의 인터페이스를 갖춘 Placeholder 또는 실제 클래스 정의가 필요합니다.
-# 여기서는 에러 방지를 위해 간단한 구조를 정의하거나 mock 처리합니다.
-class HFDClassifier(torch.nn.Module):
-    def __init__(self, config):
-        super().__init__()
-        self.config = config
-    def forward(self, x):
-        return x
 
 @dataclass
 class ModelState:
@@ -51,11 +51,9 @@ def _try_load(
 
     try:
         model = HFDClassifier(config)
-        # 실제 가중치 로드는 테스트 환경에 따라 실패할 수 있으므로 pass 처리하거나 
-        # 실제 파일이 있을 때만 수행
-        # model.load_state_dict(torch.load(path, map_location=config.device))
+        model.load_state_dict(torch.load(path, map_location=config.device))
         model.eval()
-        logger.info(f"{gender} model found at {path}")
+        logger.info(f"{gender} model loaded from {path}")
         return model
     except Exception as e:
         logger.error(f"Failed to load {gender} model: {e}")

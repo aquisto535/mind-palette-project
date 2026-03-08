@@ -46,26 +46,26 @@ struct ValidationResult {
 };
 
 // Returns validation result with appropriate error codes
-inline ValidationResult ValidatePreprocessRequest(const crow::request& req) {
+inline ValidationResult ValidatePreprocessRequest(const crow::request& req, const std::string& requestId) {
     auto body = crow::json::load(req.body);
     if (!body) {
-        LOG_ERROR("Invalid JSON body received");
+        LOG_ERROR(requestId, "Invalid JSON body received");
         return {false, "", 400, "Invalid JSON"};
     }
     
     if (!body.has("imagePath")) {
-        LOG_ERROR("Missing imagePath in request body");
+        LOG_ERROR(requestId, "Missing imagePath in request body");
         return {false, "", 400, "Missing imagePath"};
     }
     
     std::string imagePath = body["imagePath"].s();
     if (imagePath.empty()) {
-        LOG_ERROR("imagePath is empty");
+        LOG_ERROR(requestId, "imagePath is empty");
         return {false, "", 400, "imagePath is empty"};
     }
     
     if (!fs::exists(imagePath)) {
-        LOG_ERROR("File not found: {}", imagePath);
+        LOG_ERROR(requestId, "File not found: {}", imagePath);
         return {false, "", 404, "File not found"};
     }
     
@@ -74,44 +74,44 @@ inline ValidationResult ValidatePreprocessRequest(const crow::request& req) {
 
 // Returns processed image or nullopt on failure
 // Pipeline: Preprocess → Canny → Morphology → Binarize (GrabCut excluded for performance)
-inline std::optional<cv::Mat> ProcessImageFile(const std::string& imagePath) {
-    LOG_INFO("Processing file: {}", imagePath);
+inline std::optional<cv::Mat> ProcessImageFile(const std::string& imagePath, const std::string& requestId) {
+    LOG_INFO(requestId, "Processing file: {}", imagePath);
     
     ImageProcessor processor;
     cv::Mat img = processor.Load(imagePath);
     if (img.empty()) {
-        LOG_ERROR("Failed to load image: {}", imagePath);
+        LOG_ERROR(requestId, "Failed to load image: {}", imagePath);
         return std::nullopt;
     }
     
     // All preprocessing steps (Smart Crop, Invert, BGR Convert) are now encapsulated
     cv::Mat result = processor.Preprocess(img);
     if (result.empty()) {
-        LOG_ERROR("Preprocessing failed for: {}", imagePath);
+        LOG_ERROR(requestId, "Preprocessing failed for: {}", imagePath);
         return std::nullopt;
     }
     
-    LOG_INFO("Pipeline complete. Output: {}x{} (3-channel RGB)", result.cols, result.rows);
+    LOG_INFO(requestId, "Pipeline complete. Output: {}x{} (3-channel RGB)", result.cols, result.rows);
     return result;
 }
 
 // Saves processed image atomically (.tmp → rename pattern)
 // Prevents corrupted files if process crashes during write
-inline bool SaveProcessedImage(const cv::Mat& img, const std::string& outputPath) {
-    LOG_INFO("Saving with atomic write: {}", outputPath);
+inline bool SaveProcessedImage(const cv::Mat& img, const std::string& outputPath, const std::string& requestId) {
+    LOG_INFO(requestId, "Saving with atomic write: {}", outputPath);
     
     if (!AtomicFileWriter::write(img, outputPath)) {
-        LOG_ERROR("Atomic write failed for: {}", outputPath);
+        LOG_ERROR(requestId, "Atomic write failed for: {}", outputPath);
         return false;
     }
     
-    LOG_INFO("Atomic write success: {}", outputPath);
+    LOG_INFO(requestId, "Atomic write success: {}", outputPath);
     return true;
 }
 
 // Creates success response with performance metrics
-inline crow::response CreatePreprocessResponse(const std::string& outputPath, int64_t durationMs) {
-    LOG_INFO("Successfully processed image in {}ms. Saved to: {}", durationMs, outputPath);
+inline crow::response CreatePreprocessResponse(const std::string& outputPath, int64_t durationMs, const std::string& requestId) {
+    LOG_INFO(requestId, "Successfully processed image in {}ms. Saved to: {}", durationMs, outputPath);
     
     crow::json::wvalue res;
     res["processedPath"] = outputPath;
@@ -137,11 +137,16 @@ inline void setup_routes(crow::SimpleApp& app) {
     });
 
     CROW_ROUTE(app, "/preprocess").methods(crow::HTTPMethod::POST)([](const crow::request& req){
-        LOG_INFO("Received preprocess request");
+        std::string requestId = req.get_header_value("X-Request-ID");
+        if (requestId.empty()) {
+            requestId = "SYSTEM"; // 기본값
+        }
+
+        LOG_INFO(requestId, "Received preprocess request");
         auto startTime = std::chrono::high_resolution_clock::now();
         
         // Validate request (on I/O thread - lightweight)
-        auto validation = ValidatePreprocessRequest(req);
+        auto validation = ValidatePreprocessRequest(req, requestId);
         if (!validation.success) {
             return crow::response(validation.errorCode, validation.errorMessage);
         }
@@ -153,9 +158,9 @@ inline void setup_routes(crow::SimpleApp& app) {
         auto promise = std::make_shared<std::promise<std::optional<cv::Mat>>>();
         auto future = promise->get_future();
         
-        GetWorkerPool().enqueue([promise, imagePath]() 
+        GetWorkerPool().enqueue([promise, imagePath, requestId]() 
         {
-            promise->set_value(ProcessImageFile(imagePath));
+            promise->set_value(ProcessImageFile(imagePath, requestId));
         });
         
         // Wait for worker thread to complete processing
@@ -166,7 +171,7 @@ inline void setup_routes(crow::SimpleApp& app) {
         }
         
         // Save result with atomic write (.tmp → rename)
-        if (!SaveProcessedImage(*processedOpt, outputPath)) 
+        if (!SaveProcessedImage(*processedOpt, outputPath, requestId)) 
         {
             return crow::response(500, "Failed to save processed image");
         }
@@ -175,6 +180,6 @@ inline void setup_routes(crow::SimpleApp& app) {
         auto endTime = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
         
-        return CreatePreprocessResponse(outputPath, duration);
+        return CreatePreprocessResponse(outputPath, duration, requestId);
     });
 }

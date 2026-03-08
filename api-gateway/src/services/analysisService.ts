@@ -5,6 +5,7 @@ import { RESULT_DIR } from '../utils/fileStorage';
 import logger from '../utils/logger';
 
 const PREPROCESS_SERVER_URL = process.env.PREPROCESS_SERVER_URL || 'http://localhost:8081';
+const AI_SERVER_URL = process.env.AI_SERVER_URL || 'http://localhost:8002';
 
 interface AnalysisResult {
   score: number;
@@ -39,14 +40,15 @@ function generateDummyResult(): AnalysisResult {
 /**
  * 이미지 분석 요청을 처리합니다.
  * @param {Express.Multer.File} file - 업로드된 파일 객체
+ * @param {string} requestId - 요청 추적을 위한 고유 ID
  * @returns {Promise<AnalysisResult>} 분석 결과 객체
  */
-export const processAnalysis = async (file: Express.Multer.File): Promise<AnalysisResult> => {
+export const processAnalysis = async (file: Express.Multer.File, requestId: string): Promise<AnalysisResult> => {
   if (!file) {
     throw new Error('NO_FILE');
   }
 
-  logger.info('Image uploaded:', { path: file.path });
+  logger.info('Image uploaded:', { path: file.path, requestId });
 
   const timestamp = Date.now();
   const resultPath = path.join(RESULT_DIR, `${timestamp}_result.json`);
@@ -56,26 +58,52 @@ export const processAnalysis = async (file: Express.Multer.File): Promise<Analys
   try {
     const preprocessRes = await axios.post(`${PREPROCESS_SERVER_URL}/preprocess`, {
       imagePath: file.path
+    }, {
+      headers: { 'X-Request-ID': requestId }
     });
 
     if (preprocessRes.data?.processedPath) {
       processedImagePath = preprocessRes.data.processedPath;
-      logger.info('Preprocessing completed:', { processedPath: processedImagePath });
+      logger.info('Preprocessing completed:', { processedPath: processedImagePath, requestId });
     }
   } catch (error: unknown) {
-    logger.warn('Preprocessing failed, using original image:', { error: error instanceof Error ? error.message : String(error) });
+    logger.warn('Preprocessing failed, using original image:', {
+      error: error instanceof Error ? error.message : String(error),
+      requestId
+    });
     // 전처리 실패 시에도 일단 원본으로 계속 진행 (또는 에러 throw 선택 가능)
     // 현재는 테스트 단계이므로 로그만 남김
   }
 
   // Phase 4 - Python AI 서버 호출
+  let resultData: AnalysisResult;
+  try {
+    // 실제 파일을 읽어서 AI 서버로 전송 (multipart/form-data)
+    const FormData = require('form-data');
+    const formData = new FormData();
+    formData.append('file', await fs.readFile(processedImagePath), path.basename(processedImagePath));
 
-  // [Phase 2] 임시 더미 데이터 생성
-  const resultData = generateDummyResult();
+    const aiRes = await axios.post(`${AI_SERVER_URL}/analyze`, formData, {
+      headers: {
+        ...formData.getHeaders(),
+        'X-Request-ID': requestId
+      }
+    });
+
+    resultData = aiRes.data;
+    logger.info('AI Analysis completed:', { requestId });
+  } catch (error: unknown) {
+    logger.warn('AI Analysis failed, falling back to dummy data:', {
+      error: error instanceof Error ? error.message : String(error),
+      requestId
+    });
+    // AI 서버 실패 시에만 더미 데이터 생성 (또는 에러 상황에 따라 다르게 처리 가능)
+    resultData = generateDummyResult();
+  }
 
   // 결과 JSON 파일 저장
   await fs.writeFile(resultPath, JSON.stringify(resultData, null, 2));
-  logger.info('Result saved:', { path: resultPath });
+  logger.info('Result saved:', { path: resultPath, requestId });
 
   return resultData;
 };

@@ -4,6 +4,7 @@ import morgan from 'morgan';
 import analyzeRouter from './routes/analyze';
 import healthRouter from './routes/health';
 import { UPLOAD_DIR, RESULT_DIR } from './utils/fileStorage';
+import { v4 as uuidv4 } from 'uuid';
 import logger from './utils/logger';
 
 const app = express();
@@ -14,10 +15,24 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Request-ID 미들웨어
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const requestId = req.header('X-Request-ID') || uuidv4();
+  (req as any).requestId = requestId;
+  res.setHeader('X-Request-ID', requestId);
+  next();
+});
+
 // HTTP 요청 로깅 (morgan + winston)
 const morganFormat = process.env.NODE_ENV === 'production' ? 'combined' : 'dev';
 app.use(morgan(morganFormat, {
-  stream: { write: (message: string) => logger.http(message.trim()) }
+  stream: {
+    write: (message: string) => {
+      // morgan에서 로거로 전달할 때 requestId가 포함된 메타데이터를 함께 전달하는 것은 구조적으로 어려우나,
+      // 일단 winston logger가 개별 호출에서 로그를 남기도록 유도
+      logger.http(message.trim());
+    }
+  }
 }));
 
 // ----------------------------------------------------------------

@@ -1,0 +1,44 @@
+# Mind Palette API - Integration Tests
+# Recommended Extensions: "REST Client" (Humao.rest-client) or "HTTP Client" (JetBrains)
+
+@apiGatewayUrl = http://localhost:8000
+@preprocessServerUrl = http://localhost:8001
+@aiServerUrl = http://localhost:8002
+@requestId = test-client-{{$guid}}
+
+### 1. API Gateway Health Check
+GET {{apiGatewayUrl}}/health
+X-Request-ID: {{requestId}}
+
+### 2. Preprocess Server Health Check
+GET {{preprocessServerUrl}}/health
+X-Request-ID: {{requestId}}
+
+### 3. AI Server Health Check
+GET {{aiServerUrl}}/health
+X-Request-ID: {{requestId}}
+
+### 4. End-to-End Analysis (Multipart Upload)
+# Note: You need a sample image file at the specified path
+POST {{apiGatewayUrl}}/analyze
+X-Request-ID: {{requestId}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="sample.jpg"
+Content-Type: image/jpeg
+
+< ./api-gateway/test-image.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
+
+### 5. AI Server Direct Analysis (Simulation)
+POST {{aiServerUrl}}/analyze
+X-Request-ID: {{requestId}}
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW
+
+------WebKitFormBoundary7MA4YWxkTrZu0gW
+Content-Disposition: form-data; name="file"; filename="processed_sample.jpg"
+Content-Type: image/jpeg
+
+< ./api-gateway/test-image.jpg
+------WebKitFormBoundary7MA4YWxkTrZu0gW--
