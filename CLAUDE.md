@@ -94,5 +94,6 @@ Mind Palette — 아동 인물화(HFD) 지능측정을 위한 AI 이미지 전�
 **🚨 오류 발생 시 반드시 `docs/troubleshooting/` 폴더의 문서들을 우선 확인하세요.**
 - **Windows 빌드 (CRT Mismatch 방지)**: vcpkg triplet은 반드시 **동적 링크인 `x64-windows`**를 사용합니다. 정적 링크(`x64-windows-static`) 사용 시 `std::string`, `cv::Mat` 등 객체 전달 과정에서 Heap Assertion 오류(`__acrt_first_block == header`)가 발생합니다. (참고: `docs/troubleshooting/Week4_Final_Runtime_Assertion_Fix.md`)
 - **MSVC 인코딩 (C2523 / C4819 방지)**: 한글 주석 사용 시 파싱 오류(개행 먹힘)를 피하기 위해 `CMakeLists.txt`에 반드시 `/utf-8` 플래그가 포함되어야 합니다.
+- **C++ 터미널 테스트 실행 (DLL Load Error)**: `unit_tests.exe` 등 C++ 바이너리는 터미널(PowerShell)에서 직접 실행 시 `vcpkg` 런타임 DLL 경로를 찾지 못해 무반응 종료(Exit Code 1)될 수 있습니다. 런타임 검증은 반드시 **Visual Studio의 '테스트 탐색기'**를 활용하거나, 전용 개발자 쉘(VsDevCmd) 환경에서 수행하세요.
 - OpenCV 의존성은 vcpkg.json으로 관리 — 수동 설치 금지
 - **명령어 실행 방침**: git 명령어(add, commit, push)는 실행할 명령어를 텍스트로 제공하고, 사용자가 터미널에서 직접 실행. GitHub PR 생성·Review·Merge도 사용자가 직접 처리.

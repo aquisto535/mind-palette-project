@@ -120,7 +120,7 @@ TEST(ValidatePreprocessRequestTest, ValidRequest_ReturnsSuccess) {
     crow::request req;
     req.body = "{\"imagePath\": \"" + jsonPath + "\"}";
     
-    auto result = ValidatePreprocessRequest(req);
+    auto result = ValidatePreprocessRequest(req, "TEST-REQ-ID");
     
     EXPECT_TRUE(result.success);
     EXPECT_EQ(result.imagePath, absPath);
@@ -134,7 +134,7 @@ TEST(ValidatePreprocessRequestTest, InvalidJSON_Returns400) {
     crow::request req;
     req.body = "invalid json";
     
-    auto result = ValidatePreprocessRequest(req);
+    auto result = ValidatePreprocessRequest(req, "TEST-REQ-ID");
     
     EXPECT_FALSE(result.success);
     EXPECT_EQ(result.errorCode, 400);
@@ -145,7 +145,7 @@ TEST(ValidatePreprocessRequestTest, MissingImagePath_Returns400) {
     crow::request req;
     req.body = R"({"otherField": "value"})";
     
-    auto result = ValidatePreprocessRequest(req);
+    auto result = ValidatePreprocessRequest(req, "TEST-REQ-ID");
     
     EXPECT_FALSE(result.success);
     EXPECT_EQ(result.errorCode, 400);
@@ -156,7 +156,7 @@ TEST(ValidatePreprocessRequestTest, EmptyImagePath_Returns400) {
     crow::request req;
     req.body = R"({"imagePath": ""})";
     
-    auto result = ValidatePreprocessRequest(req);
+    auto result = ValidatePreprocessRequest(req, "TEST-REQ-ID");
     
     EXPECT_FALSE(result.success);
     EXPECT_EQ(result.errorCode, 400);
@@ -167,7 +167,7 @@ TEST(ValidatePreprocessRequestTest, NonExistentFile_Returns404) {
     crow::request req;
     req.body = R"({"imagePath": "/nonexistent/file.jpg"})";
     
-    auto result = ValidatePreprocessRequest(req);
+    auto result = ValidatePreprocessRequest(req, "TEST-REQ-ID");
     
     EXPECT_FALSE(result.success);
     EXPECT_EQ(result.errorCode, 404);
@@ -175,7 +175,7 @@ TEST(ValidatePreprocessRequestTest, NonExistentFile_Returns404) {
 }
 
 TEST(CreatePreprocessResponseTest, CreatesValidJsonResponse) {
-    auto response = CreatePreprocessResponse("/output/test.jpg", 42);
+    auto response = CreatePreprocessResponse("/output/test.jpg", 42, "TEST-REQ-ID");
     
     EXPECT_EQ(response.code, 200);
     
@@ -411,6 +411,7 @@ TEST_F(AdvancedImageProcessorTest, Binarize_OnlyContainsBinaryValues) {
 }
 
 int main(int argc, char **argv) {
+    Logger::init("test_logs");
     testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }

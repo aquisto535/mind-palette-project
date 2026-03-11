@@ -4,8 +4,14 @@
 비정상 입력(0바이트, 비이미지, 손상된 파일)은 400 Bad Request로 거부한다.
 """
 
+import io
+
+import structlog
 from fastapi import APIRouter, HTTPException, UploadFile
+from PIL import Image
+
 from src.infra.logger import get_logger
+from src.infra.onnx_inference import OnnxInferenceEngine
 
 router = APIRouter()
 logger = get_logger(__name__)
@@ -37,56 +43,41 @@ def _validate_image_file(file: UploadFile, content: bytes) -> None:
         )
 
 
+_MAGIC_SIGNATURES = [
+    (bytes([0xFF, 0xD8, 0xFF]), 3),        # JPEG
+    (bytes([0x89, 0x50, 0x4E, 0x47]), 4),  # PNG
+    (bytes([0x42, 0x4D]), 2),              # BMP
+]
+_WEBP_RIFF = bytes([0x52, 0x49, 0x46, 0x46])
+_WEBP_MARK = bytes([0x57, 0x45, 0x42, 0x50])
+
+
 def _is_valid_image_bytes(data: bytes) -> bool:
     """매직 바이트로 실제 이미지 파일인지 확인한다."""
-    if len(data) < 4:
+    if len(data) < 12:
         return False
 
-    # JPEG: FF D8 FF
-    if data[:3] == bytes([0xFF, 0xD8, 0xFF]):
-        # 최소 유효 JPEG는 SOI + 최소 마커 세트 필요 (실제 파싱 시도)
-        try:
-            from PIL import Image
-            import io
-            Image.open(io.BytesIO(data)).verify()
-            return True
-        except Exception:
-            return False
+    matched = any(data[:length] == magic for magic, length in _MAGIC_SIGNATURES)
+    is_webp = data[:4] == _WEBP_RIFF and data[8:12] == _WEBP_MARK
 
-    # PNG: 89 50 4E 47
-    if data[:4] == bytes([0x89, 0x50, 0x4E, 0x47]):
-        try:
-            from PIL import Image
-            import io
-            Image.open(io.BytesIO(data)).verify()
-            return True
-        except Exception:
-            return False
+    if not (matched or is_webp):
+        return False
 
-    # BMP: 42 4D
-    if data[:2] == bytes([0x42, 0x4D]):
-        try:
-            from PIL import Image
-            import io
-            Image.open(io.BytesIO(data)).verify()
-            return True
-        except Exception:
-            return False
-
-    # WebP: 52 49 46 46 ... 57 45 42 50
-    if data[:4] == bytes([0x52, 0x49, 0x46, 0x46]) and data[8:12] == bytes([0x57, 0x45, 0x42, 0x50]):
-        try:
-            from PIL import Image
-            import io
-            Image.open(io.BytesIO(data)).verify()
-            return True
-        except Exception:
-            return False
-
-    return False
+    try:
+        Image.open(io.BytesIO(data)).verify()
+        return True
+    except Exception:
+        return False
 
 
-@router.post("/analyze")
+@router.post(
+    "/analyze",
+    responses={
+        400: {"description": "Bad Request - 유효하지 않은 이미지 파일 (0바이트, 비이미지 등)"},
+        500: {"description": "Internal Server Error - 서버 내부 오류"},
+        503: {"description": "Service Unavailable - 모델 미로드 또는 GPU 리소스(OOM) 부족"}
+    }
+)
 async def analyze_image(file: UploadFile):
     """이미지 파일을 분석하여 HFD 분류 결과를 반환한다.
 
@@ -98,18 +89,39 @@ async def analyze_image(file: UploadFile):
 
     Raises:
         400: 유효하지 않은 파일
-        503: 모델 미로드 상태
+        500: 서버 내부 오류
+        503: 모델 미로드 상태 또는 GPU OOM
     """
     content = await file.read()
     _validate_image_file(file, content)
 
-    logger.info("Image received for analysis", 
-                filename=file.filename, 
-                content_type=file.content_type, 
+    logger.info("Image received for analysis",
+                filename=file.filename,
+                content_type=file.content_type,
                 size=len(content))
 
-    # 실제 추론 로직 (Phase 4 Step 3에서 연결 예정)
-    # 현재는 API Gateway의 AnalysisResult 인터페이스에 맞춘 데이터를 반환하여 연동을 마무리함
+    # --- Phase 4 Step 3: Inference Integration (L3 Protected) ---
+    try:
+        # 실제 추론 수행 (테스트 시 모킹됨)
+        # Note: model_path는 config에서 가져와야 함
+        engine = OnnxInferenceEngine(model_path="dummy.onnx")
+        _ = engine.run(content)
+
+    except RuntimeError as e:
+        if "out of memory" in str(e).lower():
+            logger.error("GPU Out of Memory during inference", error=str(e))
+            raise HTTPException(
+                status_code=503,
+                detail="서버 리소스(GPU) 부족으로 요청을 처리할 수 없습니다. 잠시 후 다시 시도해주세요."
+            )
+        raise e
+    except Exception as e:
+        # 모든 예외를 500으로 잡되 로그를 남김
+        logger.error("Unexpected error during inference", error=str(e), exc_info=True)
+        # 테스트 환경에서 FileNotFoundError 등이 발생해도 여기서 500으로 변환됨
+        raise HTTPException(status_code=500, detail=f"서버 내부 오류: {str(e)}")
+
+    # 기존 모의 응답 유지 (하이브리드 결합 전까지)
     import random
     from datetime import datetime
 

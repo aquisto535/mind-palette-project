@@ -6,16 +6,11 @@ L3: 제약과 검증 — "경계에서도 안전한가?"
 """
 
 import io
+from unittest.mock import patch
 
 import pytest
 from httpx import ASGITransport, AsyncClient
-
-from src.main import create_app
-
-
-@pytest.fixture
-def app():
-    return create_app()
+from PIL import Image
 
 
 # ──────────────────────────────────────────────
@@ -127,3 +122,27 @@ class TestAnalyzeServerStability:
         assert response.status_code == 400
         data = response.json()
         assert "detail" in data
+
+
+# ──────────────────────────────────────────────
+# L3: 제약과 검증 (Extreme Cases)
+# ──────────────────────────────────────────────
+
+@pytest.mark.asyncio
+async def test_analyze_gpu_oom_returns_503(app):
+    """GPU OOM 발생 시 503 Service Unavailable을 반환해야 한다 (L3)."""
+    img = Image.new('RGB', (260, 260), color='red')
+    buf = io.BytesIO()
+    img.save(buf, format='JPEG')
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        with patch("src.routes.analyze.OnnxInferenceEngine") as MockEngine:
+            MockEngine.side_effect = RuntimeError("CUDA out of memory")
+            response = await client.post(
+                "/analyze",
+                files={"file": ("test.jpg", buf.getvalue(), "image/jpeg")}
+            )
+
+    assert response.status_code == 503
+    assert "리소스" in response.json()["detail"] or "GPU" in response.json()["detail"]

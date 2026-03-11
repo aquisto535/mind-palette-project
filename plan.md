@@ -1,7 +1,7 @@
 # 📋 Mind Palette 개발 계획 (TDD Checklist)
 
-이 문서는 `.cursorrules`에 따라 TDD 사이클을 관리하는 체크리스트입니다.
-"시작(go)" 명령 시, 체크되지 않은(`[ ]`) 가장 상단의 항목부터 테스트 작성을 시작합니다.
+이 문서는 Antigravity와 함께 TDD 사이클을 관리하는 체크리스트입니다.
+체크되지 않은(`[ ]`) 상단 항목부터 테스트 작성을 시작하여 점진적으로 완성해 나갑니다.
 
 ---
 
@@ -9,10 +9,11 @@
 - **TDD Cycle**: Always [Red] → [Green] → [Refactor]
 - **Tidy First**: 구조적 변경(Structural)과 기능적 변경(Behavioral)을 분리한다.
 - **MCP Workflow**: [MCP_WORKFLOWS.md](file:///c:/Users/user/Documents/GitHub/mind-palette-project/docs/methodology/MCP_WORKFLOWS.md)에 따라 `shrimp`, `sequential-thinking`, `context7`을 유기적으로 활용한다.
+- **Multi-Agent Strategy (ADR-019, ADR-022)**: 설계(Architect), 품질 및 보안(Guardian), 최적화(Optimizer) 3대 전문 서브 에이전트 체제를 통해 태스크를 격리하고 수행 품질을 극대화한다.
 
 ---
 
-## 📊 현재 프로젝트 상태
+## 📊 현재 프로젝트 상태 (2026.03.10 기준)
 
 > ⚡ **최우선 과제**: Phase 4(Python AI Server)가 미완성이면 프로젝트 전체가 "전처리 서비스"에 불과하며, AI 프로젝트라 부르기 어려움.
 
@@ -24,34 +25,9 @@
 | **ONNX + 벤치마크 추가** | 95점 | ⭐ 우수 | 경쟁력 있는 포트폴리오 |
 | **파라미터 근거 문서화** | +5점 | 🎁 보너스 | 면접 신뢰도 상승 |
 
-### 🚀 2-Track 전략
-```
-Track 1 (주력 80%): Phase 4 AI 서버 개발 진행
-  - FastAPI 서버 구축
-  - EfficientNet-B2 모델 구현
-  - ONNX 변환 준비
-
-Track 2 (복습 20%): C++ 디테일 보강
-  - 주말/저녁 1-2시간: OpenCV 파라미터 실험
-  - 기존 코드 주석 보강 (왜 이 값인지 근거 추가)
-  - 벤치마크 결과 문서화
-```
-
 ---
 
-## 🧠 Phase 4: Python AI Server (Target: 2026.02 ~ 03)
-
-### 🗓️ Week 1 즉시 착수 체크리스트 (2026.02 3주차)
-
-**주력 (80%):**
-- [x] FastAPI 서버 골격 구축 (아래 Step 1 참조)
-- [x] EfficientNet-B2 아키텍처 조사 (MCP context7 활용)
-- [x] PyTorch 환경 설정 및 Hello World (더미 텐서 추론 성공)
-
-**복습 (20%):**
-- [ ] C++ 전처리 코드 1개 파일 정독 (`filter_pipeline.h` 권장)
-- [ ] "왜 Strategy Pattern을 썼는가?" 자문자답 메모 작성
-- [ ] GaussianBlur(5,5) vs (3,3) vs (7,7) 실험 1회 수행
+## 🧠 Phase 4: Python AI Server (진행 중: 2026.02 ~ 03)
 
 ### Step 1: Base Model (FastAPI + PyTorch)
 
@@ -144,18 +120,18 @@ Track 2 (복습 20%): C++ 디테일 보강
 > 배경 반전·Multi-Object Crop은 즉시 적용 가능. 나머지는 Phase 4 완성 이후 ROI 최적.
 
 ### 🔥 [확정] Production-Level Preprocessing (우선순위 최상)
-- [ ] **Advanced Pipeline 리팩터링**: `ImageProcessor::Preprocess`를 제안된 5단계 로직으로 전면 교체
-  - [ ] **Step 1 (Denoise)**: `GaussianBlur(5x5)`로 종이 질감 제거 및 필압 보존 Grayscale 생성
-  - [ ] **Step 2 (Adaptive Binary)**: `AdaptiveThreshold(11, 2)` + `Morphology(Close)`로 선 연결성 강화
-  - [ ] **Step 3 (Smart ROI)**: `0.1% Area` 이상의 모든 객체를 포함하는 `Union Rect` 계산 (신발/부속물 누락 방지)
-  - [ ] **Step 4 (Letterbox)**: 비율 왜곡 없이 512x512 중앙 배치 (Padding 추가)
+- [x] **Advanced Pipeline 리팩터링**: `ImageProcessor::Preprocess`를 제안된 5단계 로직으로 전면 교체
+  - [x] **Step 1 (Denoise)**: `GaussianBlur(5x5)`로 종이 질감 제거 및 필압 보존 Grayscale 생성
+  - [x] **Step 2 (Adaptive Binary)**: `AdaptiveThreshold(11, 2)` + `Morphology(Close)`로 선 연결성 강화
+  - [x] **Step 3 (Smart ROI)**: `0.1% Area` 이상의 모든 객체를 포함하는 `Union Rect` 계산 (신발/부속물 누락 방지)
+  - [x] **Step 4 (Letterbox)**: 비율 왜곡 없이 512x512 중앙 배치 (Padding 추가)
 
-- [ ] **3-Channel Hybrid Strategy 구현 (AI 입력 최적화)**
-  - [ ] **Channel Construction**: 단순 RGB 변환이 아닌, 채널별 의미 부여
+- [x] **3-Channel Hybrid Strategy 구현 (AI 입력 최적화)**
+  - [x] **Channel Construction**: 단순 RGB 변환이 아닌, 채널별 의미 부여
     - **R (Gray)**: 원본 명암 유지 (필압/실체감 분석용)
     - **G (Inverted Binary)**: 흰 배경 검은 선 (형태/윤곽선 분석용)
     - **B (Distance/Clone)**: `DistanceTransform` 또는 G채널 복제 (선의 골격 강조)
-  - [ ] **Domain Adaptation**: 최종 결과물을 **White Background**로 통일하여 ImageNet Pretrained 모델 친화적 데이터 생성
+  - [x] **Domain Adaptation**: 최종 결과물을 **White Background**로 통일하여 ImageNet Pretrained 모델 친화적 데이터 생성
 
 ### Phase 4 이후 실행 (ROI 순)
 - [ ] **파라미터 근거 문서화**: 각 필터 파라미터를 최소 3가지 값으로 비교 실험하고, 선택 근거를 주석/ADR에 기록 (1주, ROI 높음)
@@ -179,9 +155,10 @@ Track 2 (복습 20%): C++ 디테일 보강
 ## 🌐 Phase 5: 통합 및 고도화 (배포 전략)
 
 ### 성능 최적화 (Performance Optimization)
-- [ ] **Hash-based Caching (중복 방지)**:
-  - [ ] [TDD] 동일 이미지 업로드 시 캐시 적중(Hit) 및 결과 즉시 반환 테스트 (Red)
-  - [ ] SHA-256 해시 기반 분석 생략 로직 구현 (Green)
+- [ ] **Hash-based Caching (지연 시간 해결 - ADR-020 대응)**:
+  - [ ] [TDD] 동일 이미지 업로드 시 보안 검증 및 분석 단계를 건너뛰고 결과 즉시 반환 테스트 (Red)
+  - [ ] SHA-256 해시 기반 "Security-Verified Cache" 레이어 구현 (Green)
+  - [ ] **성능 목표**: 캐시 적중 시 지연 시간 < 10ms 달성
 - [ ] **Inference Optimization**: Python AI 서버의 추론 엔진 최종 ONNX/TensorRT 통합 및 회귀 테스트.
 
 ### 배포 아키텍처 및 보안 (Architecture & Security)
@@ -230,42 +207,45 @@ Track 2 (복습 20%): C++ 디테일 보강
   - [ ] `docker-compose.yml` 내 healthcheck (interval, timeout) 설정 (Green)
 
 #### API Documentation - Tier 2: 권장
-- [ ] **[MCP]** `context7`으로 OpenAPI 3.0 스펙의 가독성 좋은 문서화 패턴 리서치
-- [ ] **Node.js API 명세**:
-  - [ ] [TDD] API 명세 파일이 실제 엔드포인트 구조와 일치하는지 자동 검증 테스트 (Red)
-  - [ ] OpenAPI 3.0/Swagger Spec 작성 및 저장 (Green)
+- [x] **[MCP]** `context7`으로 OpenAPI 3.0 스펙의 가독성 좋은 문서화 패턴 리서치
+- [x] **Node.js API 명세**:
+  - [x] [TDD] API 명세 파일이 실제 엔드포인트 구조와 일치하는지 자동 검증 테스트 (Red)
+  - [x] OpenAPI 3.0/Swagger Spec 작성 및 저장 (Green)
 
 ### 🔐 Security
 > 목표: 입력/저장/전송/의존성 전 구간에서 최소한의 보안 기준을 충족한다.
 
 #### 입력 검증 (Input Validation) - Tier 1: 필수
-- [ ] **[MCP]** `context7`으로 이미지 파일 매직 바이트를 활용한 완벽한 확장자 위조 탐지 기법 리서치
-- [ ] **파일 업로드 검증**:
-  - [ ] [TDD] .txt 파일을 .jpg로 속여 업로드 시 차단되는지 테스트 (Red)
-  - [ ] MIME 타입/매직 바이트 기반 물리적 검증 로직 구현 (Green)
-- [ ] **경로 정규화**:
-  - [ ] [TDD] `../../etc/passwd`와 같은 Path Traversal 공격 시 차단 테스트 (Red)
-  - [ ] 입력 경로 정규화 및 화이트리스트 디렉토리 체크 구현 (Green)
+- [x] **[MCP]** `context7`으로 이미지 파일 매직 바이트를 활용한 완벽한 확장자 위조 탐지 기법 리서치 — 결론: 6-Layer 검증 모델(확장자→매직바이트→MIME→라이브러리파싱→크기/해상도→재인코딩) 권장. Node.js(빠른 1차 필터)+Python(PIL.verify 심층검증) 책임 분리 아키텍처는 L4·L6 기준 충족. PNG 시그니처는 4바이트(현재)→8바이트 강화 권장
+- [x] **파일 업로드 검증**:
+  - [x] [TDD] .txt 파일을 .jpg로 속여 업로드 시 차단되는지 테스트 (Red)
+  - [x] MIME 타입/매직 바이트 기반 물리적 검증 로직 구현 (Green) — `fileStorage.ts::hasValidMagicBytes()`, `analyze.ts`에서 적용
+- [ ] **검증 파이프라인 최적화 (Latency Strategy)**:
+  - [ ] **Parallel Validation**: L2(Magic Byte)와 L5(Resource Limit)를 병렬로 체크하여 블로킹 시간 단축.
+  - [ ] **Deferred Sanitization**: L6(재인코딩) 과정을 전처리 서버로 이관하여 API 응답 경로에서 분리(Async) 고려.
+- [x] **경로 정규화**:
+  - [x] [TDD] `../../etc/passwd`와 같은 Path Traversal 공격 시 차단 테스트 (Red)
+  - [x] 입력 경로 정규화 및 화이트리스트 디렉토리 체크 구현 (Green) — `fileStorage.ts::isSafeFilename()` (null byte, 절대경로, `..` 차단)
 
 #### 저장/무결성 (Storage & Integrity) - Tier 1: 필수
-- [ ] **Atomic Write & Atomic Delete**:
-  - [ ] [TDD] 저장/삭제 중 예상치 못한 중단 시 데이터 불일치 여부 테스트 (Red)
-  - [ ] `.tmp` → `rename` 패턴 및 원자적 삭제 로직 보완 (Green)
-- [ ] **해시 무결성**:
-  - [ ] [TDD] 결과 파일 변조 시 캐시 매칭 실패 및 재분석 트리거 테스트 (Red)
-  - [ ] SHA-256 해시 저장 및 무결성 검증 자동화 (Green)
+- [x] **Atomic Write & Atomic Delete**:
+  - [x] [TDD] 저장/삭제 중 예상치 못한 중단 시 데이터 불일치 여부 테스트 (Red)
+  - [x] `.tmp` → `rename` 패턴 및 원자적 삭제 로직 보완 (Green) — `AtomicFileWriter::atomicDelete()` (rename→.del→remove 패턴)
+- [x] **해시 무결성**:
+  - [x] [TDD] 결과 파일 변조 시 캐시 매칭 실패 및 재분석 트리거 테스트 (Red)
+  - [x] SHA-256 해시 저장 및 무결성 검증 자동화 (Green) — `hashIntegrity.ts::saveWithHash()/verifyHash()`, `analysisService.ts` 연동
 
 #### 전송 보안 (Transport Security) - Tier 2: 권장
-- [ ] **외부 HTTPS**: Frontend ↔ API Gateway는 HTTPS를 사용해야 한다.
-- [ ] **내부망 격리**: API Gateway ↔ C++ ↔ Python 통신은 내부망 HTTP로 제한해야 한다.
+- [ ] **외부 HTTPS**: Frontend ↔ API Gateway는 HTTPS를 사용해야 한다. _(Phase 5 배포 시 Nginx TLS 설정으로 처리 — 애플리케이션 코드 변경 없음)_
+- [x] **내부망 격리**: API Gateway ↔ C++ ↔ Python 통신은 내부망 HTTP로 제한해야 한다.
 
 #### 로깅 보안 (Logging Hygiene) - Tier 2: 권장
-- [ ] **PII 마스킹**: 이름/생년월일 등 개인정보는 로그에 남기지 않거나 마스킹해야 한다.
-- [ ] **에러 메시지 최소화**: 내부 경로/스택 노출을 최소화해야 한다.
+- [x] **PII 마스킹**: 이름/생년월일 등 개인정보는 로그에 남기지 않거나 마스킹해야 한다.
+- [x] **에러 메시지 최소화**: 내부 경로/스택 노출을 최소화해야 한다.
 
-#### 의존성/공급망 보안 (Dependency Security) - Tier 2: 권장
-- [ ] **정기 점검**: `npm audit`와 CodeQL을 주기적으로 확인해야 한다.
-- [ ] **버전 고정**: vcpkg baseline pinning을 유지하여 빌드 재현성을 확보해야 한다.
+#### 의존성/공급망 보안 (Dependency Security) - Managed by TDD Quality Guardian
+- [x] **정기 점검**: `npm audit`와 CodeQL을 주기에 맞춰 실행하고 결과를 분석한다. (TDD Quality Guardian 전담)
+- [x] **버전 고정**: vcpkg baseline pinning을 유지하여 빌드 재현성을 확보해야 한다.
 
 ### 🧪 Traffic & Load Testing
 > 목표: 서비스의 안정성을 검증하고, 대량의 로그를 생성하여 시스템의 한계를 테스트한다.
@@ -406,37 +386,6 @@ Track 2 (복습 20%): C++ 디테일 보강
 | **정량적 품질 지표** | 변환 결과가 "AI에 얼마나 좋은지" 수치화 부족 | "mAP/Accuracy 향상 폭을 제시하라" (AI 학습 후 성능 비교로 증명 예정) |
 
 ---
-
-## 📈 Phase 7 & 참고 자료
-
-### 📈 Phase 7: 포트폴리오 경쟁력 강화 전략
-> 이 프로젝트의 경쟁력은 OpenCV 깊이가 아닌 **"시스템 설계 + 멀티스택 + 엔지니어링 프랙티스"**에 있다.
-> 석박사 CV 연구자와 알고리즘 깊이에서 경쟁하는 것은 비효율적. 독보적 포지션을 강화하는 데 집중한다.
-
-#### 우선순위 1: AI 서버 완성 (경쟁력 +20점)
-- [ ] EfficientNet-B2 Transfer Learning 모델 학습 및 추론 파이프라인 완성
-- [ ] 학습 데이터 + 성능 메트릭(정확도, 정밀도, 재현율) 정리
-- [ ] E2E 파이프라인 작동 증명 (React → Node.js → C++ → Python)
-
-#### 우선순위 2: ONNX 변환 + 벤치마크 (경쟁력 +10점)
-- [ ] PyTorch → ONNX 변환 및 ONNX Runtime 추론 엔진 교체
-- [ ] **벤치마크 리포트**: PyTorch 순정 vs ONNX Runtime 속도/메모리 비교 데이터
-- [ ] 리포트를 `docs/` 또는 README에 테이블로 정리
-
-#### 우선순위 3: 데모 영상 제작 (경쟁력 +10점, ROI 최고)
-- [ ] 2~3분 시연 영상: 업로드 → 전처리(C++) → 추론(Python) → 결과 시각화(React)
-- [ ] 전처리 Before/After 이미지 비교 포함
-- [ ] README에 데모 GIF 또는 영상 링크 삽입
-
-#### 우선순위 4: 전처리 파라미터 근거 문서화 (경쟁력 +8점)
-- [ ] GaussianBlur 커널 크기(3,5,7), Canny threshold(30/100, 50/150, 80/200) 비교 실험
-- [ ] 실험 결과를 이미지 + 테이블로 문서화 → ADR 또는 `docs/tech-references/`에 기록
-- [ ] 면접 시 "왜 이 파라미터인가?"에 실험 데이터로 답변 가능하도록 준비
-
-#### 우선순위 5: OpenCV 기법 보강 (경쟁력 +5점, 선택)
-- [ ] CLAHE 히스토그램 평활화 필터 추가
-- [ ] bilateral filter로 DenoiseFilter 고도화
-- [ ] Otsu 기반 자동 threshold로 하드코딩 탈피
 
 ### 🎯 커리어 포지셔닝 전략
 > 이 프로젝트를 통해 어필할 포지션과 어필하지 말아야 할 포지션을 구분한다.

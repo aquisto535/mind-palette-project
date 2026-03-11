@@ -31,7 +31,7 @@ describe('Analysis Service', () => {
         processedPath: processedPath
       });
 
-    const result = await analysisService.processAnalysis(mockFile);
+    const result = await analysisService.processAnalysis(mockFile, 'test-request-id');
 
     // Nock이 인터셉트했는지 확인 (즉, 요청이 실제로 발송되었는지)
     expect(scope.isDone()).toBe(true);
@@ -47,7 +47,7 @@ describe('Analysis Service', () => {
       .reply(500, { error: 'Internal Server Error' });
 
     // 에러가 발생해도 throw되지 않고 결과가 반환되어야 함 (Graceful degradation)
-    const result = await analysisService.processAnalysis(mockFile);
+    const result = await analysisService.processAnalysis(mockFile, 'test-request-id');
 
     expect(scope.isDone()).toBe(true);
     expect(result).toHaveProperty('score');

@@ -6,6 +6,7 @@ import tempfile
 import pytest
 
 from src.config import ModelConfig
+from src.main import create_app
 
 
 def _ensure_utf8_stdout() -> None:
@@ -14,6 +15,12 @@ def _ensure_utf8_stdout() -> None:
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     elif sys.stdout.encoding and sys.stdout.encoding.lower() not in ("utf-8", "utf8"):
         sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+
+
+@pytest.fixture
+def app():
+    """테스트용 FastAPI 앱 인스턴스 (테스트마다 독립 생성)."""
+    return create_app()
 
 
 @pytest.fixture(scope="session")

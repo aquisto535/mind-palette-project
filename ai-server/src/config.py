@@ -18,9 +18,10 @@ class ModelConfig(BaseSettings):
     head_c_size: int = 16  # 사지/말단
     head_d_size: int = 11  # 의복/질적
 
-    # 정규화 파라미터 (ImageNet 기본값, 추후 스케치 데이터셋 통계로 교체)
-    normalize_mean: Tuple[float, float, float] = (0.485, 0.456, 0.406)
-    normalize_std: Tuple[float, float, float] = (0.229, 0.224, 0.225)
+    # 정규화 파라미터 (스케치 데이터셋 통계 기반 최적화)
+    # R(Gray): ~0.97, G(Binary): ~0.03, B(Dist): ~0.01
+    normalize_mean: Tuple[float, float, float] = (0.972, 0.031, 0.012)
+    normalize_std: Tuple[float, float, float] = (0.156, 0.174, 0.074)
 
     # 모델 가중치 경로 (남녀 별도)
     male_model_path: str = "models/mind_palette_male.pt"

@@ -28,7 +28,7 @@ def test_model_has_backbone(model):
 
 def test_model_has_four_heads(model):
     """4개의 nn.Linear 분류 헤드가 존재해야 한다."""
-    heads = [model.head_a, model.head_b, model.head_c, model.head_d]
+    heads = [model.heads['head_a'], model.heads['head_b'], model.heads['head_c'], model.heads['head_d']]
     assert len(heads) == 4
     for head in heads:
         assert isinstance(head, torch.nn.Linear)
@@ -36,29 +36,29 @@ def test_model_has_four_heads(model):
 
 def test_head_output_dimensions(model, config):
     """각 Head의 out_features가 19/14/16/11이어야 한다."""
-    assert model.head_a.out_features == config.head_a_size  # 19
-    assert model.head_b.out_features == config.head_b_size  # 14
-    assert model.head_c.out_features == config.head_c_size  # 16
-    assert model.head_d.out_features == config.head_d_size  # 11
+    assert model.heads['head_a'].out_features == config.head_a_size  # 19
+    assert model.heads['head_b'].out_features == config.head_b_size  # 14
+    assert model.heads['head_c'].out_features == config.head_c_size  # 16
+    assert model.heads['head_d'].out_features == config.head_d_size  # 11
 
 
 def test_total_output_items(model):
     """전체 출력 항목 합계는 60이어야 한다."""
     total = (
-        model.head_a.out_features
-        + model.head_b.out_features
-        + model.head_c.out_features
-        + model.head_d.out_features
+        model.heads['head_a'].out_features
+        + model.heads['head_b'].out_features
+        + model.heads['head_c'].out_features
+        + model.heads['head_d'].out_features
     )
     assert total == 60
 
 
 def test_backbone_input_features(model, config):
     """모든 Head의 in_features가 backbone feature dim(1408)과 일치해야 한다."""
-    assert model.head_a.in_features == config.backbone_feature_dim
-    assert model.head_b.in_features == config.backbone_feature_dim
-    assert model.head_c.in_features == config.backbone_feature_dim
-    assert model.head_d.in_features == config.backbone_feature_dim
+    assert model.heads['head_a'].in_features == config.backbone_feature_dim
+    assert model.heads['head_b'].in_features == config.backbone_feature_dim
+    assert model.heads['head_c'].in_features == config.backbone_feature_dim
+    assert model.heads['head_d'].in_features == config.backbone_feature_dim
 
 
 # --- Cycle 3: 출력 텐서 Shape ---

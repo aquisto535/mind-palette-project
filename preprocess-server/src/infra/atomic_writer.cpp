@@ -1,8 +1,8 @@
 ﻿#include "infra/atomic_writer.h"
+#include "utils/Logger.h"
 #include <fstream>
-#include <iostream>
 
-bool AtomicFileWriter::write(const cv::Mat& image, const std::string& path) {
+bool AtomicFileWriter::write(const cv::Mat& image, const std::string& path, const std::string& requestId) {
     if (image.empty()) {
         return false;
     }
@@ -37,12 +37,12 @@ bool AtomicFileWriter::write(const cv::Mat& image, const std::string& path) {
                 }
             }
         } catch (const cv::Exception& e) {
-            std::cerr << "cv::imencode failed: " << e.what() << std::endl;
+            LOG_ERROR(requestId, "cv::imencode failed: {}", e.what());
         } catch (...) {
             // Ignore to try fallback
         }
         
-        std::cerr << "Failed to write image (imencode). Attempting PPM fallback..." << std::endl;
+        LOG_WARN(requestId, "Failed to write image (imencode). Attempting PPM fallback...");
         
         // Fallback to PPM
         std::string ppmPath = path;
@@ -53,7 +53,7 @@ bool AtomicFileWriter::write(const cv::Mat& image, const std::string& path) {
         
         if (saveAsPPM(image, tempPpmPath)) {
             fs::rename(tempPpmPath, ppmPath);
-            std::cout << "Fallback success: Saved as " << ppmPath << std::endl;
+            LOG_INFO(requestId, "Fallback success: Saved as {}", ppmPath);
             try { if (fs::exists(tempPath)) fs::remove(tempPath); } catch (...) {}
             return true;
         }
@@ -61,7 +61,7 @@ bool AtomicFileWriter::write(const cv::Mat& image, const std::string& path) {
         return false;
         
     } catch (const std::exception& e) {
-        std::cerr << "AtomicFileWriter error: " << e.what() << std::endl;
+        LOG_ERROR(requestId, "AtomicFileWriter error: {}", e.what());
         try { if (fs::exists(tempPath)) fs::remove(tempPath); } catch (...) {}
         return false;
     }
@@ -91,6 +91,27 @@ bool AtomicFileWriter::writeText(const std::string& content, const std::string& 
     } catch (const std::exception& e) {
         std::cerr << "AtomicFileWriter error: " << e.what() << std::endl;
         try { if (fs::exists(tempPath)) fs::remove(tempPath); } catch (...) {}
+        return false;
+    }
+}
+
+bool AtomicFileWriter::atomicDelete(const std::string& path) {
+    if (!fs::exists(path)) {
+        return false;
+    }
+
+    std::string delPath = path + ".del";
+    try {
+        // Rename first (atomic on most file systems) — file appears gone to readers
+        fs::rename(path, delPath);
+        // Now remove the renamed file
+        fs::remove(delPath);
+        return true;
+    } catch (const std::exception& e) {
+        // If rename succeeded but remove failed, clean up .del
+        try {
+            if (fs::exists(delPath)) fs::remove(delPath);
+        } catch (...) {}
         return false;
     }
 }

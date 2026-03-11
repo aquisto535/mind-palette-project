@@ -1,8 +1,10 @@
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import axios from 'axios';
+import FormData from 'form-data';
 import { RESULT_DIR } from '../utils/fileStorage';
-import logger from '../utils/logger';
+import { saveWithHash } from '../utils/hashIntegrity';
+import logger, { maskPII } from '../utils/logger';
 
 const PREPROCESS_SERVER_URL = process.env.PREPROCESS_SERVER_URL || 'http://localhost:8081';
 const AI_SERVER_URL = process.env.AI_SERVER_URL || 'http://localhost:8002';
@@ -48,7 +50,7 @@ export const processAnalysis = async (file: Express.Multer.File, requestId: stri
     throw new Error('NO_FILE');
   }
 
-  logger.info('Image uploaded:', { path: file.path, requestId });
+  logger.info('Image uploaded:', maskPII({ path: file.path, requestId }));
 
   const timestamp = Date.now();
   const resultPath = path.join(RESULT_DIR, `${timestamp}_result.json`);
@@ -64,7 +66,7 @@ export const processAnalysis = async (file: Express.Multer.File, requestId: stri
 
     if (preprocessRes.data?.processedPath) {
       processedImagePath = preprocessRes.data.processedPath;
-      logger.info('Preprocessing completed:', { processedPath: processedImagePath, requestId });
+      logger.info('Preprocessing completed:', maskPII({ path: processedImagePath, requestId }));
     }
   } catch (error: unknown) {
     logger.warn('Preprocessing failed, using original image:', {
@@ -79,7 +81,6 @@ export const processAnalysis = async (file: Express.Multer.File, requestId: stri
   let resultData: AnalysisResult;
   try {
     // 실제 파일을 읽어서 AI 서버로 전송 (multipart/form-data)
-    const FormData = require('form-data');
     const formData = new FormData();
     formData.append('file', await fs.readFile(processedImagePath), path.basename(processedImagePath));
 
@@ -101,9 +102,10 @@ export const processAnalysis = async (file: Express.Multer.File, requestId: stri
     resultData = generateDummyResult();
   }
 
-  // 결과 JSON 파일 저장
-  await fs.writeFile(resultPath, JSON.stringify(resultData, null, 2));
-  logger.info('Result saved:', { path: resultPath, requestId });
+  // 결과 JSON 파일 저장 (SHA-256 해시 함께 저장 — 무결성 검증용)
+  const resultContent = JSON.stringify(resultData, null, 2);
+  await saveWithHash(resultContent, resultPath);
+  logger.info('Result saved:', maskPII({ path: resultPath, requestId }));
 
   return resultData;
 };

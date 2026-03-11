@@ -4,7 +4,7 @@ import morgan from 'morgan';
 import analyzeRouter from './routes/analyze';
 import healthRouter from './routes/health';
 import { UPLOAD_DIR, RESULT_DIR } from './utils/fileStorage';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'node:crypto';
 import logger from './utils/logger';
 
 const app = express();
@@ -17,7 +17,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Request-ID 미들웨어
 app.use((req: Request, res: Response, next: NextFunction) => {
-  const requestId = req.header('X-Request-ID') || uuidv4();
+  const requestId = req.header('X-Request-ID') || randomUUID();
   (req as any).requestId = requestId;
   res.setHeader('X-Request-ID', requestId);
   next();

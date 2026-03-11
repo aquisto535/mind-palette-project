@@ -28,7 +28,7 @@ def test_backbone_parameters_frozen(model):
 
 def test_head_parameters_trainable(model):
     """모든 Head 파라미터는 requires_grad == True (학습 가능)여야 한다."""
-    heads = [model.head_a, model.head_b, model.head_c, model.head_d]
+    heads = [model.heads['head_a'], model.heads['head_b'], model.heads['head_c'], model.heads['head_d']]
     for head in heads:
         for name, param in head.named_parameters():
             assert param.requires_grad is True, f"Head param '{name}' is frozen"
@@ -39,7 +39,7 @@ def test_backbone_param_count_vs_head(model):
     backbone_params = sum(p.numel() for p in model.backbone.parameters())
     head_params = sum(
         p.numel()
-        for head in [model.head_a, model.head_b, model.head_c, model.head_d]
+        for head in [model.heads['head_a'], model.heads['head_b'], model.heads['head_c'], model.heads['head_d']]
         for p in head.parameters()
     )
     assert backbone_params > head_params * 10

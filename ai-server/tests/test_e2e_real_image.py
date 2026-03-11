@@ -23,7 +23,7 @@ def model(config):
 @pytest.fixture(scope="session")
 def test_image_path():
     """프로젝트 루트의 테스트 이미지."""
-    path = Path(__file__).parent.parent.parent / "남자사람_8_남_02041.jpg"
+    path = Path(__file__).parent.parent.parent / "남자사람_8_남_06463.jpg"
     assert path.exists(), f"Test image not found: {path}"
     return path
 

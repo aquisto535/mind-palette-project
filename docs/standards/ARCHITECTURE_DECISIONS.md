@@ -27,6 +27,10 @@
 | ADR-016 | Antigravity Awesome Skills 도입 및 코드베이스 현대화 | 2026-02 | ✅ Accepted |
 | ADR-017 | AI 코딩 도구(Antigravity vs Claude Code) 역할 분담 전략 도입 | 2026-03 | ✅ Accepted |
 | ADR-018 | HFD 도메인 기반 Multi-label Binary Classification 아키텍처 채택 | 2026-03 | ✅ Accepted |
+| ADR-019 | 서브 에이전트 기반 전문화 전략 채택 (TOP 3 구축) | 2026-03 | ✅ Accepted |
+| ADR-020 | 6-Layer 이미지 파일 보안 검증 아키텍처 | 2026-03 | ✅ Accepted |
+| ADR-021 | 마이크로서비스 간 API 계약 및 자동 검증 도입 | 2026-03 | ✅ Accepted |
+| ADR-022 | TDD Quality Guardian 서브 에이전트의 보안 감사 역할 확장 | 2026-03 | ✅ Accepted |
 ---
 
 ## ADR-001: 마이크로서비스 아키텍처 채택 (Node.js + C++ + Python)
@@ -934,120 +938,66 @@ for param in model.features[-3:].parameters():
 
 ---
 
-## ADR-011: C++ 전처리 파이프라인 결과물 명세
+## ADR-011: C++ 전처리 파이프라인 결과물 명세 (3-Channel Hybrid)
 
 ### 상태
-✅ **Accepted** (2026-02)
+✅ **Accepted** (2026-03 - Updated)
 
 ### 컨텍스트 (Context)
-C++ 전처리 서버가 Python AI 서버에 전달할 이미지 형식을 결정해야 합니다.  
-주요 제약사항:
-- **AI 모델**: EfficientNet-B2 (ImageNet 사전학습, 3채널 RGB 입력)
-- **도메인**: 연필 스케치 (색상 없음, 선 정보가 핵심)
-- **성능 목표**: 전처리 < 100ms
+C++ 전처리 서버가 Python AI 서버에 전달할 이미지 형식을 결정해야 합니다. 효율적인 학습과 추론을 위해 단순한 이미지 전달을 넘어 **피처 엔지니어링(Feature Engineering)**이 포함된 다채널 전략이 필요합니다.
 
 ### 의사결정 (Decision)
-**Binarized 이미지를 RGB 3채널로 변환하여 출력**합니다.
-
-```
-파이프라인: Preprocess → Canny → Morphology → Binarize → RGB 변환
-```
+**3-Channel Hybrid Strategy**를 채택하여 각 채널에 고유한 의미를 부여한 이미지를 출력합니다.
+- **R 채널**: 필압 보존 Grayscale (전통적 세부 묘사)
+- **G 채널**: Inverted Binary (명확한 형태/윤곽선)
+- **B 채널**: Distance Transform (선의 골격 및 거리 정보)
 
 ### 근거 (Rationale)
 
-#### 1️⃣ C++ vs Python 역할 분담 (제1원칙)
-| 담당 | 역할 | 이유 |
-|------|------|------|
-| **C++ 전처리** | 기하학적 처리 | 속도 최적화 (OpenCV) |
-| **Python AI** | 의미론적 처리 | 모델 의존적 연산 (PyTorch) |
+#### 1️⃣ 다차원 특징 추출 (Multi-dimensional Features)
+- **R (Gray)**: 필압의 강약, 종이 질감 등 아날로그적인 정보를 보존하여 필압 분석 모델의 정확도를 높입니다.
+- **G (Binary)**: 배경과 선을 명확히 분리하여 모델이 형태(Shape)를 인식하는 데 집중하게 합니다.
+- **B (Dist)**: `DistanceTransform`을 통해 선의 중심부일수록 명암을 높여, 선의 굵기와 골격(Skeleton) 정보를 수치화합니다.
 
-- **C++ 담당**: 리사이즈, 노이즈 제거, 에지 검출, 이진화
-- **Python 담당**: ImageNet 정규화, Tensor 변환, 추론
-- **경계 원칙**: 정규화는 모델 의존적이므로 Python에서 처리
+#### 2️⃣ 학습 효율 극대화 (Domain Adaptation)
+- **White Background**: 모든 결과물을 흰색 배경으로 통일하여 ImageNet 사전학습 모델이 이미 알고 있는 "종이 위의 그림" 도메인에 최적화합니다.
+- **EfficientNet-B2 호환**: 3채널 RGB 입력을 요구하는 모델 아키텍처를 그대로 활용하면서 정보 밀도를 3배 높였습니다.
 
-#### 2️⃣ 도메인 특수성: 연필 스케치
-```
-아동 인물화 특성:
-- 연필 + 지우개로 그림 (색상 정보 없음)
-- 선/윤곽선이 핵심 정보
-- 흰 종이 배경 (복잡한 배경 제거 불필요)
-```
-
-**결론**: 색상 보존보다 **선 정보 강화**가 중요 → Binarize 선택
-
-#### 3️⃣ EfficientNet-B2 입력 호환성
-```python
-# Python AI 전처리 (Context7 확인)
-transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-```
-
-- EfficientNet-B2는 **RGB 3채널** 입력 필요
-- Binarized 이미지(1채널)를 `cv::cvtColor(binarized, result, cv::COLOR_GRAY2BGR)`로 변환
-- 결과: 흰 배경(255, 255, 255) + 검은 선(0, 0, 0)
-
-#### 4️⃣ GrabCut 제외 결정
-| 알고리즘 | 처리 시간 | 필요성 |
-|----------|----------|--------|
-| GrabCut | 4,233ms | ❌ 불필요 (단순 배경) |
-| Canny | ~5ms | ✅ 에지 검출 |
-| Binarize | ~2ms | ✅ 선 강화 |
-
-- **GrabCut**: 복잡한 배경 제거용 → 흰 종이 배경에는 과도함
-- **성능**: 목표 100ms 대비 40배 초과 → 제외
-- **테스트 유지**: 기술 역량 증명을 위해 테스트 코드에는 보존
+#### 3️⃣ 성능 최적화
+- **CPU 병렬화**: OpenCV의 멀티스레드 성능을 활용하여 3개의 필터를 동시에 처리하거나 파이프라인으로 묶어 100ms 이내 동작을 보장합니다.
 
 ### 파이프라인 상세
 
 ```cpp
-// server.h - ProcessImageFile()
+// Step 1: Denoise (GaussianBlur 5x5) -> R 채널용
+cv::Mat gray = processor.GaussianBlur(img, 5);
 
-// Step 1: Preprocess (Letterbox 512×512 + Denoise + Grayscale)
-cv::Mat preprocessed = processor.Preprocess(img);
+// Step 2: Adaptive Binarization -> G 채널용
+cv::Mat binary = processor.AdaptiveThreshold(gray, 11, 2);
+cv::Mat invBinary;
+cv::bitwise_not(binary, invBinary); // White Line on Black for DistTransform
 
-// Step 2: Canny Edge Detection (threshold 50/150)
-cv::Mat edges = processor.DetectEdges(preprocessed, 50, 150);
+// Step 3: Distance Transform -> B 채널용
+cv::Mat dist;
+cv::distanceTransform(invBinary, dist, cv::DIST_L2, 3);
+cv::normalize(dist, dist, 0, 255, cv::NORM_MINMAX, CV_8U);
 
-// Step 3: Morphology Enhancement (MORPH_CLOSE, kernelSize=3)
-cv::Mat enhanced = processor.EnhanceContours(edges, 3);
-
-// Step 4: Adaptive Binarization
-cv::Mat binarized = processor.Binarize(preprocessed);
-
-// Step 5: Convert to RGB 3-channel
-cv::cvtColor(binarized, result, cv::COLOR_GRAY2BGR);
+// Step 4: Merge Channels
+std::vector<cv::Mat> channels = {gray, binary, dist};
+cv::merge(channels, result);
 ```
 
 ### 결과물 명세
 
 | 항목 | 값 | 이유 |
 |------|-----|------|
-| **파일 형식** | JPEG (품질 95) | 압축 효율, 범용 호환성 |
-| **해상도** | 512×512 | EfficientNet-B2 입력 크기 |
-| **리사이즈** | Letterbox (검은 패딩) | 비율 왜곡 방지 |
-| **채널** | 3채널 RGB | AI 모델 호환성 |
-| **내용** | 흰 배경 + 검은 선 | 선 정보 극대화 |
-
-### 대안 및 트레이드오프 (Alternatives)
-
-#### 옵션 A: 컬러 RGB 출력 (Preprocess 결과)
-- ✅ **장점**: 색상 정보 보존, 색연필/크레파스 그림에 적합
-- ❌ **Rejected**: 연필 스케치 도메인에서는 색상 정보 불필요
-
-#### 옵션 C: 둘 다 출력 (하이브리드)
-- ✅ **장점**: AI 모델이 멀티 입력 활용 가능
-- ❌ **Rejected**: 구현 복잡도 증가, 현재 단계에서 과도한 엔지니어링
+| **채널 구성** | R:Gray, G:Binary, B:Dist | 정보 밀도 극대화 (필압+형태+골격) |
+| **해상도** | 512×512 (Letterbox) | 비율 왜곡 방지 및 추론 입력 준비 |
+| **배경색** | White (255, 255, 255) | ImageNet 도메인 친화성 |
 
 ### 결론 (Consequences)
-- ✅ **장점**:
-  - 연필 스케치 도메인에 최적화
-  - EfficientNet-B2 입력 호환
-  - 처리 시간 < 100ms 달성
-  - 역할 분담 명확화 (C++ = 기하학, Python = 의미론)
-- ⚠️ **단점**:
-  - 색연필/크레파스 그림에는 부적합 (향후 옵션 A로 전환 가능)
-- **관련 문서**: 
-  - [GrabCut 제외 의사결정](troubleshooting/Week3_Issues.md)
-  - [ADR-010: EfficientNet-B2 채택](#adr-010-transfer-learning-모델로-efficientnet-b2-채택)
+- ✅ **장점**: 단순 이진화 대비 AI 모델의 분류 정확도 향상, 필압 등 추가 특징 추출 가능.
+- ⚠️ **주의**: Python 서버에서 입력 정규화 시 일반적인 ImageNet Mean/Std 대신 실제 전처리 결과물의 통계값 적용 필요.
 
 ---
 
@@ -1727,3 +1677,148 @@ graph TD
 ### 결론 (Consequences)
 - ✅ **장점**: 지능 검사 도메인 및 ONNX 변환과 완벽히 호환되는 정확도 높은 모델 아키텍처 확립. 모델 변경에 유연한 마이크로서비스 아키텍처 유지.
 - ⚠️ **적용**: 훈련 시 클래스 불균형에 대응하여 적절한 Class Weight 적용 필요.
+---
+
+## ADR-019: 서브 에이전트 기반 전문화 전략 채택 (TOP 3 구축)
+
+### 상태
+✅ **Accepted** (2026-03)
+
+### 컨텍스트 (Context)
+프로젝트가 Phase 4(AI Server)와 Phase 5(통합)로 진입함에 따라 다음과 같은 고도화된 기술적 도전 과제들이 발생했습니다:
+1. **마이크로서비스 간 복잡한 데이터 흐름**: C++, Python, Node.js 간의 정교한 인터페이스 관리 및 로깅 추적 필요.
+2. **품질 보증 부담 증가**: TDD 사이클 관리 및 End-to-End 통합 테스트의 복잡도 상승.
+3. **성능 최적화의 기술적 깊이**: ONNX 변환, TensorRT 적용, 양자화(Quantization) 등 고도의 전문 지식 요구.
+
+이미 구축된 단일 에이전트 체제로는 이러한 다차원적인 요구사항을 효율적으로 처리하는 데 한계가 있다고 판단했습니다.
+
+### 의사결정 (Decision)
+Antigravity의 Persona & Skill 기능을 활용하여 **TOP 3 전문 서브 에이전트**를 정식으로 도입하고 각각의 전용 스킬셋을 구축합니다:
+
+1. **AI Pipeline Architect**: 마이크로서비스 간 인터페이스 설계, 분산 로깅, 데이터 파이프라인 정합성 전담.
+2. **TDD Quality Guardian**: TDD 워크플로우 준수 감시, L1~L3 테스트 커버리지 확보, 전체 시스템 안정성 검증 전담.
+3. **AI Inference Optimizer**: 모델 변환(ONNX/TensorRT), 추론 지연 시간(Latency) 최적화, 양자화 전략 수립 전담.
+
+### 근거 (Rationale)
+- **전문화 (Specialization)**: 각 에이전트가 특정 도메인에 특화된 인스트럭션과 도구를 가짐으로써 작업의 정교함 향상.
+- **맥락 유지 (Context Management)**: 복잡한 태스크를 도메인별로 분리하여 에이전트의 맥락 오염 방지 및 추론 정확도 개선.
+- **포트폴리오 가치**: "현대적 AI 코딩 도구를 고도화된 자동화 프로세스로 활용하는 역량" 증명.
+- **협업 효율성**: `shrimp`를 통한 태스크 분할과 전문 에이전트 간의 유기적 협업으로 개발 속도 가속화.
+
+### 결론 (Consequences)
+- ✅ **장점**: 설계 가시성 향상, 테스트 신뢰도 극대화, 추론 성능 최적화 보장.
+- 🛠️ **관리 전략 (Static Orchestration)**: 별도의 관리 에이전트를 두는 대신, 각 전문 스킬셋(.md)에 **'영역 침범 방지 지침(Non-Goals)'**을 명시하여 도메인 경계를 정적으로 확정함.
+- 🤝 **협업 모델**: 메인 에이전트(Antigravity)가 'Core Architect'로서 각 전문 페르소나를 도구처럼 호출하여 결과물을 통합함.
+
+---
+
+## ADR-020: 6-Layer 이미지 파일 보안 검증 아키텍처
+
+### 상태
+✅ **Accepted** (2026-03)
+
+### 컨텍스트 (Context)
+사용자가 업로드하는 이미지 파일은 원격 코드 실행(RCE), 서비스 거부(DoS), 경로 탐색(Path Traversal) 공격의 주요 경로입니다. 단순한 확장자 체크만으로는 위조된 파일을 걸러내기 부족하므로, 강력한 다단계 검증 체계가 필요합니다.
+
+### 의사결정 (Decision)
+**6단계 레이어(6-Layer) 보안 검증 모델**을 채택하여 구간별 책임을 분리합니다.
+
+1.  **L1: 확장자 화이트리스트 (White-list Extension)**: `.jpg`, `.jpeg`, `.png`만 허용.
+2.  **L2: 매직 바이트 검증 (Magic Bytes)**: 파일 헤더의 고유 시그니처(예: `FF D8 FF`) 확인.
+3.  **L3: MIME 타입 체크**: 브라우저/시스템이 인식하는 파일 형식 일치 여부 확인.
+4.  **L4: 이미지 무결성 검증 (PIL.verify)**: Python AI 서버에서 이미지 라이브러리를 통해 파일 손상 및 구조적 결함 확인.
+5.  **L5: 리소스 제한 (Resolution/Size Limit)**: "Pixel Flood" 공격 방지를 위한 최대 해상도(4096px) 및 크기(10MB) 제한.
+6.  **L6: 이미지 재인코딩 (Sanitization)**: 분석용 임시 파일 생성 시 다시 인코딩하여 파일 내부에 숨겨진 메타데이터나 악성 스크립트(Polyglot) 파괴.
+
+### 근거 (Rationale)
+
+#### 1️⃣ 심층 방어 (Defense in Depth)
+- 특정 레이어가 뚫리더라도 다음 레이어에서 차단하는 구조입니다.
+- 예: 확장자를 위조한 텍스트 파일(L1 성공)은 매직 바이트 검증(L2)에서 차단됩니다.
+
+#### 2️⃣ 책임 분리 (Separation of Concerns)
+- **Node.js (L1~L3, L5)**: 빠른 전처리를 통해 시스템 전체 부하 감소.
+- **Python (L4, L6)**: 딥러닝 라이브러리의 강력한 분석 기능을 활용한 최종 검역.
+
+#### 3️⃣ 성능과 보안의 균형
+- 모든 과정을 API Gateway에서 수행하면 병목이 발생하므로, 가벼운 체크(L1~L3)를 앞단에, 무거운 체크(L4, L6)를 뒷단에 배치했습니다.
+
+### 결론 (Consequences)
+- ✅ **장점**: 이미지 기반 보안 위협에 대한 강력한 내성 확보, 시스템 안정성 향상.
+- ⚠️ **단점**: 파일 업로드 시 약간의 처리 지연 발생 (수십 ms).
+  - *보완책*: `plan.md`의 Phase 5 캐싱 및 병렬 검증 파이프라인을 통해 지연 시간을 대폭 개선 예정.
+- **적용**: `api-gateway/src/utils/fileStorage.ts` 및 `ai-server/src/routes/analyze.py`에 적용 완료.
+
+  
+---
+
+## ADR-021: 마이크로서비스 간 API 계약 및 자동 검증 도입
+
+### 상태
+✅ **Accepted** (2026-03)
+
+### 컨텍스트 (Context)
+본 프로젝트는 API Gateway(Node.js), 전처리(C++), AI 추론(Python) 서비스가 HTTP REST API를 통해 연동되는 마이크로서비스 아키텍처(MSA)를 채택하고 있습니다. 1인 개발 환경에서 서비스 간 인터페이스 변경이 발생할 경우, 영향 범위를 수동으로 파악하기 어렵고 연쇄적인 통신 오류(Contract Breaking)가 발생할 위험이 있습니다.
+
+### 의사결정 (Decision)
+**OpenAPI 3.0 기반의 API 문서화 및 자동 검증 체계**를 도입합니다.
+1. **API 규격의 문서화**: Swagger/OpenAPI 3.0 스펙을 활용하여 각 서비스의 엔드포인트, 요청/응답 스키마를 명문화함.
+2. **자동 검증 테스트**: TDD 사이클 내에 "실제 엔드포인트가 정의된 스펙과 일치하는지" 검증하는 L1 수준의 테스트를 포함함.
+3. **우선순위 관리**: 프로젝트 핵심 로직(AI/전처리) 개발을 우선하되, 통합 단계(Phase 5) 진입 전 반드시 명세를 확정함.
+
+### 근거 (Rationale)
+
+#### 1️⃣ 서비스 간 계약 관리 (Contract Management)
+- 마이크로서비스 구조에서 가장 빈번하게 발생하는 버그인 "필드명 불일치"나 "데이터 타입 오류"를 컴파일/테스트 단계에서 조기에 발견하기 위함입니다.
+
+#### 2️⃣ 포트폴리오의 기술적 성스크도 증명
+- 단순 기능 구현을 넘어, MSA 환경에서의 협업 관례(API First Design)와 설계 역량을 면접관에게 객관적으로 보여줄 수 있는 핵심 근거가 됩니다.
+
+#### 3️⃣ 유지보수 및 확장성
+- 향후 프론트엔드나 새로운 마이크로서비스를 추가할 때, 소스 코드를 직접 읽지 않고도 문서만으로 통합이 가능한 환경(Self-documenting)을 구축합니다.
+
+### 결론 (Consequences)
+- ✅ **장점**: 서비스 간 결합도 관리 용이, 통신 오류 조기 발견, 대외적 기술 신뢰도 확보.
+- ⚠️ **단점**: API 변경 시 문서와 코드를 동시에 업데이트해야 하는 추가 관리 비용 발생.
+- **적용**: `plan.md`의 "API Documentation" 섹션 및 Phase 5 연동 작업에 반영.
+
+
+---
+
+## ADR-022: TDD Quality Guardian 서브 에이전트의 보안 감사 역할 확장
+
+### 상태
+✅ **Accepted** (2026-03)
+
+### 컨텍스트 (Context)
+프로젝트가 고도화됨에 따라 의존성 보안(Dependency Security) 및 공급망 보안(Supply Chain Security)의 중요성이 커졌습니다. 그러나 `npm audit`이나 `CodeQL` 분석과 같은 보안 감사 작업은 주기성과 결과 해석의 난이도로 인해 자칫 소홀해지기 쉬운 영역입니다. 이를 전문적으로 관리할 체계가 필요합니다.
+
+### 의사결정 (Decision)
+**TDD Quality Guardian** 서브 에이전트의 R&R(Roles and Responsibilities)을 확장하여 보안 감사 역할을 공식적으로 부여합니다.
+
+1.  **감사 범위**:
+    - **Node.js**: `npm audit`을 통한 취약한 패키지 탐지 및 업데이트 권고.
+    - **C++**: `vcpkg` baseline 버전 핀닝 및 의존성 무결성 확인.
+    - **공통**: CodeQL 결과 분석 및 주요 취약점(Path Traversal, Injection 등) 우선순위 판별.
+2.  **수행 시점**: 정기 프로젝트 점검 시 또는 주요 라이브러리 추가/업데이트 시 TDD 사이클과 병행하여 수행.
+3.  **보고 방식**: 발견된 취약점의 실제 영향도를 컨텍스트 기반으로 분석하여 사용자에게 조치 방안을 제시함.
+
+### 근거 (Rationale)
+
+#### 1️⃣ 관리 효율성 (Operational Efficiency)
+- 코드 품질 감시(TDD)와 보안 감사는 수행 주기가 유사하며, "시스템 안정성 확보"라는 공통의 목표를 가집니다. 신규 에이전트를 생성하는 대신 기존 에이전트의 능력을 확장함으로써 관리 복잡도를 낮춥니다.
+
+#### 2️⃣ 컨텍스트 기반 의사 결정
+- 단순 자동화 도구의 리포트 나열이 아니라, "현재 아키텍처에서 이 취약점이 실질적인 위협인가?"를 판단하는 데 에이전트의 분석력을 활용합니다.
+
+#### 3️⃣ 포트폴리오 가치 (Engineering Excellence)
+- "보안을 사후 처리가 아닌, 개발 프로세스(TDD)에 내재화(Shift-Left Security)하여 관리하는 역량"을 증명합니다.
+
+### 결론 (Consequences)
+- ✅ **장점**: 보안 사각지대 제거, 일관된 품질 관리 체계 유지, 개발 생산성 보존.
+- ⚠️ **주의**: 에이전트의 페르소나가 너무 비대해지지 않도록, 감사 도구의 '실행'보다는 결과의 '분석 및 대응 전략 수립'에 집중하도록 가이드합니다.
+
+---
+
+**마지막 업데이트**: 2026-03-10  
+**작성자**: Antigravity
