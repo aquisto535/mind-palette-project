@@ -63,14 +63,26 @@ def test_pipeline_output_dtype(config):
 
 
 def test_pipeline_output_value_range(config):
-    """정규화 후 값은 합리적 범위 [-3, 3] 내여야 한다."""
+    """정규화 후 값은 파라미터 기반 이론적 범위 내여야 한다.
+
+    스케치 데이터 통계 기반 파라미터(mean≈0.972/0.031/0.012, std≈0.156/0.174/0.074)는
+    ImageNet 파라미터와 다르므로 [-3, 3] 대신 파라미터에서 계산한 이론값을 사용한다.
+    """
     pipeline = create_transform_pipeline(config)
     mock_image = np.random.randint(0, 255, (512, 512, 3), dtype=np.uint8)
     pil_image = Image.fromarray(mock_image)
 
     tensor = pipeline(pil_image)
-    assert tensor.min() >= -3.0
-    assert tensor.max() <= 3.0
+
+    # 이론적 범위: (픽셀값[0,1] - mean) / std
+    min_std = min(config.normalize_std)
+    max_mean = max(config.normalize_mean)
+    min_mean = min(config.normalize_mean)
+    theoretical_min = (0.0 - max_mean) / min_std
+    theoretical_max = (1.0 - min_mean) / min_std
+
+    assert tensor.min().item() >= theoretical_min - 0.1
+    assert tensor.max().item() <= theoretical_max + 0.1
 
 
 def test_pipeline_uses_config_normalization_params():

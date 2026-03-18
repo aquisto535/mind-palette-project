@@ -36,5 +36,6 @@ async def health_check(request: Request):
             "male": model_state.male_loaded,
             "female": model_state.female_loaded,
         }
+        health_data["engine_type"] = model_state.engine_type
 
     return health_data

@@ -1,62 +1,57 @@
+import os
 import torch
 from dataclasses import dataclass
-from typing import Dict, Any, Optional
+from typing import Any, Optional
 from pathlib import Path
 from src.config import ModelConfig
 from src.infra.logger import get_logger
 
 logger = get_logger(__name__)
 
-# HFDClassifier 클래스가 다른 곳에 정의되어 있지 않으므로, 
-# 최소한의 인터페이스를 갖춘 Placeholder 또는 실제 클래스 정의가 필요합니다.
-# 여기서는 에러 방지를 위해 간단한 구조를 정의하거나 mock 처리합니다.
-class HFDClassifier(torch.nn.Module):
-    def __init__(self, config):
-        super().__init__()
-        self.config = config
-    def forward(self, x):
-        return x
-
 @dataclass
 class ModelState:
-    male_model: Optional[HFDClassifier] = None
-    female_model: Optional[HFDClassifier] = None
+    male_engine: Optional[Any] = None
+    female_engine: Optional[Any] = None
+    engine_type: str = "none"
 
     @property
     def male_loaded(self) -> bool:
-        return self.male_model is not None
+        return self.male_engine is not None
 
     @property
     def female_loaded(self) -> bool:
-        return self.female_model is not None
+        return self.female_engine is not None
 
 
 def load_models(config: ModelConfig) -> ModelState:
-    """남녀 모델을 독립적으로 로드. 실패 시 해당 모델만 None."""
     state = ModelState()
+    
+    # Use exact same model base names as config.male_onnx_path
+    trt_male = config.male_onnx_path.replace(".onnx", ".engine")
+    trt_female = config.female_onnx_path.replace(".onnx", ".engine")
+    
+    try:
+        if torch.cuda.is_available():
+            from src.infra.tensorrt_engine import TensorRtNativeEngine
+            if os.path.exists(trt_male) and os.path.exists(trt_female):
+                state.male_engine = TensorRtNativeEngine(trt_male)
+                state.female_engine = TensorRtNativeEngine(trt_female)
+                state.engine_type = "tensorrt"
+                logger.info("Loaded TensorRT engines successfully.")
+                return state
+    except Exception as e:
+        logger.warning(f"TensorRT 엔진 로드 실패 (Fallback to ONNX): {e}")
 
-    state.male_model = _try_load(config, config.male_model_path, "male")
-    state.female_model = _try_load(config, config.female_model_path, "female")
+    # Fallback to ONNX
+    try:
+        from src.infra.onnx_inference import OnnxInferenceEngine
+        if os.path.exists(config.male_onnx_path) and os.path.exists(config.female_onnx_path):
+            state.male_engine = OnnxInferenceEngine(config.male_onnx_path)
+            state.female_engine = OnnxInferenceEngine(config.female_onnx_path)
+            state.engine_type = "onnx"
+            logger.info("Loaded ONNX engines successfully.")
+            return state
+    except Exception as e:
+        logger.error(f"Failed to load ONNX models: {e}")
 
     return state
-
-
-def _try_load(
-    config: ModelConfig, model_path: str, gender: str
-) -> Optional[HFDClassifier]:
-    path = Path(model_path)
-    if not path.exists():
-        logger.warning(f"{gender} model not found at {path}")
-        return None
-
-    try:
-        model = HFDClassifier(config)
-        # 실제 가중치 로드는 테스트 환경에 따라 실패할 수 있으므로 pass 처리하거나 
-        # 실제 파일이 있을 때만 수행
-        # model.load_state_dict(torch.load(path, map_location=config.device))
-        model.eval()
-        logger.info(f"{gender} model found at {path}")
-        return model
-    except Exception as e:
-        logger.error(f"Failed to load {gender} model: {e}")
-        return None

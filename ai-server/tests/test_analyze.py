@@ -135,14 +135,25 @@ async def test_analyze_gpu_oom_returns_503(app):
     buf = io.BytesIO()
     img.save(buf, format='JPEG')
 
+    import unittest.mock
+    
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        with patch("src.routes.analyze.OnnxInferenceEngine") as MockEngine:
-            MockEngine.side_effect = RuntimeError("CUDA out of memory")
+        engine = app.state.model_state.male_engine
+        if engine is None:
+            engine = unittest.mock.MagicMock()
+            app.state.model_state.male_engine = engine
+            app.state.model_state.engine_type = "mock"
+            
+        original_run = engine.run
+        engine.run = unittest.mock.MagicMock(side_effect=RuntimeError("CUDA out of memory"))
+        try:
             response = await client.post(
                 "/analyze",
                 files={"file": ("test.jpg", buf.getvalue(), "image/jpeg")}
             )
+        finally:
+            engine.run = original_run
 
     assert response.status_code == 503
     assert "리소스" in response.json()["detail"] or "GPU" in response.json()["detail"]

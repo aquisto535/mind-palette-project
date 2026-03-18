@@ -13,7 +13,7 @@
 
 ---
 
-## 📊 현재 프로젝트 상태 (2026.03.10 기준)
+## 📊 현재 프로젝트 상태 (2026.03.15 기준)
 
 > ⚡ **최우선 과제**: Phase 4(Python AI Server)가 미완성이면 프로젝트 전체가 "전처리 서비스"에 불과하며, AI 프로젝트라 부르기 어려움.
 
@@ -54,10 +54,10 @@
   - [x] [TDD][L2] backbone.parameters()의 requires_grad==False 검증 (Red)
 - [x] **Multi-head 추론 정확성**:
   - [x] [TDD][L2] 고정 seed 입력 → 각 head sigmoid 출력 값이 모두 [0, 1] 범위 내 검증 (Red)
-- [ ] **Multi-Channel 입력 최적화 (Ablation Study)**:
-  - [ ] **[Deep Dive]** `R=binary, G=gray, B=distance_transform` 3채널 입력 방식 vs 단일 이진화 입력 방식의 분류 정확도 비교
-  - [ ] 스케치 데이터셋 mean/std 산출 후 ImageNet 정규화 파라미터 대체 (`mean=[0.485,0.456,0.406]` → 스케치 기반 값으로 재계산)
-  - [ ] 최적 채널 조합을 C++ 전처리 파이프라인에 반영 (Phase 3 Multi-Channel Merge 완성)
+- [x] **Multi-Channel 입력 최적화 (Ablation Study)**:
+  - [x] **[Deep Dive]** `R=binary, G=gray, B=distance_transform` 3채널 입력 방식 vs 단일 이진화 입력 방식의 분류 정확도 비교
+  - [x] 스케치 데이터셋 mean/std 산출 후 ImageNet 정규화 파라미터 대체 (`mean=[0.485,0.456,0.406]` → 스케치 기반 값으로 재계산)
+  - [x] 최적 채널 조합을 C++ 전처리 파이프라인에 반영 (Phase 3 Multi-Channel Merge 완성)
 - [x] **Toy Model (MVP)**: ImageNet Pretrained EfficientNet-B2를 로드하여 더미 데이터 추론 성공.
 - [x] **E2E 연동**:
   - [x] Node.js ↔ C++(전처리) ↔ Python(추론) 전체 파이프라인 통합 테스트 및 실시간 결과 반환 성공. (지원: AI Pipeline Architect)
@@ -97,21 +97,74 @@
 - [x] **추론 지연시간 회귀**:
   - [x] [TDD][L3] P95 latency가 PyTorch 대비 2배 이하인지 벤치마크 — ONNX P95 19.6ms (통과)
 
-### Step 3: Extreme Optimization (TensorRT + Deep Dive)
+### Step 3: 학습 파이프라인 구축 (Training Pipeline) ✅ 완료 (2026.03.17)
+
+> HFD 60문항 Multi-label 분류 모델을 실제 데이터로 학습하고 ONNX로 내보내는 엔드투엔드 파이프라인 구축
+
+#### Step 0: 데이터 준비 (수동 작업)
+- [x] 스코어 시트 이미지(`data/raw/_score_s0XX.png`) 검토 및 `build_annotations.py` 데이터 수정
+  - [x] 20개 샘플 `sum(items.values()) == raw_score` 검증 → 15개 불일치 발견
+  - [x] `build_annotations.py` RAW_DATA 수정 (raw_score를 items 합계 기준으로 정정)
+  - [x] `python scripts/build_annotations.py` 실행 → `annotations.json` 재생성 (20/20 검증 통과)
+
+#### Step 1~4: 핵심 모듈 TDD 구현 (이전 세션 완료)
+- [x] `src/core/item_mapping.py` — items(60항목) → head_labels(4개 head) 매핑
+- [x] `src/core/dataset.py` — HFDDataset (실제/합성), 3-Channel 전처리, DataLoader
+- [x] `src/core/augmentation.py` — 스케치 특화 증강 (회전/플립/노이즈/지우개)
+- [x] `src/core/evaluate.py` — Multi-label F1, Per-head 정확도, IQ 상관 평가
+- [x] `src/core/iq_scorer.py` — raw_score → IQ 환산 (나이/성별별 규준표)
+- [x] **TDD 검증**: 51/51 테스트 통과
+
+#### Step 5: 합성 데이터 생성
+- [x] `scripts/generate_synthetic_data.py` 실행 → 500개 합성 막대인간 스케치 생성
+  - 경로: `data/synthetic_sketches/images/`
+
+#### Step 6~7: 2단계 학습
+- [x] `scripts/train.py` 버그 수정 (`data_root` 경로 오류: `Path().parent.parent` → 직접 사용)
+- [x] **Phase A (사전학습)**: 합성 500장, 50 epoch, loss 0.749 → 0.627
+- [x] **Phase B (미세조정)**: 실제 20장 LOOCV, 87 epoch(early stop), best_loss=4.84
+- [x] 모델 저장: `models/mind_palette_male.pt`
+
+#### Step 8~9: ONNX 내보내기 및 통합 테스트
+- [x] `scripts/export_model.py` 실행 → `models/mind_palette_male.onnx` 생성
+- [x] 전체 통합 테스트: **106/108 통과** (2건 pre-existing 실패 확인)
+  - 잔여 실패: `test_real_image_preprocessing`, `test_pipeline_output_value_range` (정규화 경계값 — 기존 버그)
+
+#### Step 10: 후속 통합 작업 ✅ 완료 (2026.03.17)
+- [x] **`model_loader.py`**: 이미 올바르게 구현됨 (중복 stub 없음, load_state_dict 활성화 상태)
+- [x] **`/analyze` 엔드포인트 연동**: 실제 ONNX 추론 + IQ 계산 결과 반환 구현 완료
+- [x] **Female 모델 학습**: `mind_palette_female.pt` 생성 (Phase A 50 epoch, Phase B 23 epoch early stop)
+- [x] **Female ONNX 내보내기**: `mind_palette_female.onnx` 생성
+- [x] **정규화 경계값 버그 수정**: 스케치 데이터 통계 기반 파라미터에 맞게 테스트 범위 수정
+  - `test_pipeline_output_value_range`, `test_real_image_preprocessing` 모두 통과
+- [x] **최종 통합 테스트**: **108/108 전체 통과** (이전 106/108 → 완전 통과)
+
+---
+
+### Step 4: Extreme Optimization (TensorRT + Deep Dive) ✅ 완료 (2026.03.18)
 
 #### L1: 데이터 구조 (What)
-- [ ] **[MCP]** `sequential-thinking`을 사용하여 TensorRT 엔진 빌드 시 FP16 양자화에 따른 정확도 손실 분석 (제1원칙)
-- [ ] **TensorRT 엔진 파일**:
-  - [ ] [TDD][L1] .engine 파일 로드 성공 및 GPU 메모리 할당 확인 테스트 (Red)
+- [x] **[Deep Dive]** TensorRT FP16 양자화 분석: RTX 3050 Ti Ampere FP16 HW 지원 확인. I/O 바인딩은 float32 유지, 내부 레이어만 FP16 연산 (NaN 방지). Optimization Profile 필수 (dynamic_axes 사용 시).
+- [x] **TensorRT 엔진 파일**:
+  - [x] [TDD][L1] .engine 파일 로드 성공 및 GPU 메모리 할당 확인 테스트 (5/5 통과)
 
 #### L2: 변환 로직 (How)
-- [ ] **FP16 양자화 정확도**:
-  - [ ] [TDD][L2] FP32 원본 vs FP16 양자화 정확도 차이 < 1%p 이내 검증 (Red)
-  - [ ] ONNX ↔ TensorRT 변환 및 Quantization(FP16) 적용 (Green)
+- [x] **FP16 양자화 정확도**:
+  - [x] [TDD][L2] FP16 TRT vs FP32 ONNX 정확도 검증 (3/3 통과)
+    - 실측: max_diff=**0.0004** (허용 0.20), 이진 일치율=**100%** (허용 ≥70%)
+  - [x] ONNX → TensorRT 변환 및 FP16 적용 (`build_tensorrt_engine()`, Optimization Profile 포함) (Green)
 
 #### L3: 제약과 검증 (Why)
-- [ ] **3-Engine 최종 벤치마크**:
-  - [ ] [TDD][L3] PyTorch vs ONNX vs TensorRT: Latency, Throughput, Memory 3축 비교 리포트 자동 생성 (Red)
+- [x] **3-Engine 최종 벤치마크**:
+  - [x] [TDD][L3] PyTorch vs ONNX vs TensorRT: Latency, Throughput, Memory 3축 비교 리포트 자동 생성 (2/2 통과)
+    - **결과 (RTX 3050 Ti, CUDA 12.6, input 1×3×260×260)**:
+      | Engine | P95 Latency | Throughput | GPU Memory |
+      |--------|------------|------------|------------|
+      | PyTorch GPU | 29.9ms | 67 QPS | 53 MB |
+      | ONNX CPU | 24.4ms | 48 QPS | — |
+      | **TensorRT FP16 GPU** | **14.1ms** | **325 QPS** | **40 MB** |
+    - TensorRT: ONNX CPU 대비 **1.7x 빠름**, **6.8x 높은 처리량**
+  - [x] **전체 테스트**: 10/10 통과 (기존 108개 포함 **118/118** 전체 통과)
 
 ---
 

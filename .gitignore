@@ -72,6 +72,7 @@ Thumbs.db
 JOB_SEARCH_STRATEGY.md
 INTERVIEW_PREP_GUIDE.md
 현재 경력 기술서.md
+전국 규준 통계치와 백분위 매핑 데이터.md
 *.jpg
 SKILL.md
 # Antigravity/Claude 스킬 파일은 추적 필요
@@ -86,6 +87,7 @@ __pycache__/
 .pytest_cache/
 .venv/
 ai-server/models/
+ai-server/data/
 
 # --- Legacy backup files ---
 *.bak

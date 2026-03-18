@@ -49,8 +49,14 @@ def test_real_image_preprocessing(test_image_path, config):
     tensor = pipeline(img)
     assert tensor.shape == (3, config.input_size, config.input_size)
     assert tensor.dtype == torch.float32
-    assert tensor.min() >= -3.0
-    assert tensor.max() <= 3.0
+
+    # 스케치 데이터 통계 기반 파라미터(mean≈0.972/0.031/0.012, std≈0.156/0.174/0.074)는
+    # 이론적 최솟값 = (0 - max_mean) / min_std, 최댓값 = (1 - min_mean) / min_std
+    min_std = min(config.normalize_std)
+    max_mean = max(config.normalize_mean)
+    min_mean = min(config.normalize_mean)
+    assert tensor.min().item() >= (0.0 - max_mean) / min_std - 0.1
+    assert tensor.max().item() <= (1.0 - min_mean) / min_std + 0.1
 
 
 def test_real_image_inference(test_image_path, config, model):

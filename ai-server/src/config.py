@@ -34,11 +34,18 @@ class ModelConfig(BaseSettings):
     male_onnx_path: str = "models/mind_palette_male.onnx"
     female_onnx_path: str = "models/mind_palette_female.onnx"
 
-    # 추론 백엔드 ("pytorch" | "onnx")
+    # 추론 백엔드 ("pytorch" | "onnx" | "tensorrt_native" | "tensorrt_ort")
     inference_backend: str = "pytorch"
 
     # ONNX 변환 설정
     onnx_opset_version: int = 17
+
+    # TensorRT 설정 (RTX 3050 Laptop, CUDA 12.6 기준)
+    male_trt_engine_path: str = "models/mind_palette_male.engine"
+    female_trt_engine_path: str = "models/mind_palette_female.engine"
+    trt_fp16_enable: bool = True
+    trt_engine_cache_dir: str = "models/trt_cache"
+    trt_workspace_gb: int = 2  # 4GB VRAM에서 2GB 빌드 워크스페이스
 
 
 class ServerConfig(BaseSettings):
@@ -46,3 +53,30 @@ class ServerConfig(BaseSettings):
 
     host: str = "0.0.0.0"
     port: int = 8082
+
+
+class TrainingConfig(BaseSettings):
+    """학습 파이프라인 설정."""
+
+    # 데이터 경로
+    data_dir: str = "data"
+    annotations_path: str = "data/labels/annotations.json"
+    synthetic_dir: str = "data/synthetic_sketches"
+
+    # Phase A: 합성 데이터 사전학습
+    phase_a_epochs: int = 50
+    phase_a_lr: float = 1e-3
+    phase_a_batch_size: int = 4
+    phase_a_synthetic_count: int = 500
+
+    # Phase B: 실제 데이터 미세조정
+    phase_b_epochs: int = 100
+    phase_b_lr: float = 1e-4
+    phase_b_batch_size: int = 4
+    phase_b_early_stop_patience: int = 15
+
+    # 공통
+    weight_decay: float = 1e-4
+    checkpoint_dir: str = "models/checkpoints"
+    output_dir: str = "models"
+    device: str = "cpu"

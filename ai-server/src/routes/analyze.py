@@ -5,11 +5,17 @@
 """
 
 import io
+from datetime import datetime
+from typing import Annotated, Optional
 
+import numpy as np
 import structlog
-from fastapi import APIRouter, HTTPException, UploadFile
+from fastapi import APIRouter, Form, HTTPException, UploadFile, Request
 from PIL import Image
 
+from src.core.augmentation import get_val_transform
+from src.core.iq_scorer import score_to_result
+from src.core.item_mapping import HEAD_A_ITEMS, HEAD_B_ITEMS, HEAD_C_ITEMS, HEAD_D_ITEMS
 from src.infra.logger import get_logger
 from src.infra.onnx_inference import OnnxInferenceEngine
 
@@ -70,6 +76,32 @@ def _is_valid_image_bytes(data: bytes) -> bool:
         return False
 
 
+_HEAD_ITEM_MAP = [
+    ("head_a", HEAD_A_ITEMS),
+    ("head_b", HEAD_B_ITEMS),
+    ("head_c", HEAD_C_ITEMS),
+    ("head_d", HEAD_D_ITEMS),
+]
+_THRESHOLD = 0.5
+
+
+def _logits_to_item_results(outputs: tuple) -> dict:
+    """ONNX 출력 로짓(tuple) → 60문항 결과 dict."""
+    items = {}
+    for (head_name, item_list), logit_arr in zip(_HEAD_ITEM_MAP, outputs):
+        probs = 1 / (1 + np.exp(-logit_arr.flatten()))  # sigmoid
+        for item_no, prob in zip(item_list, probs):
+            items[str(item_no)] = int(prob >= _THRESHOLD)
+    return items
+
+
+def _compute_head_scores(items: dict) -> dict:
+    return {
+        head_name: sum(items[str(n)] for n in item_list)
+        for head_name, item_list in _HEAD_ITEM_MAP
+    }
+
+
 @router.post(
     "/analyze",
     responses={
@@ -78,14 +110,23 @@ def _is_valid_image_bytes(data: bytes) -> bool:
         503: {"description": "Service Unavailable - 모델 미로드 또는 GPU 리소스(OOM) 부족"}
     }
 )
-async def analyze_image(file: UploadFile):
+async def analyze_image(
+    request: Request,
+    file: UploadFile,
+    age: Annotated[int, Form()] = 10,
+    child_gender: Annotated[str, Form()] = "male",
+    figure_gender: Annotated[str, Form()] = "male",
+):
     """이미지 파일을 분석하여 HFD 분류 결과를 반환한다.
 
     Args:
         file: 업로드된 이미지 파일 (JPEG, PNG, BMP, WebP)
+        age: 아동 만 나이 (기본 10)
+        child_gender: 아동 성별 "male" | "female" (기본 "male")
+        figure_gender: 그림 성별 "male" | "female" (기본 "male")
 
     Returns:
-        분류 결과 JSON
+        분류 결과 JSON (60문항 + IQ + 백분위)
 
     Raises:
         400: 유효하지 않은 파일
@@ -100,12 +141,24 @@ async def analyze_image(file: UploadFile):
                 content_type=file.content_type,
                 size=len(content))
 
-    # --- Phase 4 Step 3: Inference Integration (L3 Protected) ---
     try:
-        # 실제 추론 수행 (테스트 시 모킹됨)
-        # Note: model_path는 config에서 가져와야 함
-        engine = OnnxInferenceEngine(model_path="dummy.onnx")
-        _ = engine.run(content)
+        from src.config import ModelConfig
+        config = ModelConfig()
+        model_state = getattr(request.app.state, "model_state", None)
+        if not model_state or getattr(model_state, "engine_type", "none") == "none":
+            raise HTTPException(status_code=503, detail="모델이 로드되지 않았습니다.")
+            
+        engine = model_state.male_engine if figure_gender == "male" else model_state.female_engine
+        if engine is None:
+            raise HTTPException(status_code=503, detail=f"해당 성별({figure_gender}) 모델이 로드되지 않았습니다.")
+
+        # 이미지 전처리: bytes → PIL → tensor → numpy (1,3,H,W)
+        pil_image = Image.open(io.BytesIO(content)).convert("RGB")
+        transform = get_val_transform(config.input_size)
+        img_tensor = transform(pil_image).unsqueeze(0)  # (1,3,H,W)
+        img_np = img_tensor.numpy()
+
+        outputs = engine.run(img_np)  # (head_a, head_b, head_c, head_d)
 
     except RuntimeError as e:
         if "out of memory" in str(e).lower():
@@ -116,25 +169,31 @@ async def analyze_image(file: UploadFile):
             )
         raise e
     except Exception as e:
-        # 모든 예외를 500으로 잡되 로그를 남김
         logger.error("Unexpected error during inference", error=str(e), exc_info=True)
-        # 테스트 환경에서 FileNotFoundError 등이 발생해도 여기서 500으로 변환됨
         raise HTTPException(status_code=500, detail=f"서버 내부 오류: {str(e)}")
 
-    # 기존 모의 응답 유지 (하이브리드 결합 전까지)
-    import random
-    from datetime import datetime
+    # 60문항 결과 → 원점수 → IQ/백분위
+    items = _logits_to_item_results(outputs)
+    head_scores = _compute_head_scores(items)
+    raw_score = sum(items.values())
+
+    try:
+        iq_result = score_to_result(raw_score, age, child_gender, figure_gender)
+    except ValueError:
+        iq_result = {"iq": None, "percentile": None, "raw_score": raw_score}
 
     analysis_result = {
-        "score": random.randint(75, 98),
-        "percentile": random.randint(65, 99),
+        "items": items,
+        "head_scores": head_scores,
+        "raw_score": raw_score,
+        "iq": iq_result["iq"],
+        "percentile": iq_result["percentile"],
+        "child_info": {
+            "age": age,
+            "child_gender": child_gender,
+            "figure_gender": figure_gender,
+        },
         "date": datetime.now().strftime("%Y-%m-%d"),
-        "interpretation": "AI Pipeline Architect에 의해 측정된 실시간 통합 분석 결과입니다. 이미지 전처리 및 전파 과정이 정상입니다.",
-        "details": {
-            "creativity": random.randint(70, 95),
-            "expression": random.randint(70, 95),
-            "observational": random.randint(70, 95)
-        }
     }
 
     logger.info("Inference completed successfully", 
