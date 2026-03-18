@@ -56,7 +56,10 @@ const validateImageContent = async (req: Request, res: Response, next: NextFunct
     // Path Injection 방어: 파일 경로가 기획된 업로드 폴더 내에 있는지 검증
     // ─────────────────────────────────────────────────────────
     const filePath = path.resolve(req.file.path);
-    const resolvedUploadDir = path.resolve(UPLOAD_DIR);
+    // ─────────────────────────────────────────────────────────
+    // P2 Fix: 트레일링 path.sep을 추가하여 sibling prefix bypass 방어
+    // ─────────────────────────────────────────────────────────
+    const resolvedUploadDir = path.resolve(UPLOAD_DIR) + path.sep;
     
     if (!filePath.startsWith(resolvedUploadDir)) {
       logger.error('Security Alert: Path traversal attempt blocked', { path: req.file.path });

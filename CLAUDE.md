@@ -45,6 +45,13 @@ Mind Palette — 아동 인물화(HFD) 지능측정을 위한 AI 이미지 전�
   - 스킬/서브에이전트 활용 맵
   - Antigravity와의 협업 프로토콜
 
+### 🦆 러버덕 모드 (Rubber Duck Review)
+`/rubber-duck` 또는 `러버덕` 명령 시 `.agent/workflows/rubber-duck.md`의 절차를 따릅니다:
+- **진입**: 정답 제시를 완전히 금지하고, 4단계 소크라틱 질문(What → How → Why Not → What If)으로만 응답
+- **검증 보조**: 사용자 요청 시 `pytest`/`npm test` 실행 결과를 보여주되, 해석은 사용자에게 맡김
+- **종료**: `종료`/`끝`/`exit` 명령 시 복습 요약을 생성하고 일반 모드로 복귀
+- **상세 규칙**: `.agent/workflows/rubber-duck.md` 참조
+
 ## 프로젝트 구조
 
 | 디렉토리 | 역할 | 기술 스택 |
