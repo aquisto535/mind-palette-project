@@ -1,11 +1,26 @@
 import express, { Request, Response, NextFunction } from 'express';
 import fs from 'node:fs/promises';
+import path from 'node:path';
 import multer from 'multer';
-import { upload, CustomRequest, hasValidMagicBytes } from '../utils/fileStorage';
+import rateLimit from 'express-rate-limit';
+import { upload, CustomRequest, hasValidMagicBytes, UPLOAD_DIR } from '../utils/fileStorage';
 import { processAnalysis } from '../services/analysisService';
 import logger from '../utils/logger';
 
 const router = express.Router();
+
+// ─────────────────────────────────────────────────────────
+// 미들웨어: /analyze 전용 Rate Limiting (DoS 방어)
+// 분석 요청은 리소스 소모가 크므로 글로벌보다 엄격하게 제한
+// ─────────────────────────────────────────────────────────
+const analyzeLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1분
+  max: 10, // IP당 분당 10회
+  message: { error: 'Too many analysis requests, please try again in a minute.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => process.env.NODE_ENV === 'test',
+});
 
 // ─────────────────────────────────────────────────────────
 // 미들웨어: Multer 업로드 처리 및 에러 핸들링
@@ -37,9 +52,20 @@ const validateImageContent = async (req: Request, res: Response, next: NextFunct
   }
 
   try {
-    const fileBuffer = await fs.readFile(req.file.path);
+    // ─────────────────────────────────────────────────────────
+    // Path Injection 방어: 파일 경로가 기획된 업로드 폴더 내에 있는지 검증
+    // ─────────────────────────────────────────────────────────
+    const filePath = path.resolve(req.file.path);
+    const resolvedUploadDir = path.resolve(UPLOAD_DIR);
+    
+    if (!filePath.startsWith(resolvedUploadDir)) {
+      logger.error('Security Alert: Path traversal attempt blocked', { path: req.file.path });
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const fileBuffer = await fs.readFile(filePath);
     if (!hasValidMagicBytes(fileBuffer)) {
-      await fs.unlink(req.file.path).catch(() => undefined);
+      await fs.unlink(filePath).catch(() => undefined);
       return res.status(400).json({ error: '파일 내용이 올바른 이미지 형식이 아닙니다.' });
     }
     next();
@@ -50,6 +76,7 @@ const validateImageContent = async (req: Request, res: Response, next: NextFunct
 
 // POST /analyze
 router.post('/', 
+  analyzeLimiter,
   handleMulterUpload, 
   validateImageContent, 
   async (req: Request, res: Response) => {

@@ -160,6 +160,9 @@ async def analyze_image(
 
         outputs = engine.run(img_np)  # (head_a, head_b, head_c, head_d)
 
+    except HTTPException as e:
+        # 503(OOM/미로드) 등 명시적 예외는 그대로 전달하도록 상단에 배치
+        raise e
     except RuntimeError as e:
         if "out of memory" in str(e).lower():
             logger.error("GPU Out of Memory during inference", error=str(e))

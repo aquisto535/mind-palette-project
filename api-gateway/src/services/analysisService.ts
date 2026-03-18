@@ -2,7 +2,7 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import axios from 'axios';
 import FormData from 'form-data';
-import { RESULT_DIR } from '../utils/fileStorage';
+import { RESULT_DIR, UPLOAD_DIR } from '../utils/fileStorage';
 import { saveWithHash } from '../utils/hashIntegrity';
 import logger, { maskPII } from '../utils/logger';
 
@@ -82,7 +82,14 @@ export const processAnalysis = async (file: Express.Multer.File, requestId: stri
   try {
     // 실제 파일을 읽어서 AI 서버로 전송 (multipart/form-data)
     const formData = new FormData();
-    formData.append('file', await fs.readFile(processedImagePath), path.basename(processedImagePath));
+    const resolvedPath = path.resolve(processedImagePath);
+    const resolvedUploadDir = path.resolve(UPLOAD_DIR);
+
+    if (!resolvedPath.startsWith(resolvedUploadDir)) {
+      throw new Error('SECURITY_PATH_VIOLATION');
+    }
+
+    formData.append('file', await fs.readFile(resolvedPath), path.basename(resolvedPath));
 
     const aiRes = await axios.post(`${AI_SERVER_URL}/analyze`, formData, {
       headers: {

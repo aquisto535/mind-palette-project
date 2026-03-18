@@ -1,6 +1,7 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
+import rateLimit from 'express-rate-limit';
 import analyzeRouter from './routes/analyze';
 import healthRouter from './routes/health';
 import { UPLOAD_DIR, RESULT_DIR } from './utils/fileStorage';
@@ -10,7 +11,18 @@ import logger from './utils/logger';
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// 글로벌 Rate Limiting (기본 방어)
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15분
+  max: 100, // IP당 최대 100회
+  message: { error: 'Too many requests, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => process.env.NODE_ENV === 'test',
+});
+
 // 미들웨어 설정
+app.use(limiter);
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

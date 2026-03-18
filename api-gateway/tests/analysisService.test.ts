@@ -1,10 +1,11 @@
 import nock from 'nock';
 import path from 'path';
 import * as analysisService from '../src/services/analysisService';
+import { UPLOAD_DIR } from '../src/utils/fileStorage';
 
 describe('Analysis Service', () => {
   const mockFile = {
-    path: path.join(__dirname, 'dummy.jpg'),
+    path: path.join(UPLOAD_DIR, 'dummy.jpg'),
     originalname: 'dummy.jpg'
   } as any;
 
