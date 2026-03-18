@@ -4,8 +4,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
-const os_1 = __importDefault(require("os"));
-const child_process_1 = require("child_process");
+const node_os_1 = __importDefault(require("node:os"));
+const node_child_process_1 = require("node:child_process");
 const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 const router = express_1.default.Router();
 // 헬스 체크 엔드포인트를 위한 전용 레이트 리미터 설정
@@ -13,10 +13,10 @@ const router = express_1.default.Router();
 const healthRateLimiter = (0, express_rate_limit_1.default)({
     windowMs: 1 * 60 * 1000, // 1분
     max: 60, // IP당 1분에 최대 60번 요청 허용
-    message: {
+    message: JSON.stringify({
         status: 'error',
         message: 'Too many health check requests, please try again later.'
-    },
+    }),
     standardHeaders: true, // `RateLimit-*` 헤더 포함
     legacyHeaders: false, // `X-RateLimit-*` 헤더 비활성화
 });
@@ -39,24 +39,27 @@ router.get('/', healthRateLimiter, (req, res) => {
         // 디스크 여유 공간 (Windows/Linux 호환)
         let diskAvailableGB = 'N/A';
         try {
-            if (os_1.default.platform() === 'win32') {
+            if (node_os_1.default.platform() === 'win32') {
                 // Windows: wmic 명령어 사용
-                const output = (0, child_process_1.execSync)('wmic logicaldisk where "DeviceID=\'C:\'" get FreeSpace', { encoding: 'utf8' });
+                const output = (0, node_child_process_1.execSync)('wmic logicaldisk where "DeviceID=\'C:\'" get FreeSpace', { encoding: 'utf8' });
                 const lines = output.trim().split('\n');
                 if (lines.length > 1) {
-                    const freeSpaceBytes = parseInt(lines[1].trim());
-                    diskAvailableGB = (freeSpaceBytes / 1024 / 1024 / 1024).toFixed(2) + ' GB';
+                    const rawLine = lines[1];
+                    if (rawLine) {
+                        const freeSpaceBytes = Number.parseInt(rawLine.trim());
+                        diskAvailableGB = (freeSpaceBytes / 1024 / 1024 / 1024).toFixed(2) + ' GB';
+                    }
                 }
             }
             else {
                 // Linux/Mac: df 명령어 사용
-                const output = (0, child_process_1.execSync)('df -k / | tail -1 | awk \'{print $4}\'', { encoding: 'utf8' });
-                const freeSpaceKB = parseInt(output.trim());
+                const output = (0, node_child_process_1.execSync)('df -k / | tail -1 | awk \'{print $4}\'', { encoding: 'utf8' });
+                const freeSpaceKB = Number.parseInt(output.trim());
                 diskAvailableGB = (freeSpaceKB / 1024 / 1024).toFixed(2) + ' GB';
             }
         }
-        catch (diskError) {
-            // 디스크 체크 실패 시 'N/A'로 표시 (에러 무시)
+        catch {
+            // 디스크 체크 실패 시 'N/A'로 표시 (비핵심 정보이므로 무시)
             diskAvailableGB = 'N/A';
         }
         res.json({
@@ -75,7 +78,7 @@ router.get('/', healthRateLimiter, (req, res) => {
     catch (error) {
         res.status(503).json({
             status: 'unhealthy',
-            error: error.message,
+            error: error instanceof Error ? error.message : 'Unknown error',
             timestamp: new Date().toISOString()
         });
     }

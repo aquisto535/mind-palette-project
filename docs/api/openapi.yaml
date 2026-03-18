@@ -1,0 +1,266 @@
+openapi: "3.0.3"
+
+info:
+  title: Mind Palette API Gateway
+  version: "1.0.0"
+  description: |
+    아동 인물화(HFD) 지능측정을 위한 AI 이미지 분석 API.
+    이미지를 업로드하면 C++ 전처리 → Python AI 추론 파이프라인을 거쳐
+    지능 점수, 백분위, 세부 항목 해석 결과를 반환합니다.
+  contact:
+    name: Mind Palette
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:3000
+    description: 로컬 개발 서버
+
+tags:
+  - name: System
+    description: 서버 상태 및 헬스 체크
+  - name: Analysis
+    description: 이미지 분석 엔드포인트
+
+paths:
+  /:
+    get:
+      tags: [System]
+      summary: 서버 상태 확인 (텍스트)
+      description: API Gateway 가동 여부를 텍스트로 반환합니다.
+      responses:
+        "200":
+          description: 서버 정상 동작
+          content:
+            text/html:
+              schema:
+                type: string
+                example: "Mind Palette API Gateway is running."
+
+  /health:
+    get:
+      tags: [System]
+      summary: 헬스 체크
+      description: |
+        서버의 상세 상태 정보(가동 시간, 메모리, 디스크)를 반환합니다.
+        IP당 1분에 60회로 요청이 제한됩니다.
+      responses:
+        "200":
+          description: 서버 정상
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+                format: uuid
+              description: 요청 추적용 UUID
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+              example:
+                status: healthy
+                timestamp: "2026-03-10T12:00:00.000Z"
+                uptime: "5 minutes 30 seconds"
+                memory:
+                  used: "45.23 MB"
+                  total: "67.50 MB"
+                disk:
+                  available: "120.00 GB"
+        "429":
+          description: 요청 한도 초과
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: 서버 비정상
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnhealthyResponse"
+
+  /analyze:
+    post:
+      tags: [Analysis]
+      summary: 인물화 이미지 분석
+      description: |
+        아동 인물화 이미지를 업로드하면 다음 파이프라인을 거쳐 분석 결과를 반환합니다.
+        1. 매직 바이트 기반 파일 형식 검증 (JPEG/PNG/BMP/WebP)
+        2. C++ 전처리 서버 (GaussianBlur → AdaptiveThreshold → SmartROI → Letterbox)
+        3. Python AI 서버 (EfficientNet-B2 Multi-head 추론)
+
+        **지원 형식**: JPEG, PNG, BMP, WebP
+        **최대 파일 크기**: 5MB
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [image]
+              properties:
+                image:
+                  type: string
+                  format: binary
+                  description: 분석할 인물화 이미지 파일 (JPEG/PNG/BMP/WebP, 최대 5MB)
+      parameters:
+        - in: header
+          name: X-Request-ID
+          schema:
+            type: string
+            format: uuid
+          description: 요청 추적용 UUID (없으면 서버가 자동 생성)
+      responses:
+        "200":
+          description: 분석 성공
+          headers:
+            X-Request-ID:
+              schema:
+                type: string
+                format: uuid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnalysisResult"
+              example:
+                score: 85
+                percentile: 78
+                date: "2026. 3. 10."
+                interpretation: "평균 이상의 지능 발달을 보입니다."
+                details:
+                  creativity: 85
+                  expression: 90
+                  observational: 88
+        "400":
+          description: 잘못된 요청 (파일 없음, 지원 형식 아님, 파일 크기 초과, 파일 손상)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                no_file:
+                  summary: 파일 없음
+                  value:
+                    error: "No image file uploaded"
+                invalid_type:
+                  summary: 지원되지 않는 파일 형식
+                  value:
+                    error: "Only JPEG, PNG, BMP, and WebP files are allowed"
+                file_too_large:
+                  summary: 파일 크기 초과
+                  value:
+                    error: "File too large (limit: 5MB)"
+                invalid_magic:
+                  summary: 파일 내용 불일치 (MIME 위조)
+                  value:
+                    error: "파일 내용이 올바른 이미지 형식이 아닙니다."
+        "500":
+          description: 서버 내부 오류
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      required: [status, timestamp, uptime, memory, disk]
+      properties:
+        status:
+          type: string
+          enum: [healthy]
+          description: 서버 상태
+        timestamp:
+          type: string
+          format: date-time
+          description: 응답 생성 시각 (ISO 8601)
+        uptime:
+          type: string
+          description: "서버 가동 시간 (예: 5 minutes 30 seconds)"
+        memory:
+          type: object
+          required: [used, total]
+          properties:
+            used:
+              type: string
+              description: "현재 힙 사용량 (예: 45.23 MB)"
+            total:
+              type: string
+              description: "전체 힙 크기 (예: 67.50 MB)"
+        disk:
+          type: object
+          required: [available]
+          properties:
+            available:
+              type: string
+              description: "디스크 여유 공간 (예: 120.00 GB)"
+
+    UnhealthyResponse:
+      type: object
+      required: [status, timestamp]
+      properties:
+        status:
+          type: string
+          enum: [unhealthy]
+        error:
+          type: string
+          description: 오류 메시지
+        timestamp:
+          type: string
+          format: date-time
+
+    AnalysisResult:
+      type: object
+      required: [score, percentile, date, interpretation, details]
+      properties:
+        score:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: AI 분석 종합 점수
+        percentile:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: 동연령 집단 내 백분위
+        date:
+          type: string
+          description: 분석 날짜 (로케일 형식)
+        interpretation:
+          type: string
+          description: 분석 결과 해석 문자열
+        details:
+          type: object
+          required: [creativity, expression, observational]
+          properties:
+            creativity:
+              type: integer
+              minimum: 0
+              maximum: 100
+              description: 창의성 점수
+            expression:
+              type: integer
+              minimum: 0
+              maximum: 100
+              description: 표현력 점수
+            observational:
+              type: integer
+              minimum: 0
+              maximum: 100
+              description: 관찰력 점수
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          description: 오류 메시지
+
+  headers:
+    X-Request-ID:
+      description: 요청 추적용 UUID — 전 구간(Node.js → C++ → Python) 로그에 전파됨
+      schema:
+        type: string
+        format: uuid

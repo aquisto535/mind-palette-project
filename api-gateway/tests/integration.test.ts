@@ -13,7 +13,8 @@ describe('Integration Test: File Upload Flow', () => {
   beforeAll(() => {
     // 테스트용 0바이트 더미 이미지 생성 (없으면)
     if (!fs.existsSync(DUMMY_IMAGE_PATH)) {
-      fs.writeFileSync(DUMMY_IMAGE_PATH, 'dummy image content');
+      // PNG 매직 바이트(89 50 4E 47)로 시작하는 최소 픽스처
+      fs.writeFileSync(DUMMY_IMAGE_PATH, Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]));
     }
 
     // 업로드/결과 디렉토리 확인

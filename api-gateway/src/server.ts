@@ -1,23 +1,50 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
+import rateLimit from 'express-rate-limit';
 import analyzeRouter from './routes/analyze';
 import healthRouter from './routes/health';
 import { UPLOAD_DIR, RESULT_DIR } from './utils/fileStorage';
+import { randomUUID } from 'node:crypto';
 import logger from './utils/logger';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// 글로벌 Rate Limiting (기본 방어)
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15분
+  max: 100, // IP당 최대 100회
+  message: { error: 'Too many requests, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => process.env.NODE_ENV === 'test',
+});
+
 // 미들웨어 설정
+app.use(limiter);
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Request-ID 미들웨어
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const requestId = req.header('X-Request-ID') || randomUUID();
+  (req as any).requestId = requestId;
+  res.setHeader('X-Request-ID', requestId);
+  next();
+});
+
 // HTTP 요청 로깅 (morgan + winston)
 const morganFormat = process.env.NODE_ENV === 'production' ? 'combined' : 'dev';
 app.use(morgan(morganFormat, {
-  stream: { write: (message: string) => logger.http(message.trim()) }
+  stream: {
+    write: (message: string) => {
+      // morgan에서 로거로 전달할 때 requestId가 포함된 메타데이터를 함께 전달하는 것은 구조적으로 어려우나,
+      // 일단 winston logger가 개별 호출에서 로그를 남기도록 유도
+      logger.http(message.trim());
+    }
+  }
 }));
 
 // ----------------------------------------------------------------

@@ -20,7 +20,7 @@ public:
      * @param path Target file path
      * @return true if successful
      */
-    static bool write(const cv::Mat& image, const std::string& path);
+    static bool write(const cv::Mat& image, const std::string& path, const std::string& requestId = "SYSTEM");
     
     /**
      * @brief Atomically write text/JSON to file
@@ -29,6 +29,16 @@ public:
      * @return true if successful
      */
     static bool writeText(const std::string& content, const std::string& path);
+
+    /**
+     * @brief Atomically delete a file (rename to .del temp, then remove)
+     *
+     * Ensures no partial state: if rename succeeds but remove fails,
+     * the .del file is cleaned up. Returns false if the file does not exist.
+     * @param path Target file path to delete
+     * @return true if file was successfully deleted
+     */
+    static bool atomicDelete(const std::string& path);
 
 private:
     static std::string getTempPath(const std::string& path);

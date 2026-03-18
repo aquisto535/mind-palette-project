@@ -1,0 +1,372 @@
+
+> mind-palette-api-gateway@1.0.0 test
+> jest
+
+PASS tests/hashIntegrity.test.ts
+PASS tests/analysisService.test.ts (5.948 s)
+  ??Console
+
+    console.log
+      2026-03-18 21:44:32 [test-request-id] [info] : Image uploaded: {"path":"C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\api-gateway\\tests/***"}
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:32 [test-request-id] [info] : Preprocessing completed: {"path":"/shared/processed/***"}
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:32 [test-request-id] [warn] : AI Analysis failed, falling back to dummy data: {"error":"SECURITY_PATH_VIOLATION"}
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:32 [test-request-id] [info] : Result saved: {"path":"C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\shared_volume\\results/***"}
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:32 [test-request-id] [info] : Image uploaded: {"path":"C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\api-gateway\\tests/***"}
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:32 [test-request-id] [warn] : Preprocessing failed, using original image: {"error":"Request failed with status code 500"}
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:32 [test-request-id] [warn] : AI Analysis failed, falling back to dummy data: {"error":"SECURITY_PATH_VIOLATION"}
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:32 [test-request-id] [info] : Result saved: {"path":"C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\shared_volume\\results/***"}
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+PASS tests/security.transport-logging.test.ts (8.087 s)
+  ??Console
+
+    console.log
+      2026-03-18 21:44:35 [http] : POST /analyze 400 4.085 ms - 34
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:35 [http] : POST /analyze 400 0.693 ms - 34
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:35 [http] : POST /analyze 400 0.393 ms - 34
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+PASS tests/integration.test.ts (8.267 s)
+  ??Console
+
+    console.log
+      2026-03-18 21:44:34 [82ecce84-02c8-48a4-a98e-5057e07bc647] [info] : Image uploaded: {"path":"C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\shared_volume\\uploads/***"}
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:35 [82ecce84-02c8-48a4-a98e-5057e07bc647] [warn] : Preprocessing failed, using original image: {"error":""}
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:35 [82ecce84-02c8-48a4-a98e-5057e07bc647] [warn] : AI Analysis failed, falling back to dummy data: {"error":""}
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:35 [82ecce84-02c8-48a4-a98e-5057e07bc647] [info] : Result saved: {"path":"C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\shared_volume\\results/***"}
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:35 [http] : POST /analyze 200 186.078 ms - 215
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+PASS tests/analysis.l3.test.ts (8.153 s)
+  ??Console
+
+    console.log
+      2026-03-18 21:44:35 [http] : POST /analyze 400 115.641 ms - 39
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:35 [http] : POST /analyze 400 4.707 ms - 72
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:35 [http] : POST /analyze 400 1.155 ms - 34
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+FAIL tests/server.test.ts (8.306 s)
+  ??Console
+
+    console.log
+      2026-03-18 21:44:35 [http] : GET / 200 2.511 ms - 36
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:35 [http] : POST /analyze 400 0.877 ms - 34
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:35 [26014086-afed-4d12-9362-bae29c10b241] [info] : Image uploaded: {"path":"C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\shared_volume\\uploads/***"}
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:35 [26014086-afed-4d12-9362-bae29c10b241] [warn] : Preprocessing failed, using original image: {"error":""}
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:35 [26014086-afed-4d12-9362-bae29c10b241] [warn] : AI Analysis failed, falling back to dummy data: {"error":""}
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:35 [26014086-afed-4d12-9362-bae29c10b241] [info] : Result saved: {"path":"C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\shared_volume\\results/***"}
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:35 [http] : POST /analyze 200 167.362 ms - 215
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+  ??API Gateway Tests ??POST /analyze ??should return 200 and analysis result when valid file is uploaded
+
+    expect(received).toBeGreaterThan(expected)
+
+    Expected: > 144
+    Received:   144
+
+      67 |       // 4. ?뚯씪 ???寃利?(Uploads)
+      68 |       const finalUploads = fs.readdirSync(TEST_UPLOAD_DIR);
+    > 69 |       expect(finalUploads.length).toBeGreaterThan(initialUploads.length);
+         |                                   ^
+      70 |
+      71 |       // 5. 寃곌낵 ???寃利?(Results)
+      72 |       const finalResults = fs.readdirSync(TEST_RESULT_DIR);
+
+      at Object.<anonymous> (tests/server.test.ts:69:35)
+
+PASS tests/openApiSpec.test.ts (8.532 s)
+  ??Console
+
+    console.log
+      2026-03-18 21:44:35 [http] : GET / 200 2.544 ms - 36
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:35 [http] : GET /health 200 129.062 ms - 173
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:35 [http] : GET /health 200 98.795 ms - 173
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:35 [http] : GET /health 200 103.877 ms - 173
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:35 [http] : POST /analyze 400 0.777 ms - 34
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+PASS tests/health.test.ts (8.585 s)
+  ??Console
+
+    console.log
+      2026-03-18 21:44:35 [http] : GET /health 200 142.518 ms - 173
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:35 [http] : GET /health 200 104.554 ms - 173
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:35 [http] : GET /health 200 91.816 ms - 173
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:35 [http] : GET /health 200 102.511 ms - 173
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:35 [http] : GET /health 200 93.394 ms - 173
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+PASS tests/security.test.ts (8.767 s)
+  ??Console
+
+    console.log
+      2026-03-18 21:44:35 [1ad16b48-67ac-4242-bb5e-466f6918b32c] [info] : Image uploaded: {"path":"C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\shared_volume\\uploads/***"}
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:35 [1ad16b48-67ac-4242-bb5e-466f6918b32c] [warn] : Preprocessing failed, using original image: {"error":""}
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:35 [1ad16b48-67ac-4242-bb5e-466f6918b32c] [warn] : AI Analysis failed, falling back to dummy data: {"error":""}
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:35 [1ad16b48-67ac-4242-bb5e-466f6918b32c] [info] : Result saved: {"path":"C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\shared_volume\\results/***"}
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:35 [http] : POST /analyze 200 254.156 ms - 215
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:35 [http] : POST /analyze 400 1.481 ms - 40
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:35 [http] : POST /analyze 400 33.450 ms - 39
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:35 [http] : POST /analyze 400 2.715 ms - 72
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:35 [0f1dcf84-8f21-4467-84ef-ac2043c10f5a] [info] : Image uploaded: {"path":"C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\shared_volume\\uploads/***"}
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:35 [0f1dcf84-8f21-4467-84ef-ac2043c10f5a] [warn] : Preprocessing failed, using original image: {"error":""}
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:35 [0f1dcf84-8f21-4467-84ef-ac2043c10f5a] [warn] : AI Analysis failed, falling back to dummy data: {"error":""}
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:35 [0f1dcf84-8f21-4467-84ef-ac2043c10f5a] [info] : Result saved: {"path":"C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\shared_volume\\results/***"}
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:35 [http] : POST /analyze 200 10.208 ms - 215
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:35 [0cd9eb0f-7de1-4071-a8f4-f0fbfcd31216] [info] : Image uploaded: {"path":"C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\shared_volume\\uploads/***"}
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:35 [0cd9eb0f-7de1-4071-a8f4-f0fbfcd31216] [warn] : Preprocessing failed, using original image: {"error":""}
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:35 [0cd9eb0f-7de1-4071-a8f4-f0fbfcd31216] [warn] : AI Analysis failed, falling back to dummy data: {"error":""}
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:35 [0cd9eb0f-7de1-4071-a8f4-f0fbfcd31216] [info] : Result saved: {"path":"C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\shared_volume\\results/***"}
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:35 [http] : POST /analyze 200 9.959 ms - 215
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:35 [http] : POST /analyze 400 2.659 ms - 72
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:35 [http] : POST /analyze 400 2.070 ms - 72
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:35 [c952f186-1c0c-4d05-84e9-7e4dac21a31d] [info] : Image uploaded: {"path":"C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\shared_volume\\uploads/***"}
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:35 [c952f186-1c0c-4d05-84e9-7e4dac21a31d] [warn] : Preprocessing failed, using original image: {"error":""}
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:35 [c952f186-1c0c-4d05-84e9-7e4dac21a31d] [warn] : AI Analysis failed, falling back to dummy data: {"error":""}
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:35 [c952f186-1c0c-4d05-84e9-7e4dac21a31d] [info] : Result saved: {"path":"C:\\Users\\user\\Documents\\GitHub\\mind-palette-project\\shared_volume\\results/***"}
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:35 [http] : POST /analyze 200 14.174 ms - 215
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:35 [http] : POST /analyze 400 2.466 ms - 72
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:35 [http] : POST /analyze 400 0.475 ms - 33
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+    console.log
+      2026-03-18 21:44:35 [http] : POST /analyze 400 2.196 ms - 72
+
+      at Console.log (node_modules/winston/lib/winston/transports/console.js:87:23)
+
+
+Test Suites: 1 failed, 8 passed, 9 total
+Tests:       1 failed, 55 passed, 56 total
+Snapshots:   0 total
+Time:        9.818 s
+Ran all test suites.

@@ -1,9 +1,16 @@
 cmake_minimum_required(VERSION 3.15)
 
-# Static Linking Configuration (resolves OpenCV DLL issues on Windows)
+# Standard Configuration
 if(WIN32)
-    set(VCPKG_TARGET_TRIPLET "x64-windows-static" CACHE STRING "")
-    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>" CACHE STRING "")
+    # The 'Debug Assertion Failed (__acrt_first_block == header)' error occurs due to 
+    # heap mismatch when mixing Static (/MTd) and Dynamic (/MDd) CRT linking.
+    # We use the default dynamic triplet (x64-windows) for consistency.
+    set(VCPKG_TARGET_TRIPLET "x64-windows" CACHE STRING "")
+    
+    # Enable automatic DLL copying for dynamic linking
+    set(X_VCPKG_APPLOCAL_DEPS ON CACHE BOOL "")
+
+    message(STATUS "VCPKG_TARGET_TRIPLET: ${VCPKG_TARGET_TRIPLET}")
 endif()
 
 project(PreprocessServer CXX)
@@ -16,7 +23,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 if(WIN32)
     if(MSVC)
-        add_compile_options(/W3) # Use W3 to avoid too many external library warnings
+        add_compile_options(/W3 /utf-8) # Use W3 to avoid too many external library warnings, /utf-8 ensures source files are treated as UTF-8
         add_definitions(-D_WIN32_WINNT=0x0601) # Windows 7 or higher
     endif()
 endif()

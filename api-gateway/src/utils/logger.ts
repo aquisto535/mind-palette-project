@@ -5,9 +5,15 @@ const { combine, timestamp, printf, colorize, json } = winston.format;
 
 // 로그 포맷 정의
 const logFormat = printf(({ level, message, timestamp, ...metadata }) => {
-    let msg = `${timestamp} [${level}] : ${message}`;
-    if (Object.keys(metadata).length > 0) {
-        msg += ` ${JSON.stringify(metadata)}`;
+    const requestId = metadata.requestId ? ` [${metadata.requestId}]` : '';
+    let msg = `${timestamp}${requestId} [${level}] : ${message}`;
+
+    // requestId는 이미 출력했으므로 메타데이터 복사본에서 삭제하여 중복 출력 방지
+    const meta = { ...metadata };
+    delete meta.requestId;
+
+    if (Object.keys(meta).length > 0) {
+        msg += ` ${JSON.stringify(meta)}`;
     }
     return msg;
 });
@@ -45,6 +51,31 @@ if (process.env.NODE_ENV !== 'production') {
             ),
         })
     );
+}
+
+// ─────────────────────────────────────────────
+// PII 마스킹 유틸리티
+// 로그 기록 전 개인 식별 가능 필드(파일명, 경로 내 파일명)를 마스킹한다.
+// ─────────────────────────────────────────────
+const PII_FIELDS = ['originalname'] as const;
+
+export function maskPII(meta: Record<string, any>): Record<string, any> {
+  const result = { ...meta };
+
+  // 원본 파일명 마스킹
+  for (const field of PII_FIELDS) {
+    if (typeof result[field] === 'string') {
+      result[field] = '***';
+    }
+  }
+
+  // 경로에서 파일명 부분 마스킹 (경로 구조는 유지)
+  if (typeof result['path'] === 'string') {
+    const dir = result['path'].replace(/[/\\][^/\\]+$/, '');
+    result['path'] = dir + '/***';
+  }
+
+  return result;
 }
 
 export default logger;

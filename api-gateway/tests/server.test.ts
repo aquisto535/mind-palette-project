@@ -24,9 +24,9 @@ describe('API Gateway Tests', () => {
       if (!fs.existsSync(TEST_UPLOAD_DIR)) {
         fs.mkdirSync(TEST_UPLOAD_DIR, { recursive: true });
       }
-      // 테스트용 더미 이미지 생성
+      // PNG 매직 바이트(89 50 4E 47)로 시작하는 최소 픽스처
       if (!fs.existsSync(DUMMY_IMAGE_PATH)) {
-        fs.writeFileSync(DUMMY_IMAGE_PATH, 'dummy image content');
+        fs.writeFileSync(DUMMY_IMAGE_PATH, Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]));
       }
     });
 

@@ -10,8 +10,10 @@ ThreadPool::ThreadPool(size_t numThreads) {
     workers_.reserve(numThreads);
     
     for (size_t i = 0; i < numThreads; ++i) {
-        workers_.emplace_back([this]() {
-            while (true) {
+        workers_.emplace_back([this]() 
+        {
+            while (true) 
+            {
                 std::function<void()> task;
                 
                 {
