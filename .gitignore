@@ -67,7 +67,6 @@ Thumbs.db
 *.vcxproj
 *.filters
 *.recipe
-*.json
 
 JOB_SEARCH_STRATEGY.md
 INTERVIEW_PREP_GUIDE.md
