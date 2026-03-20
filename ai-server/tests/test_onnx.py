@@ -38,6 +38,8 @@ def model_and_onnx_path(config: ModelConfig):
     dummy_input = torch.zeros(
         1, config.input_channels, config.input_size, config.input_size
     )
+    batch_dim = torch.export.Dim("batch_size", min=1, max=16)
+    dynamic_shapes = {"x": {0: batch_dim}}
     torch.onnx.export(
         model,
         (dummy_input,),
@@ -45,8 +47,9 @@ def model_and_onnx_path(config: ModelConfig):
         opset_version=config.onnx_opset_version,
         input_names=["input"],
         output_names=["head_a", "head_b", "head_c", "head_d"],
-        dynamic_axes={"input": {0: "batch_size"}},
+        dynamic_shapes=dynamic_shapes,
         do_constant_folding=True,
+        dynamo=True,
     )
 
     yield model, path

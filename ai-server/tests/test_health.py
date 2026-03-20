@@ -18,6 +18,8 @@ def app_no_models():
     config = ModelConfig(
         male_model_path="nonexistent/male.pt",
         female_model_path="nonexistent/female.pt",
+        male_onnx_path="nonexistent/male.onnx",
+        female_onnx_path="nonexistent/female.onnx",
     )
     return create_app(model_config=config)
 

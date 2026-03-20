@@ -32,6 +32,10 @@ gpu = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+filterwarnings = [
+    # PyTorch 내부 pytree 구현 변경으로 인한 경고 — 우리 코드 밖에서 발생
+    "ignore::FutureWarning:copyreg",
+]
 
 [build-system]
 requires = ["setuptools>=68.0"]

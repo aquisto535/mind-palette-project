@@ -87,6 +87,10 @@ __pycache__/
 .venv/
 ai-server/models/
 ai-server/data/
+data/synthetic_sketches/
 
 # --- Legacy backup files ---
 *.bak
+
+# --- Benchmark artifacts ---
+benchmark_output/

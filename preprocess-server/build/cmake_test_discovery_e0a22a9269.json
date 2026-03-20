@@ -1,5 +1,5 @@
 {
-  "tests": 45,
+  "tests": 60,
   "name": "AllTests",
   "testsuites": [
     {
@@ -170,6 +170,105 @@
           "name": "Binarize_OnlyContainsBinaryValues",
           "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_main.cpp",
           "line": 395
+        }
+      ]
+    },
+    {
+      "name": "FilterTest",
+      "tests": 9,
+      "testsuite": [
+        {
+          "name": "ResizeFilter_512x512",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
+          "line": 15
+        },
+        {
+          "name": "DenoiseFilter_AppliesBlur",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
+          "line": 26
+        },
+        {
+          "name": "GrayscaleFilter_ConvertsToSingleChannel",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
+          "line": 38
+        },
+        {
+          "name": "BinarizeFilter_CreatesBinaryImage",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
+          "line": 48
+        },
+        {
+          "name": "MorphologyFilter_ClosesGaps",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
+          "line": 62
+        },
+        {
+          "name": "RgbConvertFilter_ConvertsTo3Channel",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
+          "line": 72
+        },
+        {
+          "name": "InvertFilter_InvertsColors",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
+          "line": 81
+        },
+        {
+          "name": "ResizeFilter_DownscaleUsesInterArea",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
+          "line": 159
+        },
+        {
+          "name": "ResizeFilter_UpscaleUsesInterCubic",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
+          "line": 175
+        }
+      ]
+    },
+    {
+      "name": "FilterPipelineTest",
+      "tests": 3,
+      "testsuite": [
+        {
+          "name": "AddAndExecute",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
+          "line": 94
+        },
+        {
+          "name": "EmptyPipelineReturnsInput",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
+          "line": 107
+        },
+        {
+          "name": "SizeAndClear",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
+          "line": 116
+        }
+      ]
+    },
+    {
+      "name": "PipelineFactoryTest",
+      "tests": 2,
+      "testsuite": [
+        {
+          "name": "CreatePreprocessPipeline",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
+          "line": 131
+        },
+        {
+          "name": "CreateHybridPipeline",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
+          "line": 144
+        }
+      ]
+    },
+    {
+      "name": "OCPTest",
+      "tests": 1,
+      "testsuite": [
+        {
+          "name": "NewFilterWithoutModifyingExistingCode",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
+          "line": 203
         }
       ]
     },

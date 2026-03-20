@@ -1,5 +1,5 @@
 import nock from 'nock';
-import path from 'path';
+import path from 'node:path';
 import * as analysisService from '../src/services/analysisService';
 import { UPLOAD_DIR } from '../src/utils/fileStorage';
 
