@@ -12,6 +12,8 @@
 #include "filters/clahe_filter.h"
 #include "filters/nlmeans_denoise_filter.h"
 #include "filters/otsu_canny_filter.h"
+#include "filters/hybrid_preprocess_filter.h"
+#include "core/image_processor.h"
 
 // ==================== IFilter Tests ====================
 
@@ -337,4 +339,82 @@ TEST(FilterTest, OtsuCannyFilter_CustomSigma) {
 
     EXPECT_FALSE(result.empty());
     EXPECT_GT(cv::countNonZero(result), 0);
+}
+
+// ==================== GetContentROI (Dominant + Proximity) Tests ====================
+// 부속 자극 제거 검증: 계획서 docs/project-guides/preprocess_roi_accessory_removal_plan.md 참고
+
+static cv::Mat makeBinaryWithRects(int rows, int cols,
+                                   const std::vector<cv::Rect>& rects) {
+    cv::Mat img = cv::Mat::zeros(rows, cols, CV_8UC1);
+    for (const auto& r : rects) {
+        cv::rectangle(img, r, cv::Scalar(255), cv::FILLED);
+    }
+    return img;
+}
+
+// Case 1: 메인 인물 + 멀리 떨어진 부속 자극 → 부속 자극 제외
+//   main=(100,100,200,200), accessory=(430,430,40,40)
+//   dominantRect=main, margin=20% → expandedRect 우단 ≈ 340 < 430 → 제외
+TEST(GetContentROITest, ExcludesDistantAccessories) {
+    cv::Mat binary = makeBinaryWithRects(500, 500, {
+        cv::Rect(100, 100, 200, 200),  // 메인 인물 (40000px²)
+        cv::Rect(430, 430,  40,  40),  // 멀리 떨어진 부속 자극 (1600px²)
+    });
+
+    ImageProcessor proc;
+    cv::Rect roi = proc.GetContentROI(binary);
+
+    // 부속 자극(x=430)이 ROI에 포함되어선 안 됨
+    EXPECT_LT(roi.x + roi.width, 430)
+        << "ROI should not include distant accessory. roi=("
+        << roi.x << "," << roi.y << "," << roi.width << "," << roi.height << ")";
+}
+
+// Case 2: 메인 인물 + 근접한 분리 선(팔/다리) → Dominant만 반환 (근접 선 제외)
+//   Dominant only 방식: 가장 큰 컨투어의 bbox만 반환
+//   main=(100,100,200,200), nearby=(320,100,30,200)
+//   ROI 우단 < 320 (nearby 제외)
+TEST(GetContentROITest, DominantOnly_ExcludesNearbyFragment) {
+    cv::Mat binary = makeBinaryWithRects(500, 500, {
+        cv::Rect(100, 100, 200, 200),  // 메인 인물 (40000px²)
+        cv::Rect(320, 100,  30, 200),  // 근접한 분리 선 (6000px²) — Dominant only이므로 제외
+    });
+
+    ImageProcessor proc;
+    cv::Rect roi = proc.GetContentROI(binary);
+
+    // Dominant(메인 인물)만 포함 — 우단이 320 미만
+    EXPECT_LE(roi.x, 100)
+        << "ROI left edge should cover main figure";
+    EXPECT_LT(roi.x + roi.width, 320)
+        << "ROI should not include nearby fragment in dominant-only mode. roi=("
+        << roi.x << "," << roi.y << "," << roi.width << "," << roi.height << ")";
+}
+
+// Case 3: 단일 컨투어 → 기존 동작 유지 (bounding rect + padding)
+TEST(GetContentROITest, SingleContour_ReturnsBoundingRectWithPadding) {
+    cv::Mat binary = makeBinaryWithRects(500, 500, {
+        cv::Rect(100, 100, 200, 200),
+    });
+
+    ImageProcessor proc;
+    cv::Rect roi = proc.GetContentROI(binary);
+
+    // 단일 컨투어의 bounding rect를 포함해야 함 (padding 포함)
+    EXPECT_LE(roi.x, 100);
+    EXPECT_LE(roi.y, 100);
+    EXPECT_GE(roi.x + roi.width,  300);  // 100+200
+    EXPECT_GE(roi.y + roi.height, 300);
+}
+
+// Case 4: 빈 이미지 → 전체 이미지 크기 fallback
+TEST(GetContentROITest, EmptyBinary_ReturnsFallback) {
+    cv::Mat binary = cv::Mat::zeros(500, 500, CV_8UC1);
+
+    ImageProcessor proc;
+    cv::Rect roi = proc.GetContentROI(binary);
+
+    EXPECT_EQ(roi.width,  500);
+    EXPECT_EQ(roi.height, 500);
 }

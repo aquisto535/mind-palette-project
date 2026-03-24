@@ -1,10 +1,9 @@
 import express, { Request, Response, NextFunction } from 'express';
-import fs from 'node:fs/promises';
-import path from 'node:path';
 import multer from 'multer';
 import rateLimit from 'express-rate-limit';
-import { upload, CustomRequest, hasValidMagicBytes, UPLOAD_DIR } from '../utils/fileStorage';
+import { upload, CustomRequest } from '../utils/fileStorage';
 import { processAnalysis } from '../services/analysisService';
+import { ImageValidator } from '../services/imageValidator';
 import logger from '../utils/logger';
 
 const router = express.Router();
@@ -38,7 +37,7 @@ const handleMulterUpload = (req: Request, res: Response, next: NextFunction) => 
 };
 
 // ─────────────────────────────────────────────────────────
-// 미들웨어: 이미지 콘텐츠 무결성 검증 (Magic Bytes)
+// 미들웨어: 이미지 콘텐츠 무결성 검증 (Magic Bytes & Resolution)
 // ─────────────────────────────────────────────────────────
 const validateImageContent = async (req: Request, res: Response, next: NextFunction) => {
   const customReq = req as CustomRequest;
@@ -51,30 +50,12 @@ const validateImageContent = async (req: Request, res: Response, next: NextFunct
     return res.status(400).json({ error: 'No image file uploaded' });
   }
 
-  try {
-    // ─────────────────────────────────────────────────────────
-    // Path Injection 방어: 파일 경로가 기획된 업로드 폴더 내에 있는지 검증
-    // ─────────────────────────────────────────────────────────
-    const filePath = path.resolve(req.file.path);
-    // ─────────────────────────────────────────────────────────
-    // P2 Fix: 트레일링 path.sep을 추가하여 sibling prefix bypass 방어
-    // ─────────────────────────────────────────────────────────
-    const resolvedUploadDir = path.resolve(UPLOAD_DIR) + path.sep;
-    
-    if (!filePath.startsWith(resolvedUploadDir)) {
-      logger.error('Security Alert: Path traversal attempt blocked', { path: req.file.path });
-      return res.status(403).json({ error: 'Access denied' });
-    }
-
-    const fileBuffer = await fs.readFile(filePath);
-    if (!hasValidMagicBytes(fileBuffer)) {
-      await fs.unlink(filePath).catch(() => undefined);
-      return res.status(400).json({ error: '파일 내용이 올바른 이미지 형식이 아닙니다.' });
-    }
-    next();
-  } catch (error) {
-    next(error);
+  const result = await ImageValidator.validate(req.file);
+  if (!result.valid) {
+    return res.status(result.error === 'Access denied' ? 403 : 400).json({ error: result.error });
   }
+
+  next();
 };
 
 // POST /analyze
@@ -86,7 +67,9 @@ router.post('/',
     try {
       const requestId = (req as any).requestId;
       const result = await processAnalysis(req.file!, requestId); // Non-null assertion safe due to middleware
-      res.json(result);
+      res.set('X-Sanitization-Status', result.sanitized ? 'applied' : 'skipped');
+      const { sanitized: _sanitized, ...responseData } = result;
+      res.json(responseData);
     } catch (error: unknown) {
       logger.error('Analysis Error:', { error: error instanceof Error ? error.message : String(error) });
       res.status(500).json({ error: 'Internal Server Error' });

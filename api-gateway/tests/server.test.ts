@@ -1,7 +1,7 @@
 import request from 'supertest';
 import app from '../src/server';
-import path from 'path';
-import fs from 'fs';
+import path from 'node:path';
+import fs from 'node:fs';
 
 describe('API Gateway Tests', () => {
 
@@ -64,9 +64,13 @@ describe('API Gateway Tests', () => {
       expect(res.body).toHaveProperty('interpretation');
       expect(res.body).toHaveProperty('details');
 
-      // 4. 파일 저장 검증 (Uploads)
+      // 4. 파일 저장 검증 (Uploads - 자동 삭제 검증)
       const finalUploads = fs.readdirSync(TEST_UPLOAD_DIR);
-      expect(finalUploads.length).toBeGreaterThan(initialUploads.length);
+      if (process.env.KEEP_IMAGES === 'true') {
+        expect(finalUploads.length).toBeGreaterThan(initialUploads.length);
+      } else {
+        expect(finalUploads.length).toEqual(initialUploads.length);
+      }
 
       // 5. 결과 저장 검증 (Results)
       const finalResults = fs.readdirSync(TEST_RESULT_DIR);

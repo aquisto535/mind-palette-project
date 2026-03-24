@@ -73,6 +73,8 @@ INTERVIEW_PREP_GUIDE.md
 현재 경력 기술서.md
 전국 규준 통계치와 백분위 매핑 데이터.md
 *.jpg
+*.png
+*.jpeg
 SKILL.md
 # Antigravity/Claude 스킬 파일은 추적 필요
 !.agent/skills/**/SKILL.md
@@ -94,3 +96,4 @@ data/synthetic_sketches/
 
 # --- Benchmark artifacts ---
 benchmark_output/
+data/synthetic_sketches/

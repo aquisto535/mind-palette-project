@@ -1,4 +1,4 @@
-﻿#include "core/pipeline_factory.h"
+#include "core/pipeline_factory.h"
 
 FilterPipeline PipelineFactory::createPreprocessPipeline(int targetSize) {
     FilterPipeline pipeline;
@@ -15,8 +15,8 @@ FilterPipeline PipelineFactory::createPreprocessPipeline(int targetSize) {
 FilterPipeline PipelineFactory::createHybridPipeline() {
     FilterPipeline pipeline;
     
-    // Step 1: Initial Resize (1024) for high-quality source
-    pipeline.add(std::make_unique<ResizeFilter>(1024));
+    // Step 1: Initial Resize (768) to optimize AdaptiveThreshold and FindContours speed (< 100ms target)
+    pipeline.add(std::make_unique<ResizeFilter>(768));
     
     // Step 2: Denoise (Gaussian Only)
     // Gaussian: 5x5, Median: 0 (Disabled)

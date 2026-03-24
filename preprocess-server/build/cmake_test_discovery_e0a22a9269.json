@@ -1,5 +1,5 @@
 {
-  "tests": 60,
+  "tests": 92,
   "name": "AllTests",
   "testsuites": [
     {
@@ -175,52 +175,107 @@
     },
     {
       "name": "FilterTest",
-      "tests": 9,
+      "tests": 20,
       "testsuite": [
         {
           "name": "ResizeFilter_512x512",
           "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
-          "line": 15
+          "line": 20
         },
         {
           "name": "DenoiseFilter_AppliesBlur",
           "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
-          "line": 26
+          "line": 31
         },
         {
           "name": "GrayscaleFilter_ConvertsToSingleChannel",
           "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
-          "line": 38
+          "line": 43
         },
         {
           "name": "BinarizeFilter_CreatesBinaryImage",
           "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
-          "line": 48
+          "line": 53
         },
         {
           "name": "MorphologyFilter_ClosesGaps",
           "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
-          "line": 62
+          "line": 67
         },
         {
           "name": "RgbConvertFilter_ConvertsTo3Channel",
           "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
-          "line": 72
+          "line": 77
         },
         {
           "name": "InvertFilter_InvertsColors",
           "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
-          "line": 81
+          "line": 86
         },
         {
           "name": "ResizeFilter_DownscaleUsesInterArea",
           "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
-          "line": 159
+          "line": 164
         },
         {
           "name": "ResizeFilter_UpscaleUsesInterCubic",
           "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
-          "line": 175
+          "line": 180
+        },
+        {
+          "name": "ClaheFilter_EmptyInput_ReturnsEmpty",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
+          "line": 226
+        },
+        {
+          "name": "ClaheFilter_GrayscaleInput_OutputsSingleChannel",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
+          "line": 232
+        },
+        {
+          "name": "ClaheFilter_BgrInput_OutputsSingleChannel",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
+          "line": 240
+        },
+        {
+          "name": "ClaheFilter_LowContrastImage_IncreasesStdDev",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
+          "line": 250
+        },
+        {
+          "name": "NlMeansDenoiseFilter_EmptyInput_ReturnsEmpty",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
+          "line": 267
+        },
+        {
+          "name": "NlMeansDenoiseFilter_GrayscaleInput_PreservesSize",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
+          "line": 273
+        },
+        {
+          "name": "NlMeansDenoiseFilter_BgrInput_PreservesChannels",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
+          "line": 287
+        },
+        {
+          "name": "OtsuCannyFilter_EmptyInput_ReturnsEmpty",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
+          "line": 301
+        },
+        {
+          "name": "OtsuCannyFilter_DetectsEdgesOnRectangle",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
+          "line": 307
+        },
+        {
+          "name": "OtsuCannyFilter_BgrInput_OutputsSingleChannel",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
+          "line": 321
+        },
+        {
+          "name": "OtsuCannyFilter_CustomSigma",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
+          "line": 333
         }
       ]
     },
@@ -231,17 +286,17 @@
         {
           "name": "AddAndExecute",
           "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
-          "line": 94
+          "line": 99
         },
         {
           "name": "EmptyPipelineReturnsInput",
           "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
-          "line": 107
+          "line": 112
         },
         {
           "name": "SizeAndClear",
           "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
-          "line": 116
+          "line": 121
         }
       ]
     },
@@ -252,12 +307,12 @@
         {
           "name": "CreatePreprocessPipeline",
           "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
-          "line": 131
+          "line": 136
         },
         {
           "name": "CreateHybridPipeline",
           "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
-          "line": 144
+          "line": 149
         }
       ]
     },
@@ -268,7 +323,136 @@
         {
           "name": "NewFilterWithoutModifyingExistingCode",
           "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
-          "line": 203
+          "line": 208
+        }
+      ]
+    },
+    {
+      "name": "GetContentROITest",
+      "tests": 4,
+      "testsuite": [
+        {
+          "name": "ExcludesDistantAccessories",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
+          "line": 359
+        },
+        {
+          "name": "DominantOnly_ExcludesNearbyFragment",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
+          "line": 378
+        },
+        {
+          "name": "SingleContour_ReturnsBoundingRectWithPadding",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
+          "line": 396
+        },
+        {
+          "name": "EmptyBinary_ReturnsFallback",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
+          "line": 412
+        }
+      ]
+    },
+    {
+      "name": "QualityMetricsTest",
+      "tests": 6,
+      "testsuite": [
+        {
+          "name": "ComputePSNR_IdenticalImages_ReturnsHighValue",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_quality_metrics.cpp",
+          "line": 6
+        },
+        {
+          "name": "ComputePSNR_DifferentImages_ReturnsFiniteValue",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_quality_metrics.cpp",
+          "line": 12
+        },
+        {
+          "name": "ComputePSNR_EmptyInput_ReturnsNegative",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_quality_metrics.cpp",
+          "line": 20
+        },
+        {
+          "name": "ComputeSSIM_IdenticalImages_ReturnsNearOne",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_quality_metrics.cpp",
+          "line": 25
+        },
+        {
+          "name": "ComputeSSIM_DifferentImages_ReturnsBelowOne",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_quality_metrics.cpp",
+          "line": 31
+        },
+        {
+          "name": "ComputeSSIM_EmptyInput_ReturnsNegative",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_quality_metrics.cpp",
+          "line": 39
+        }
+      ]
+    },
+    {
+      "name": "PressureAnalyzerTest",
+      "tests": 6,
+      "testsuite": [
+        {
+          "name": "EmptyInput_ReturnsNegativeScore",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_pressure_analyzer.cpp",
+          "line": 6
+        },
+        {
+          "name": "DarkRChannel_ReturnsHighPressureScore",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_pressure_analyzer.cpp",
+          "line": 12
+        },
+        {
+          "name": "BrightRChannel_ReturnsLowPressureScore",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_pressure_analyzer.cpp",
+          "line": 20
+        },
+        {
+          "name": "ValidInput_HasHistogram",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_pressure_analyzer.cpp",
+          "line": 28
+        },
+        {
+          "name": "ValidInput_MeanIntensityInRange",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_pressure_analyzer.cpp",
+          "line": 35
+        },
+        {
+          "name": "ScoreIsNormalized",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_pressure_analyzer.cpp",
+          "line": 43
+        }
+      ]
+    },
+    {
+      "name": "TremorAnalyzerTest",
+      "tests": 5,
+      "testsuite": [
+        {
+          "name": "EmptyInput_ReturnsNegativeScore",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_tremor_analyzer.cpp",
+          "line": 6
+        },
+        {
+          "name": "StraightLine_ReturnsLowTremorScore",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_tremor_analyzer.cpp",
+          "line": 12
+        },
+        {
+          "name": "ZigZagLine_ReturnsHigherVariance",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_tremor_analyzer.cpp",
+          "line": 23
+        },
+        {
+          "name": "ValidInput_HuMomentsSize",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_tremor_analyzer.cpp",
+          "line": 39
+        },
+        {
+          "name": "RectangleInput_DetectsContours",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_tremor_analyzer.cpp",
+          "line": 47
         }
       ]
     },

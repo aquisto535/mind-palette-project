@@ -2,6 +2,7 @@ import multer, { FileFilterCallback } from 'multer';
 import path from 'node:path';
 import fs from 'node:fs';
 import { Request } from 'express';
+import { imageSize } from 'image-size';
 
 // Extend Request to include fileValidationError
 export interface CustomRequest extends Request {
@@ -59,6 +60,41 @@ export function isSafeFilename(filename: string): boolean {
   if (/^[/\\]/.test(filename)) return false;         // 절대 경로
   if (filename.includes('..')) return false;          // 상위 디렉토리 탐색
   return true;
+}
+
+// ─────────────────────────────────────────────
+// L5 강화: 이미지 해상도 제한 (Pixel Flood 방어)
+// ─────────────────────────────────────────────
+const MAX_IMAGE_DIMENSION = 4096;
+
+export interface DimensionCheckResult {
+  valid: boolean;
+  width?: number;
+  height?: number;
+  error?: string;
+}
+
+export function checkImageDimensions(filePath: string): DimensionCheckResult {
+  try {
+    const fileBuffer = fs.readFileSync(filePath);
+    const dimensions = imageSize(fileBuffer);
+    const width = dimensions.width ?? 0;
+    const height = dimensions.height ?? 0;
+
+    if (width > MAX_IMAGE_DIMENSION || height > MAX_IMAGE_DIMENSION) {
+      return {
+        valid: false,
+        width,
+        height,
+        error: `Image dimensions exceed limit (${width}x${height}, max ${MAX_IMAGE_DIMENSION}x${MAX_IMAGE_DIMENSION})`,
+      };
+    }
+
+    return { valid: true, width, height };
+  } catch {
+    // 메타데이터 파싱 실패 시 통과 (Magic Byte 검증을 이미 통과한 상태)
+    return { valid: true };
+  }
 }
 
 // Multer 스토리지 설정

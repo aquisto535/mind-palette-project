@@ -83,51 +83,33 @@ function generateDummyResult(): AnalysisResult {
   };
 }
 
-/**
- * 이미지 분석 요청을 처리합니다.
- * @param {Express.Multer.File} file - 업로드된 파일 객체
- * @param {string} requestId - 요청 추적을 위한 고유 ID
- * @returns {Promise<AnalysisResult>} 분석 결과 객체
- */
-export const processAnalysis = async (file: Express.Multer.File, requestId: string): Promise<AnalysisResult> => {
-  if (!file) {
-    throw new Error('NO_FILE');
-  }
-
-  logger.info('Image uploaded:', maskPII({ path: file.path, requestId }));
-
-  const timestamp = Date.now();
-  const resultPath = path.join(RESULT_DIR, `${timestamp}_result.json`);
-
-  // [Phase 3] C++ 전처리 서버 호출
-  let processedImagePath = file.path; // 기본값은 원본 이미지
+async function invokePreprocessServer(filePath: string, requestId: string): Promise<{ processedImagePath: string; sanitized: boolean }> {
+  let processedImagePath = filePath;
+  let sanitized = false;
   try {
-    const preprocessRes = await axios.post(`${PREPROCESS_SERVER_URL}/preprocess`, {
-      imagePath: file.path
-    }, {
-      headers: { 'X-Request-ID': requestId }
-    });
-
+    const preprocessRes = await axios.post(`${PREPROCESS_SERVER_URL}/preprocess`, { imagePath: filePath }, { headers: { 'X-Request-ID': requestId } });
     if (preprocessRes.data?.processedPath) {
       processedImagePath = preprocessRes.data.processedPath;
-      logger.info('Preprocessing completed:', maskPII({ path: processedImagePath, requestId }));
+      sanitized = true;
+      logger.info('Preprocessing completed (L6 sanitized):', maskPII({ path: processedImagePath, requestId }));
+    } else {
+      logger.warn('L6 Sanitization skipped: preprocessing did not return processedPath', { requestId });
     }
   } catch (error: unknown) {
-    logger.warn('Preprocessing failed, using original image:', {
+    logger.warn('L6 Sanitization skipped: preprocessing failed, using original image:', {
       error: error instanceof Error ? error.message : String(error),
       requestId
     });
   }
+  return { processedImagePath, sanitized };
+}
 
-  // Phase 4 - Python AI 서버 호출
-  let resultData: AnalysisResult;
+async function invokeAiServer(processedImagePath: string, requestId: string): Promise<AnalysisResult> {
   try {
     const formData = new FormData();
     const resolvedPath = path.resolve(processedImagePath);
     // ─────────────────────────────────────────────────────────
     // P2 Fix: 트레일링 path.sep을 추가하여 sibling prefix bypass 방어
-    //   예: resolvedUploadDir = /foo/uploads
-    //       /foo/uploads_malicious/ → startsWith(/foo/uploads/) → false ✅
     // ─────────────────────────────────────────────────────────
     const resolvedUploadDir = path.resolve(UPLOAD_DIR) + path.sep;
 
@@ -138,27 +120,71 @@ export const processAnalysis = async (file: Express.Multer.File, requestId: stri
     formData.append('file', await fs.readFile(resolvedPath), path.basename(resolvedPath));
 
     const aiRes = await axios.post(`${AI_SERVER_URL}/analyze`, formData, {
-      headers: {
-        ...formData.getHeaders(),
-        'X-Request-ID': requestId
-      }
+      headers: { ...formData.getHeaders(), 'X-Request-ID': requestId }
     });
 
-    resultData = mapAiResponseToResult(aiRes.data as AiServerResponse);
+    const resultData = mapAiResponseToResult(aiRes.data as AiServerResponse);
     logger.info('AI Analysis completed:', { requestId });
+    return resultData;
   } catch (error: unknown) {
     logger.warn('AI Analysis failed, falling back to dummy data:', {
       error: error instanceof Error ? error.message : String(error),
       requestId
     });
-    // AI 서버 실패 시에만 더미 데이터 생성 (또는 에러 상황에 따라 다르게 처리 가능)
-    resultData = generateDummyResult();
+    return generateDummyResult();
+  }
+}
+
+async function cleanupTempImages(originalPath: string, processedPath: string, requestId: string): Promise<void> {
+  const keepImages = process.env.KEEP_IMAGES === 'true';
+  if (keepImages) return;
+
+  try {
+    await fs.unlink(originalPath).catch(e => { if (e.code !== 'ENOENT') throw e; });
+    if (processedPath !== originalPath) {
+      await fs.unlink(processedPath).catch(e => { if (e.code !== 'ENOENT') throw e; });
+    }
+    logger.info('Cleaned up temp image files', { requestId });
+  } catch (cleanupError) {
+    logger.error('Failed to clean up temp image files', { 
+      error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError), 
+      requestId 
+    });
+  }
+}
+
+/**
+ * 이미지 분석 요청을 처리합니다.
+ * @param {Express.Multer.File} file - 업로드된 파일 객체
+ * @param {string} requestId - 요청 추적을 위한 고유 ID
+ * @returns {Promise<AnalysisResult>} 분석 결과 객체
+ */
+export const processAnalysis = async (file: Express.Multer.File, requestId: string): Promise<AnalysisResult & { sanitized: boolean }> => {
+  if (!file) {
+    throw new Error('NO_FILE');
   }
 
-  // 결과 JSON 파일 저장 (SHA-256 해시 함께 저장 — 무결성 검증용)
-  const resultContent = JSON.stringify(resultData, null, 2);
-  await saveWithHash(resultContent, resultPath);
-  logger.info('Result saved:', maskPII({ path: resultPath, requestId }));
+  logger.info('Image uploaded:', maskPII({ path: file.path, requestId }));
 
-  return resultData;
+  const timestamp = Date.now();
+  const resultPath = path.join(RESULT_DIR, `${timestamp}_result.json`);
+
+  let sanitized = false;
+  let processedImagePath = file.path;
+
+  try {
+    const preprocessResult = await invokePreprocessServer(file.path, requestId);
+    processedImagePath = preprocessResult.processedImagePath;
+    sanitized = preprocessResult.sanitized;
+
+    const resultData = await invokeAiServer(processedImagePath, requestId);
+
+    const resultContent = JSON.stringify(resultData, null, 2);
+    await saveWithHash(resultContent, resultPath);
+    logger.info('Result saved:', maskPII({ path: resultPath, requestId }));
+
+    return { ...resultData, sanitized };
+  } finally {
+    await cleanupTempImages(file.path, processedImagePath, requestId);
+  }
 };

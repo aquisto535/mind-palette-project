@@ -13,20 +13,6 @@
 
 ---
 
-## 📊 현재 프로젝트 상태 (2026.03.20 기준) ✅ Phase 4 완료
-
-> ⚡ **핵심 성과**: Phase 4(Python AI Server) + Phase 4 이후 고도화 항목 전부 완료 → **95점 포트폴리오** 달성
-
-### 프로젝트 경쟁력 점수표
-| 시점 | 점수 | 상태 | 비고 |
-|------|------|------|------|
-| **2026.02 (C++ 전처리만)** | 60점 | ⚠️ 위험 | "전처리 서비스"로만 평가됨 |
-| **2026.03.17 (AI 서버 기본)** | 85점 | ✅ 안전 | FastAPI + ONNX + TensorRT 통합 완료 |
-| **2026.03.20 (파라미터 벤치마크 + 기하 분석)** | **95점** | ⭐ 우수 | 실측 근거 기반 필터 파라미터 + 압력/떨림 분석 |
-| **면접 대비 (예정)** | +5점 | 🎁 보너스 | 아키텍처 설명 + ADR 15개 의사결정 근거 |
-
----
-
 ## 🧠 Phase 4: Python AI Server ✅ 완료 (2026.03.20)
 
 ### Step 1: Base Model (FastAPI + PyTorch)
@@ -198,11 +184,14 @@
 > 배경 반전·Multi-Object Crop은 즉시 적용 가능. 나머지는 Phase 4 완성 이후 ROI 최적.
 
 ### 🔥 [확정] Production-Level Preprocessing (우선순위 최상)
-- [x] **Advanced Pipeline 리팩터링**: `ImageProcessor::Preprocess`를 제안된 5단계 로직으로 전면 교체
+- [x] **Advanced Pipeline 리팩터링**: `ImageProcessor::Preprocess`를 `FilterPipeline` 패턴으로 전면 교체 (OCP 준수) [완료: 2026.03.21]
   - [x] **Step 1 (Denoise)**: `GaussianBlur(5x5)`로 종이 질감 제거 및 필압 보존 Grayscale 생성
   - [x] **Step 2 (Adaptive Binary)**: `AdaptiveThreshold(11, 2)` + `Morphology(Close)`로 선 연결성 강화
-  - [x] **Step 3 (Smart ROI)**: `0.1% Area` 이상의 모든 객체를 포함하는 `Union Rect` 계산 (신발/부속물 누락 방지)
+  - [x] **Step 3 (Smart ROI)**: **Dominant Contour Only** (가장 큰 컨투어=메인 인물만 ROI, 부속 자극 제거) [완료: 2026.03.21]
   - [x] **Step 4 (Letterbox)**: 비율 왜곡 없이 512x512 중앙 배치 (Padding 추가)
+
+- [x] **성능 최적화 (Latency Strategy)**:
+  - [x] **Early Resize**: 이진화/컨투어 추출 전 `768px`로 선제 축소하여 연산량 최적화 (Latency: 183ms → **97ms**) [완료: 2026.03.21]
 
 - [x] **3-Channel Hybrid Strategy 구현 (AI 입력 최적화)**
   - [x] **Channel Construction**: 단순 RGB 변환이 아닌, 채널별 의미 부여
@@ -237,6 +226,43 @@
   - [x] TremorAnalyzer C++ 구현 (POST /analyze-tremor 엔드포인트, Hu Moments)
 - [x] **하이브리드 결과 결합**: C++ 기하학적 특징 + AI 추론 결과 → Phase 4 연동 시 설계
   - [x] HybridCombiner 클래스 구현 (confidence = 1.0 - tremor_score*0.3)
+
+---
+
+## 🔄 Phase 5 준비 항목: 모델 재학습 (C++ 전처리 통합) ⏳ Optional (선택사항)
+
+> **중요**: 이 항목은 필수가 아니며, Phase 5 배포 전략(Hash-based Caching, Nginx, Docker) 완료 후 시간 여유가 있을 때 진행하는 것을 권장합니다.
+
+### 배경: Train-Inference Mismatch 해결 (성능 최적화)
+
+현재 상태:
+- **학습 시**: 원본 스캔 크롭 이미지 (RGB)로 학습
+- **추론 시**: C++ HybridPipeline 출력 (3채널: R=Gray, G=InvBinary, B=Dist)로 추론
+- **영향도**: 현재 모델은 안정적으로 작동 중이며, 이 항목은 추가 성능 개선 목적
+
+### 재학습 전제 조건 (현재 상태)
+
+- ✅ C++ 전처리 파이프라인 안정화 (Phase 3 완료)
+- ✅ AI 모델 아키텍처 확정 (Phase 4 완료)
+- ✅ 정규화 파라미터 3채널 기준으로 설계 완료 (mean=(0.972, 0.031, 0.012))
+- ❌ 추가 데이터 수집 필요 (현재: 20개 샘플 → 목표: 50개+) **← 가장 큰 블로커**
+
+### 우선순위
+
+| 우선순위 | 항목 | 타이밍 |
+|---------|------|--------|
+| 🔴 **1순위** | Phase 5 배포 전략 (Hash Caching, Docker, Nginx) | 즉시 |
+| 🟡 **2순위** | 추가 데이터 수집 (50개+ 확보 필요) | Phase 5 진행 중 병행 |
+| 🟢 **3순위** | 모델 재학습 (데이터 확보 후) | Phase 5 후반 (여유 시간) |
+
+### 향후 실행 계획 (데이터 확보 시)
+
+- [ ] **C++ 전처리로 학습 데이터 재생성**: data/raw → C++ API → data/preprocessed
+- [ ] **annotations.json 경로 업데이트**: `"image_path": "raw/sample_*.png"` → `"preprocessed/sample_*.png"`
+- [ ] **모델 재학습**: train.py (기존 파라미터 유지)
+- [ ] **모델 변환 재실행**: export_model.py, build_tensorrt_engine.py
+
+**상세 계획**: `docs/standards/ADR-phase5-retraining.md` 참조
 
 ---
 
@@ -308,9 +334,9 @@
 - [x] **파일 업로드 검증**:
   - [x] [TDD] .txt 파일을 .jpg로 속여 업로드 시 차단되는지 테스트 (Red)
   - [x] MIME 타입/매직 바이트 기반 물리적 검증 로직 구현 (Green) — `fileStorage.ts::hasValidMagicBytes()`, `analyze.ts`에서 적용
-- [ ] **검증 파이프라인 최적화 (Latency Strategy)**:
-  - [ ] **Parallel Validation**: L2(Magic Byte)와 L5(Resource Limit)를 병렬로 체크하여 블로킹 시간 단축.
-  - [ ] **Deferred Sanitization**: L6(재인코딩) 과정을 전처리 서버로 이관하여 API 응답 경로에서 분리(Async) 고려.
+- [x] **검증 파이프라인 최적화 (Latency Strategy)**:
+  - [x] **Parallel Validation**: L2(Magic Byte)와 L5(Resource Limit)를 병렬로 체크하여 블로킹 시간 단축.
+  - [x] **Deferred Sanitization**: L6(재인코딩) 과정을 전처리 서버로 이관하여 API 응답 경로에서 분리(Async) 고려.
 - [x] **경로 정규화**:
   - [x] [TDD] `../../etc/passwd`와 같은 Path Traversal 공격 시 차단 테스트 (Red)
   - [x] 입력 경로 정규화 및 화이트리스트 디렉토리 체크 구현 (Green) — `fileStorage.ts::isSafeFilename()` (null byte, 절대경로, `..` 차단)
@@ -322,6 +348,9 @@
 - [x] **해시 무결성**:
   - [x] [TDD] 결과 파일 변조 시 캐시 매칭 실패 및 재분석 트리거 테스트 (Red)
   - [x] SHA-256 해시 저장 및 무결성 검증 자동화 (Green) — `hashIntegrity.ts::saveWithHash()/verifyHash()`, `analysisService.ts` 연동
+- [x] **배포 환경 스토리지 최적화 (Production Cleanup)**:
+  - [x] [TDD] 분석 완료 후 `KEEP_IMAGES` 설정(배포 환경)에 따른 자동 Cleanup 및 테스트 (Green)
+  - [x] `analysisService.ts`의 `finally` 절을 이용한 원본 및 C++ 전처리 이미지 원자적 자동 삭제 로직 적용
 
 #### 전송 보안 (Transport Security) - Tier 2: 권장
 - [ ] **외부 HTTPS**: Frontend ↔ API Gateway는 HTTPS를 사용해야 한다. _(Phase 5 배포 시 Nginx TLS 설정으로 처리 — 애플리케이션 코드 변경 없음)_
@@ -455,63 +484,7 @@
 - [x] **Quality Gates**: CI 파이프라인에 정적 분석 통합 및 통과 확인.
 - [x] **GoogleTest (GTest)**: 전체 알고리즘에 대한 경계값(Edge Case) 및 회귀 테스트 완료.
 
-#### Phase 3 회고 (최종): C++ 전처리 모듈 기술 수준 자가 진단 (Updated)
-> **평가 기준**: 영상처리/CV 엔지니어가 포트폴리오를 리뷰한다고 가정
-> **종합 등급**: ⭐⭐⭐⭐☆ (4.0/5.0) — "Data-Centric AI를 위한 Smart Pipeline & Feature Engineering"
-
-**✅ 강화된 강점 (Solved Problems)**
-| 측면 | 수준 | 요약 |
-|------|------|------|
-| **Data-Centric Engineering** | ⭐⭐⭐⭐⭐ | 단순 이미지 처리가 아닌, **AI 학습 효율을 위한 3-Channel Hybrid Strategy** (Pressure/Shape/Structure) 설계 |
-| **Smart ROI Algorithm** | ⭐⭐⭐⭐☆ | Morphology + Contour Analysis + Union Logic을 결합하여 노이즈에 강건한 객체 추출 구현 |
-| **서비스 구조화** | ⭐⭐⭐⭐⭐ | HTTP 서버 + 파이프라인 + 벤치마크 + Atomic Write + **Test-Driven Visualization** |
-| **Modern C++17** | ⭐⭐⭐⭐☆ | `unique_ptr`, `move semantics`, `std::optional` 활용 |
-
-**⚠️ 잔여 약점 및 과제 (Backlog)**
-| 약점 | 설명 | 면접 리스크 및 대응 |
-|------|------|---------------------|
-| **Manual Tuning** | `AdaptiveThreshold(11, 2)`, `Blur(5x5)` 등이 실험적(Heuristic) 값임 | "데이터셋 분포에 따른 Auto-Tuning 로직이 왜 없는가?" (Phase 4에서 통계 기반 보완 필요) |
-| **정량적 품질 지표** | 변환 결과가 "AI에 얼마나 좋은지" 수치화 부족 | "mAP/Accuracy 향상 폭을 제시하라" (AI 학습 후 성능 비교로 증명 예정) |
-
 ---
-
-### 🎯 커리어 포지셔닝 전략
-> 이 프로젝트를 통해 어필할 포지션과 어필하지 말아야 할 포지션을 구분한다.
-
-#### ✅ 어필 포지션: "AI 파이프라인 / 시스템 엔지니어"
-- **핵심 어필**: C++ 시스템 프로그래밍 배경으로, 3개 언어(C++/Node.js/Python) 마이크로서비스를 Docker 기반으로 통합한 엔드투엔드 AI 시스템 설계·구현·배포 역량
-- **차별점**: 알고리즘 하나에 국한되지 않고 전체 시스템을 혼자 만들 수 있는 희소 역량
-- **증거**: 15개 ADR, GTest/Jest/PyTest 테스트, CI/CD, Atomic Write 등 엔지니어링 프랙티스
-
-**적합한 포지션 (경쟁력 높음)**
-| 포지션 | 경쟁력 | 이유 |
-|--------|--------|------|
-| C++ 영상 파이프라인 개발 | ⭐⭐⭐⭐☆ | Crow + OpenCV + ThreadPool + Pipeline 패턴 |
-| MLOps / AI 인프라 | ⭐⭐⭐⭐☆ | Docker + 마이크로서비스 + CI/CD + ONNX 변환 |
-| 풀스택 AI 서비스 개발 | ⭐⭐⭐⭐⭐ | 한 사람이 전체 시스템 설계-구현-배포 = 희소 역량 |
-
-#### ❌ 피해야 할 포지셔닝: "영상처리 전문가"
-- SIFT/ORB, 주파수 분석, 카메라 캘리브레이션 등 전문 지식 부족
-- 석박사 CV 연구자와 직접 경쟁하게 되어 불리
-- "OpenCV 필터 8종 구현"은 차별화 불가 (누구나 가능)
-
-**면접 예상 질문 대비**
-| 질문 | 강한 답변 방향 | 약한 답변 (회피) |
-|------|---------------|-----------------|
-| "왜 C++로 전처리를 했나?" | CPU 캐시 + SIMD 최적화 + GIL 없는 멀티스레딩 → Python 대비 성능 우위 | "C++을 잘해서요" |
-| "OpenCV 어느 수준까지?" | 기본 파이프라인 구축 + 디자인 패턴 적용 + 서비스화 경험 | 고급 알고리즘 전문가인 척 |
-| "왜 이 아키텍처?" | ADR 15개의 의사결정 근거 (규모에 맞는 판단력) | "트렌드라서요" |
-| "AI 모델 경험은?" | EfficientNet-B2 Transfer Learning + ONNX 최적화 벤치마크 | 모델 자체 설계 경험 과장 |
-
-### 📅 4개월 실행 로드맵 (2026.02 ~ 05)
-> **진단 기준일**: 2026년 2월 18일 | **목표**: 85-95점 포트폴리오 완성
-
-| 기간 | 주력 목표 | 복습 목표 | 마일스톤 |
-|------|-----------|-----------|----------|
-| **2월 말** | FastAPI 서버 완성 + PyTorch 환경 구축 | GaussianBlur 파라미터 실험 1회 | Phase 4 Step 1 착수 |
-| **3월** | EfficientNet-B2 모델 구현 + 학습 파이프라인 | Canny Threshold 3가지 값 비교 실험 | AI 서버 기본 추론 성공 |
-| **4월** | ONNX 변환 + 벤치마크 + E2E 파이프라인 연동 | 파라미터 실험 결과 ADR 문서화 | 전체 파이프라인 작동 증명 |
-| **5월** | 데모 영상 제작 + README 정리 + 면접 준비 | 아키텍처 다이어그램 1장 완성 | 포트폴리오 완성 (85-95점) |
 
 ### 📌 핵심 원칙 (Kent Beck)
 ```

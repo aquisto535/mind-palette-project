@@ -4,7 +4,7 @@
 > 면접 시 "왜 이 기술을 선택했는가?"라는 질문에 명확하고 논리적인 답변을 제공하기 위한 문서입니다.
 
 ---
-
+  
 ## 📋 의사결정 목록 (Decision Index)
 
 | ID | 제목 | 날짜 | 상태 |
@@ -397,7 +397,7 @@ std::filesystem::rename(temp_path, final_path);
 ✅ **Accepted** (2025-11)
 
 ### 컨텍스트 (Context)
-프로젝트가 10개월간 진행되며, 코드베이스가 커질수록 **기술 부채(Technical Debt)** 누적 위험이 증가합니다.
+코드베이스가 커질수록 **기술 부채(Technical Debt)** 누적 위험이 증가합니다.
 
 ### 의사결정 (Decision)
 **TDD(Test-Driven Development)**와 **Tidy First(Kent Beck)** 방법론을 프로젝트 전반에 적용합니다.
@@ -436,7 +436,7 @@ describe('POST /analyze', () => {
 
 ### 대안 및 트레이드오프 (Alternatives)
 - **테스트 없이 빠른 개발**: 초기 속도는 빠르지만 장기적으로 기술 부채 누적.
-  - ❌ **Rejected**: 10개월 프로젝트에서 중반 이후 "레거시 코드" 상태가 되어 유지보수 불가능해짐.
+  - ❌ **Rejected**: 프로젝트에서 중반 이후 "레거시 코드" 상태가 되어 유지보수 불가능해짐.
 
 ### 결론 (Consequences)
 - ✅ **장점**: 안정적인 코드베이스, 리팩터링 안전성, 채용 시장 가치, 자기 문서화.
@@ -805,7 +805,7 @@ input_tensor.to(device)
 ### 면접 시 활용법
 **질문**: "왜 Kubernetes 대신 Docker Compose를 선택하셨나요?"  
 **답변**:
-> "저희 프로젝트는 초기 MVP 단계로 동시 접속 50명 이하, 단일 서버 환경입니다. Kubernetes는 수백 대의 서버를 관리하는 도구로, 현재 규모에는 Over-Engineering입니다. 대신 Docker Compose로 `docker-compose up -d` 한 줄로 전체 시스템을 실행할 수 있도록 하여 개발 생산성을 극대화했습니다. 향후 사용자가 급증하면 동일한 Docker 이미지를 Kubernetes로 마이그레이션할 수 있는 확장성도 확보했습니다."
+> "저희 프로젝트는 초기 MVP 단계로 동시 접속 100명 이하, 단일 서버 환경입니다. Kubernetes는 수백 대의 서버를 관리하는 도구로, 현재 규모에는 Over-Engineering입니다. 대신 Docker Compose로 `docker-compose up -d` 한 줄로 전체 시스템을 실행할 수 있도록 하여 개발 생산성을 극대화했습니다. 향후 사용자가 급증하면 동일한 Docker 이미지를 Kubernetes로 마이그레이션할 수 있는 확장성도 확보했습니다."
 
 ### 이력서/포트폴리오 링크
 ```markdown
@@ -1865,5 +1865,29 @@ Claude Code에 **러버덕 리뷰 모드**를 워크플로우(`.agent/workflows/
 
 ---
 
-**마지막 업데이트**: 2026-03-18  
+## ADR-024: FilterPipeline 패턴 및 Early Resize 최적화 채택
+
+### 상태
+✅ **Accepted** (2026-03-21)
+
+### 컨텍스트 (Context)
+Phase 3 C++ 전처리 서버의 `ImageProcessor::Preprocess` 함수가 수백 라인의 절차적 코드로 작성되어 유지보수가 어렵고, 새로운 필터 추가 시 기존 코드를 수정해야 하는 OCP 위반 문제가 있었습니다. 또한, 고해상도 이미지(512px 이상)에서 `AdaptiveThreshold` 및 `findContours` 연산 시 레이턴시가 180ms를 초과하여 목표치(< 100ms)를 충족하지 못했습니다.
+
+### 의사결정 (Decision)
+1. **디자인 패턴**: `IFilter` 인터페이스와 `FilterPipeline` 클래스를 활용한 **Composite/Pipeline Pattern**으로 리팩터링하여 알고리즘 실행 로직을 핵심 프로세서에서 완전히 분리함.
+2. **성능 최적화**: 연산량이 많은 필터 이전에 `ResizeFilter(768)`를 배치하는 **Early Resize(선제 축소)** 전략을 파이프라인 최상단에 주입함.
+3. **팩토리 패턴**: `PipelineFactory`를 통해 도메인별 최적화된 파이프라인(예: HybridPipeline)을 동적으로 생성 및 주입하는 구조 채용.
+
+### 근거 (Rationale)
+- **유지보수성 (OCP)**: 새로운 분석 로직이 추가되어도 `IFilter`를 상속받은 신규 클래스만 작성하면 되며, 기존 검증된 필터와 프로세서 코드는 전혀 수정할 필요가 없음.
+- **성능 실측 기반 최적화**: 병목 분석 결과 `AdaptiveThreshold`(~94ms)와 `ROI 탐색`(~70ms)이 대부건을 차지함을 확인. 입력 해상도를 768px로 조정하여 연산 픽셀 수를 줄임으로써 기능을 보존하면서도 레이턴시를 **183ms → 97ms로 약 47% 개선**함.
+- **테스트 안정성**: 리팩터링 후에도 기존 91개 테스트(CTest)가 모두 100% 통과함을 확인하여 기능적 동등성을 보장함.
+
+### 결론 (Consequences)
+- ✅ **장점**: 코드 가독성 향상, 하드웨어 제약(< 100ms) 충족, 향후 기능 확장에 유연한 아키텍처 확보.
+- ⚠️ **주의**: 너무 낮은 해상도로 리사이즈 시 작은 컨투어(세밀한 필압)가 소실될 수 있으므로, 768px을 임계점으로 설정함.
+
+---
+
+**마지막 업데이트**: 2026-03-21  
 **작성자**: Antigravity

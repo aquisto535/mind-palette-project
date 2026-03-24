@@ -86,7 +86,7 @@ target_include_directories(preprocess_server PRIVATE src src/core src/infra)
 # target_include_directories(test_pipeline PRIVATE src src/core)
 
 # Week 3 Canny Pipeline Test (GrabCut excluded - production version)
-add_executable(test_canny_pipeline examples/test_canny_pipeline.cpp src/core/image_processor.cpp)
+add_executable(test_canny_pipeline examples/test_canny_pipeline.cpp src/core/image_processor.cpp ${FILTER_SOURCES})
 target_link_libraries(test_canny_pipeline PRIVATE ${OpenCV_LIBS} spdlog::spdlog)
 target_include_directories(test_canny_pipeline PRIVATE src src/core)
 
@@ -147,6 +147,11 @@ include(GoogleTest)
 gtest_discover_tests(unit_tests)
 
 # Visualize Pipeline Tool (Temporary)
-add_executable(visualize_pipeline src/utils/visualize_pipeline.cpp src/core/image_processor.cpp)
+add_executable(visualize_pipeline src/utils/visualize_pipeline.cpp src/core/image_processor.cpp ${FILTER_SOURCES})
 target_link_libraries(visualize_pipeline PRIVATE ${OpenCV_LIBS} spdlog::spdlog)
 target_include_directories(visualize_pipeline PRIVATE src src/core)
+
+# Phase 3 Latency Test
+add_executable(phase3_latency_test src/utils/phase3_latency_test.cpp src/core/image_processor.cpp ${FILTER_SOURCES})
+target_link_libraries(phase3_latency_test PRIVATE ${OpenCV_LIBS} spdlog::spdlog)
+target_include_directories(phase3_latency_test PRIVATE src src/core)
