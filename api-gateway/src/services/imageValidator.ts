@@ -18,11 +18,20 @@ export class ImageValidator {
   static async validate(file: Express.Multer.File): Promise<ValidationResult> {
     try {
       const filePath = path.resolve(file.path);
-      const resolvedUploadDir = path.resolve(UPLOAD_DIR) + path.sep;
+      const resolvedUploadDir = path.resolve(UPLOAD_DIR);
+
+      // Windows case-insensitivity handling
+      const isWindows = process.platform === 'win32';
+      const checkPath = isWindows ? filePath.toLowerCase() : filePath;
+      const checkUploadDir = (isWindows ? resolvedUploadDir.toLowerCase() : resolvedUploadDir) + path.sep;
 
       // 1. Path Injection Protection
-      if (!filePath.startsWith(resolvedUploadDir)) {
-        logger.error('Security Alert: Path traversal attempt blocked', { path: file.path });
+      if (!checkPath.startsWith(checkUploadDir)) {
+        logger.error('Security Alert: Path traversal attempt blocked', { 
+          path: file.path, 
+          resolvedPath: filePath, 
+          expectedDir: resolvedUploadDir 
+        });
         return { valid: false, error: 'Access denied' };
       }
 
@@ -41,7 +50,7 @@ export class ImageValidator {
       }
 
       // 3. L5: Resolution Limit (Pixel Flood protection)
-      const dimCheck = checkImageDimensions(filePath);
+      const dimCheck = await checkImageDimensions(filePath);
       if (!dimCheck.valid) {
         await fs.unlink(filePath).catch(() => undefined);
         return { valid: false, error: dimCheck.error };

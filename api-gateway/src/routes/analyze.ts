@@ -52,6 +52,9 @@ const validateImageContent = async (req: Request, res: Response, next: NextFunct
 
   const result = await ImageValidator.validate(req.file);
   if (!result.valid) {
+    if (result.error === 'Internal validation error') {
+      return res.status(500).json({ error: result.error });
+    }
     return res.status(result.error === 'Access denied' ? 403 : 400).json({ error: result.error });
   }
 

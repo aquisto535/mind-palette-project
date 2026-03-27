@@ -42,9 +42,4 @@ public:
 
 private:
     static std::string getTempPath(const std::string& path);
-    
-    /**
-     * @brief Save as PPM (fallback format)
-     */
-    static bool saveAsPPM(const cv::Mat& image, const std::string& path);
 };

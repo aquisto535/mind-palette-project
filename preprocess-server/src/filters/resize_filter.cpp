@@ -1,6 +1,7 @@
 #include "resize_filter.h"
 
-ResizeFilter::ResizeFilter(int targetSize) : targetSize_(targetSize) {}
+ResizeFilter::ResizeFilter(int targetSize, bool withPadding) 
+    : targetSize_(targetSize), withPadding_(withPadding) {}
 
 cv::Mat ResizeFilter::apply(const cv::Mat& input) const {
     if (input.empty()) {
@@ -16,13 +17,15 @@ cv::Mat ResizeFilter::apply(const cv::Mat& input) const {
     int newWidth = static_cast<int>(input.cols * scale);
     int newHeight = static_cast<int>(input.rows * scale);
     
-    // INTER_AREA: 축소 시 안티앨리어싱 효과로 품질 우수
-    // INTER_CUBIC: 확대 시 부드러운 보간으로 선명도 유지
     int interpolation = (scale < 1.0) ? cv::INTER_AREA : cv::INTER_CUBIC;
 
     cv::Mat resized;
     cv::resize(input, resized, cv::Size(newWidth, newHeight), 0, 0, interpolation);
     
+    if (!withPadding_) {
+        return resized;
+    }
+
     // Create canvas with black padding
     cv::Mat canvas(targetSize_, targetSize_, input.type(), cv::Scalar(0, 0, 0));
     

@@ -28,12 +28,12 @@ inline ThreadPool& GetWorkerPool() {
 // ============================================================================
 
 // Generate output path from input path
-// /shared/uploads/test.jpg -> /shared/processed/test_clean.jpg
+// Example: .../shared_volume/uploads/test.jpg -> .../shared_volume/uploads/test_clean.jpg
 inline std::string GenerateOutputPath(const std::string& inputPath) {
     fs::path p(inputPath);
     std::string stem = p.stem().string();
     std::string ext = p.extension().string();
-    fs::path outputDir = "/shared/processed";
+    fs::path outputDir = p.parent_path(); 
     return (outputDir / (stem + "_clean" + ext)).string();
 }
 

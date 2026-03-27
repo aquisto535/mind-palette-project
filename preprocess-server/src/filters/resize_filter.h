@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "core/filter.h"
 
@@ -10,12 +10,12 @@
  */
 class ResizeFilter : public IFilter {
 public:
-    explicit ResizeFilter(int targetSize = 512);
+    explicit ResizeFilter(int targetSize, bool withPadding = true);
     
     cv::Mat apply(const cv::Mat& input) const override;
     std::string name() const override { return "ResizeFilter"; }
 
 private:
     int targetSize_;
+    bool withPadding_;
 };
-

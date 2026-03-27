@@ -6,9 +6,9 @@ import { RESULT_DIR, UPLOAD_DIR } from '../utils/fileStorage';
 import { saveWithHash } from '../utils/hashIntegrity';
 import logger, { maskPII } from '../utils/logger';
 
-const PREPROCESS_SERVER_URL = process.env.PREPROCESS_SERVER_URL || 'http://localhost:8081';
+const PREPROCESS_SERVER_URL = process.env.PREPROCESS_SERVER_URL || 'http://127.0.0.1:8081';
 // AI 서버 기본 포트는 ai-server/src/config.py :: ServerConfig.port = 8082 와 일치
-const AI_SERVER_URL = process.env.AI_SERVER_URL || 'http://localhost:8082';
+const AI_SERVER_URL = process.env.AI_SERVER_URL || 'http://127.0.0.1:8082';
 
 interface AnalysisResult {
   score: number;
@@ -65,24 +65,6 @@ function mapAiResponseToResult(ai: AiServerResponse): AnalysisResult {
   };
 }
 
-/**
- * 더미 분석 결과를 생성합니다.
- * 실제 AI 모델 연동 시 제거 또는 Mocking 용도로 사용
- */
-function generateDummyResult(): AnalysisResult {
-  return {
-    score: Math.floor(Math.random() * (95 - 70) + 70), // 70~95점 랜덤
-    percentile: Math.floor(Math.random() * (99 - 60) + 60),
-    date: new Date().toLocaleDateString(),
-    interpretation: "AI 분석 결과가 여기에 표시됩니다. (현재는 Mock 데이터입니다)",
-    details: {
-      creativity: 85,
-      expression: 90,
-      observational: 88
-    }
-  };
-}
-
 async function invokePreprocessServer(filePath: string, requestId: string): Promise<{ processedImagePath: string; sanitized: boolean }> {
   let processedImagePath = filePath;
   let sanitized = false;
@@ -105,44 +87,63 @@ async function invokePreprocessServer(filePath: string, requestId: string): Prom
 }
 
 async function invokeAiServer(processedImagePath: string, requestId: string): Promise<AnalysisResult> {
-  try {
-    const formData = new FormData();
-    const resolvedPath = path.resolve(processedImagePath);
-    // ─────────────────────────────────────────────────────────
-    // P2 Fix: 트레일링 path.sep을 추가하여 sibling prefix bypass 방어
-    // ─────────────────────────────────────────────────────────
-    const resolvedUploadDir = path.resolve(UPLOAD_DIR) + path.sep;
+  const formData = new FormData();
+  const resolvedPath = path.resolve(processedImagePath);
+  const resolvedUploadDir = path.resolve(UPLOAD_DIR);
 
-    if (!resolvedPath.startsWith(resolvedUploadDir)) {
-      throw new Error('SECURITY_PATH_VIOLATION');
-    }
+  // Windows case-insensitivity handling
+  const isWindows = process.platform === 'win32';
+  const checkPath = isWindows ? resolvedPath.toLowerCase() : resolvedPath;
+  const checkUploadDir = (isWindows ? resolvedUploadDir.toLowerCase() : resolvedUploadDir) + path.sep;
 
-    formData.append('file', await fs.readFile(resolvedPath), path.basename(resolvedPath));
-
-    const aiRes = await axios.post(`${AI_SERVER_URL}/analyze`, formData, {
-      headers: { ...formData.getHeaders(), 'X-Request-ID': requestId }
+  if (!checkPath.startsWith(checkUploadDir)) {
+    logger.error('Security Alert: AI server path violation', { 
+      path: processedImagePath, 
+      resolvedPath, 
+      expectedDir: resolvedUploadDir 
     });
-
-    const resultData = mapAiResponseToResult(aiRes.data as AiServerResponse);
-    logger.info('AI Analysis completed:', { requestId });
-    return resultData;
-  } catch (error: unknown) {
-    logger.warn('AI Analysis failed, falling back to dummy data:', {
-      error: error instanceof Error ? error.message : String(error),
-      requestId
-    });
-    return generateDummyResult();
+    throw new Error('SECURITY_PATH_VIOLATION');
   }
+
+  formData.append('file', await fs.readFile(resolvedPath), path.basename(resolvedPath));
+
+  const aiRes = await axios.post(`${AI_SERVER_URL}/analyze`, formData, {
+    headers: { ...formData.getHeaders(), 'X-Request-ID': requestId }
+  });
+
+  const resultData = mapAiResponseToResult(aiRes.data as AiServerResponse);
+  logger.info('AI Analysis completed:', { requestId });
+  return resultData;
 }
 
 async function cleanupTempImages(originalPath: string, processedPath: string, requestId: string): Promise<void> {
   const keepImages = process.env.KEEP_IMAGES === 'true';
   if (keepImages) return;
 
+  const resolvedUploadDir = path.resolve(UPLOAD_DIR);
+  const isWindows = process.platform === 'win32';
+  const checkUploadDir = (isWindows ? resolvedUploadDir.toLowerCase() : resolvedUploadDir) + path.sep;
+
+  const validateAndUnlink = async (targetPath: string) => {
+    const resolvedPath = path.resolve(targetPath);
+    const checkPath = isWindows ? resolvedPath.toLowerCase() : resolvedPath;
+
+    if (!checkPath.startsWith(checkUploadDir)) {
+      logger.warn('Cleanup blocked: path outside upload directory', { path: targetPath, requestId });
+      return;
+    }
+
+    await fs.unlink(resolvedPath).catch(e => { 
+      if (e.code !== 'ENOENT') {
+        logger.error('File unlink failed:', { path: targetPath, error: e.message, requestId });
+      }
+    });
+  };
+
   try {
-    await fs.unlink(originalPath).catch(e => { if (e.code !== 'ENOENT') throw e; });
+    await validateAndUnlink(originalPath);
     if (processedPath !== originalPath) {
-      await fs.unlink(processedPath).catch(e => { if (e.code !== 'ENOENT') throw e; });
+      await validateAndUnlink(processedPath);
     }
     logger.info('Cleaned up temp image files', { requestId });
   } catch (cleanupError) {

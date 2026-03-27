@@ -67,6 +67,9 @@ Thumbs.db
 *.vcxproj
 *.filters
 *.recipe
+e2e_*.txt
+e2e_*.log
+
 
 JOB_SEARCH_STRATEGY.md
 INTERVIEW_PREP_GUIDE.md

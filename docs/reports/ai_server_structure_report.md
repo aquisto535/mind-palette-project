@@ -1,178 +1,227 @@
-# 🏗️ ai-server 전체 구조 및 아키텍처 분석 리포트
+# 🧠 AI Server 구조 분석 리포트
 
-본 문서는 `ai-server`의 내부 디렉터리 구조, 데이터 흐름, 신경망 아키텍처 및 시스템 레이어 간의 의존 관계를 직관적으로 설명합니다.
+> 작성일: 2026-03-25  
+> 분석 대상: `ai-server/src/` (FastAPI + ONNX/TensorRT 추론 서버)
 
 ---
 
-## 1. 디렉터리 레이아웃과 역할 분리
+## 1. 디렉터리 구조
 
 ```
 ai-server/
-├── src/                        ← 프로덕션 코드
-│   ├── main.py                 ← FastAPI 앱 팩토리 (조립자)
-│   ├── config.py               ← 모든 하이퍼파라미터 중앙 관리
-│   ├── core/                   ← AI 핵심 연산 (순수 Python/PyTorch)
-│   │   ├── model.py            ← HFDClassifier 신경망 정의
-│   │   └── preprocessing.py    ← 이미지 → 텐서 변환 파이프라인
-│   ├── infra/                  ← 외부 의존성 처리 (파일I/O, 장애 방어)
-│   │   └── model_loader.py     ← .pt 가중치 로드 + 상태 관리
-│   └── routes/                 ← HTTP 엔드포인트
-│       └── health.py           ← GET /health
-└── tests/                      ← TDD 테스트
-    ├── test_model_architecture.py  ← L1: 구조 검증
-    ├── test_preprocessing.py       ← L1+L2: 전처리 검증
-    ├── test_inference.py           ← L2: 추론 로직 검증
-    ├── test_health.py              ← L1+L3: API 응답 + 장애 방어
-    └── test_e2e_real_image.py      ← 실제 이미지 E2E 검증
+├── src/
+│   ├── main.py              ← FastAPI 앱 팩토리 (진입점)
+│   ├── config.py            ← 모든 하이퍼파라미터 중앙 관리
+│   ├── routes/
+│   │   ├── health.py        ← GET /health (서버 상태 확인)
+│   │   └── analyze.py       ← POST /analyze (핵심: 이미지 → 결과)
+│   ├── core/                ← AI 도메인 로직
+│   │   ├── model.py         ← HFDClassifier (EfficientNet-B2 + 4 Heads)
+│   │   ├── preprocessing.py ← 이미지 → 텐서 변환 파이프라인
+│   │   ├── augmentation.py  ← 학습/추론용 이미지 변환
+│   │   ├── iq_scorer.py     ← 원점수 → IQ + 백분위 계산
+│   │   ├── item_mapping.py  ← 60문항 번호 매핑 테이블
+│   │   └── onnx_converter.py← PyTorch → ONNX 변환 스크립트
+│   └── infra/               ← 인프라/시스템 계층
+│       ├── engine_protocol.py   ← InferenceEngine Protocol (공통 인터페이스)
+│       ├── model_loader.py      ← TensorRT → ONNX Fallback 로더
+│       ├── onnx_inference.py    ← ONNX Runtime 엔진
+│       ├── tensorrt_engine.py   ← TensorRT Native 엔진 (GPU 최적화)
+│       ├── tensorrt_ort_engine.py ← TensorRT + ORT 혼합 엔진
+│       └── logger.py            ← structlog 기반 JSON 로거
+└── tests/
+    ├── test_model_architecture.py ← L1: Shape 검증
+    ├── test_preprocessing.py      ← L1/L2: 전처리 검증
+    ├── test_inference.py          ← L2: 동결/추론 검증
+    ├── test_health.py             ← L3: Graceful Degradation
+    └── test_e2e_real_image.py     ← E2E: 실제 이미지 통합
 ```
 
 ---
 
-## 2. 요청 처리 흐름 (Request Flow)
+## 2. HTTP 요청 처리 흐름 (POST /analyze)
 
 ```mermaid
 sequenceDiagram
-    participant C as Client<br/>(Node.js Gateway)
-    participant R as routes/health.py<br/>(HTTP Layer)
-    participant MS as ModelState<br/>(App State)
-    participant ML as model_loader.py<br/>(Infra Layer)
-    participant P as preprocessing.py<br/>(Core)
-    participant M as HFDClassifier<br/>(Core/model.py)
+    participant C as Client<br/>(Node.js API Gateway)
+    participant R as routes/analyze.py
+    participant V as _validate_image_file()
+    participant P as core/augmentation.py<br/>get_val_transform()
+    participant E as infra/InferenceEngine<br/>(ONNX or TensorRT)
+    participant S as core/iq_scorer.py
 
-    Note over C,M: 서버 시작 시 (startup)
-    ML->>ML: path.exists() 확인
-    ML->>M: HFDClassifier 생성 + .pt 로드
-    ML->>MS: ModelState(male=모델, female=모델)
+    C->>R: POST /analyze<br/>multipart: file + age + child_gender + figure_gender
 
-    Note over C,M: 실제 추론 요청 시
-    C->>R: POST /infer {image, gender}
-    R->>MS: app.state.model_state 조회
-    MS-->>R: male_model or female_model
-    R->>P: create_transform_pipeline(config)
-    P-->>R: Tensor (1, 3, 260, 260)
-    R->>M: model(tensor)
-    M-->>R: (logits_a, logits_b, logits_c, logits_d)
-    R->>R: torch.sigmoid(logits) 적용
-    R-->>C: JSON {head_a: [...], head_b: [...], ...}
+    R->>V: 파일 유효성 검사
+    Note over V: ① 0바이트 체크<br/>② Content-Type 허용 목록<br/>③ 매직 바이트 (JPEG/PNG/BMP/WebP)<br/>④ PIL.verify()
+    V-->>R: 통과 또는 400 Bad Request
+
+    R->>R: figure_gender로 엔진 선택<br/>male_engine or female_engine
+    Note over R: 엔진 None이면 503 반환
+
+    R->>P: PIL Image
+    P-->>R: Tensor (1, 3, 260, 260)<br/>float32 numpy
+
+    R->>E: engine.run(img_np)
+    Note over E: ONNX Session.run()<br/>or TensorRT execute()
+    E-->>R: (head_a, head_b, head_c, head_d)<br/>각각 numpy 배열
+
+    R->>R: _logits_to_item_results()<br/>Sigmoid → 60문항 0/1 결과
+    R->>R: _compute_head_scores()<br/>4개 그룹 원점수 합산
+
+    R->>S: raw_score + age + gender
+    Note over S: IQ = 100 + 15×((점수-M)/SD)<br/>전국 규준 데이터 적용
+    S-->>R: iq, percentile
+
+    R-->>C: JSON 응답<br/>items(60문항) + head_scores + raw_score + iq + percentile
 ```
 
 ---
 
-## 3. HFDClassifier 내부 텐서 변환 흐름 (Architecture)
+## 3. 서버 부팅 시 엔진 로딩 전략 (Fallback Chain)
 
 ```mermaid
-graph LR
-    subgraph Input["입력 이미지"]
-        I["PIL Image<br/>(512×512, RGB)"]
-    end
+flowchart TD
+    Start([서버 시작<br/>main.py: create_app]) --> LC[load_models 호출]
 
-    subgraph Preprocessing["preprocessing.py"]
-        P1["Resize(260×260)"]
-        P2["ToTensor<br/>uint8 → float32"]
-        P3["Normalize<br/>mean=(0.485,0.456,0.406)<br/>std=(0.229,0.224,0.225)"]
-    end
+    LC --> GPU{CUDA 사용 가능?}
 
-    subgraph Model["model.py: HFDClassifier"]
-        B["EfficientNet-B2<br/>backbone.features<br/>(❄️ 동결: requires_grad=False)"]
-        G["avgpool<br/>Global Average Pooling"]
-        F["flatten(1)<br/>(B, 1408)"]
+    GPU -->|Yes| TRT{.engine 파일<br/>남녀 모두 존재?}
+    TRT -->|Yes| LoadTRT[TensorRtNativeEngine 로드<br/>engine_type = 'tensorrt']
+    TRT -->|No| ONNX_FB[ONNX로 Fallback]
+    GPU -->|No| ONNX_FB
 
-        subgraph Heads["4개 Multi-Head (학습 가능)"]
-            HA["head_a<br/>Linear(1408→19)<br/>머리/얼굴"]
-            HB["head_b<br/>Linear(1408→14)<br/>몸통/비례"]
-            HC["head_c<br/>Linear(1408→16)<br/>사지/말단"]
-            HD["head_d<br/>Linear(1408→11)<br/>의복/질적"]
-        end
-    end
+    ONNX_FB --> ONN{.onnx 파일<br/>남녀 모두 존재?}
+    ONN -->|Yes| LoadONNX[OnnxInferenceEngine 로드<br/>engine_type = 'onnx']
+    ONN -->|No| NoModel[ModelState 빈 상태<br/>engine_type = 'none']
 
-    subgraph Output["출력 (Raw Logits)"]
-        O["sigmoid 적용 후<br/>각 항목 [0,1] 확률값<br/>총 60개 분류 결과"]
-    end
+    LoadTRT --> Ready([서버 정상 기동<br/>모든 요청 처리 가능])
+    LoadONNX --> Ready
+    NoModel --> Degraded([서버 기동은 됨<br/>/analyze 요청 시 503])
 
-    I --> P1 --> P2 --> P3
-    P3 -->|"(1, 3, 260, 260)"| B
-    B -->|"(1, 1408, H, W)"| G
-    G -->|"(1, 1408, 1, 1)"| F
-    F --> HA & HB & HC & HD
-    HA & HB & HC & HD --> O
-
-    style B fill:#e8f5e9,stroke:#4caf50
-    style Heads fill:#e3f2fd,stroke:#2196f3
+    style LoadTRT fill:#e8f5e9,stroke:#4caf50
+    style LoadONNX fill:#fff3e0,stroke:#ff9800
+    style NoModel fill:#fce4ec,stroke:#e91e63
+    style Ready fill:#e3f2fd,stroke:#2196f3
+    style Degraded fill:#fafafa,stroke:#9e9e9e
 ```
+
+> **핵심**: 모델 파일이 없어도 서버는 **절대 죽지 않습니다**. `/health`는 항상 200 OK를 반환하고, `/analyze` 호출 시에만 503을 반환합니다. (Graceful Degradation)
 
 ---
 
-## 4. 모델 로딩과 장애 방어 상태 흐름 (Infra Layer)
+## 4. 추론 엔진 계층 구조 (Strategy Pattern)
 
 ```mermaid
-stateDiagram-v2
-    [*] --> Loading: 서버 기동
-
-    state Loading {
-        [*] --> CheckMale: _try_load(male)
-        CheckMale --> MaleLoaded: 파일 존재 ✅
-        CheckMale --> MaleNull: 파일 없음 ⚠️
-        MaleLoaded --> CheckFemale
-        MaleNull --> CheckFemale
-
-        CheckFemale --> FemaleLoaded: 파일 존재 ✅
-        CheckFemale --> FemaleNull: 파일 없음 ⚠️
+classDiagram
+    class InferenceEngine {
+        <<Protocol>>
+        +run(image: ndarray) tuple
+        +output_names list[str]
     }
 
-    Loading --> Ready: ModelState 구성 완료
-    
-    state Ready {
-        [*] --> HealthOK: GET /health → 200 OK
-        HealthOK --> BothLoaded: male=true, female=true
-        HealthOK --> PartialLoaded: male=true, female=false (또는 반대)
-        HealthOK --> NoneLoaded: male=false, female=false
+    class OnnxInferenceEngine {
+        -_session: InferenceSession
+        -_input_name: str
+        -_output_names: list
+        +run(image) tuple
+        +providers list
     }
 
-    note right of NoneLoaded: 서버는 살아있음!\n추론만 불가능한 상태
+    class TensorRtNativeEngine {
+        +run(image) tuple
+        +output_names list
+    }
+
+    class TensorRtOrtEngine {
+        +run(image) tuple
+        +output_names list
+    }
+
+    InferenceEngine <|.. OnnxInferenceEngine : implements
+    InferenceEngine <|.. TensorRtNativeEngine : implements
+    InferenceEngine <|.. TensorRtOrtEngine : implements
+
+    class ModelState {
+        +male_engine: InferenceEngine
+        +female_engine: InferenceEngine
+        +engine_type: str
+        +male_loaded bool
+        +female_loaded bool
+    }
+
+    ModelState o-- InferenceEngine
+```
+
+> **핵심**: `analyze.py`는 `engine.run(img_np)` 한 줄만 호출합니다. 엔진이 ONNX든 TensorRT든 **동일 인터페이스**이므로 라우터 코드는 전혀 바뀌지 않습니다. (Protocol 기반 duck typing)
+
+---
+
+## 5. 데이터 변환 흐름 요약
+
+```
+[클라이언트 이미지 bytes]
+       │  (multipart/form-data)
+       ▼
+[_validate_image_file()]
+  ✓ 0바이트 거부
+  ✓ Content-Type 허용 목록
+  ✓ 매직 바이트 (JPEG/PNG/BMP/WebP)
+  ✓ PIL.verify() 이중 검증
+       │
+       ▼
+[PIL Image.open().convert("RGB")]
+       │
+       ▼
+[get_val_transform(260)]
+  Resize(260, 260)
+  ToTensor  → [0.0, 1.0] float32
+  Normalize → 채널별 ImageNet 통계 적용
+       │ Tensor shape: (1, 3, 260, 260)
+       ▼
+[engine.run(img_np)]
+  EfficientNet-B2 Backbone (frozen)
+  → GlobalAvgPool → flatten → [1408]
+  → head_a: Linear(1408→19)  ← 머리/얼굴
+  → head_b: Linear(1408→14)  ← 몸통/비례
+  → head_c: Linear(1408→16)  ← 사지/말단
+  → head_d: Linear(1408→11)  ← 의복/질적
+       │ Raw Logits: (1,19), (1,14), (1,16), (1,11)
+       ▼
+[_logits_to_item_results()]
+  Sigmoid 적용 → 확률
+  ≥ 0.5 → 1 (통과), < 0.5 → 0 (미통과)
+       │ 60문항 dict {"1": 1, "2": 0, ...}
+       ▼
+[score_to_result()]
+  raw_score = sum(items)  ← 0~60점
+  IQ = 100 + 15 × ((점수 - M) / SD)  ← 전국 규준
+  백분위 = IQ_TO_PERCENTILE[iq]
+       │
+       ▼
+[최종 JSON 응답]
+  items: {60문항 결과}
+  head_scores: {a,b,c,d 원점수}
+  raw_score, iq, percentile
+  child_info: {age, child_gender, figure_gender}
 ```
 
 ---
 
-## 5. 레이어 간 의존 관계 (Dependency Graph)
+## 6. 현재 구현 상태 요약표
 
-```mermaid
-graph TD
-    CFG["📋 config.py<br/>ModelConfig<br/>(단일 진실 공급원)"]
-
-    PREP["🔄 preprocessing.py<br/>create_transform_pipeline()"]
-    MDL["🤖 model.py<br/>HFDClassifier"]
-    LOADER["🔌 model_loader.py<br/>load_models() → ModelState"]
-    MAIN["🚀 main.py<br/>create_app() [Factory]"]
-    HEALTH["🌐 routes/health.py<br/>GET /health"]
-
-    CFG -->|"input_size=260<br/>normalize_mean/std"| PREP
-    CFG -->|"head_a/b/c/d size<br/>backbone_feature_dim"| MDL
-    CFG -->|"model_path (male/female)<br/>device"| LOADER
-    CFG --> MAIN
-
-    MDL -->|"HFDClassifier 인스턴스"| LOADER
-    LOADER -->|"ModelState"| MAIN
-    MAIN -->|"app.state.model_state"| HEALTH
-    PREP -->|"transforms.Compose"| HEALTH
-
-    style CFG fill:#fff3e0,stroke:#ff9800,stroke-width:3px
-    style MDL fill:#e3f2fd,stroke:#2196f3
-    style LOADER fill:#fce4ec,stroke:#e91e63
-```
-
----
-
-## 6. 핵심 설계 원칙 요약
-
-| 관심사 | 담당 파일 | 핵심 원칙 |
-|:---|:---|:---|
-| **하이퍼파라미터** | `config.py` | 하드코딩 제로 — 모든 수치가 여기서 관리 |
-| **신경망 구조** | `core/model.py` | backbone 동결 / head만 학습 / Logits 반환 |
-| **이미지 변환** | `core/preprocessing.py` | Config 기반 Normalize — 통계값 교체 가능 |
-| **가중치 로딩** | `infra/model_loader.py` | 파일 없어도 서버 기동 — 상태로 추적 |
-| **HTTP API** | `routes/health.py` | 모델 상태를 JSON으로 외부에 노출 |
-| **앱 조립** | `main.py` | Factory 패턴 — 테스트 격리 가능 |
-
----
-**작성자**: Antigravity AI Assistant  
-**작성일**: 2026-03-14
+| 컴포넌트 | 파일 | 상태 | 역할 |
+|:---|:---|:---:|:---|
+| FastAPI 앱 진입점 | `src/main.py` | ✅ | 앱 팩토리, 라우터 등록 |
+| 설정 중앙 관리 | `src/config.py` | ✅ | 하이퍼파라미터 하드코딩 방지 |
+| 이미지 분석 API | `src/routes/analyze.py` | ✅ | 입력 검증 + 추론 + IQ 산출 |
+| 헬스 체크 API | `src/routes/health.py` | ✅ | CPU/메모리/모델 상태 반환 |
+| HFD 모델 | `src/core/model.py` | ✅ | EfficientNet-B2 + 4 Linear Heads |
+| 전처리 파이프라인 | `src/core/preprocessing.py` | ✅ | Resize → ToTensor → Normalize |
+| IQ 점수 계산 | `src/core/iq_scorer.py` | ✅ | 전국 규준 기반 IQ + 백분위 |
+| 엔진 공통 인터페이스 | `src/infra/engine_protocol.py` | ✅ | Protocol (duck typing) |
+| ONNX 추론 엔진 | `src/infra/onnx_inference.py` | ✅ | CPU 기본 추론 |
+| TensorRT 엔진 | `src/infra/tensorrt_engine.py` | ✅ | GPU 최적화 추론 |
+| 모델 로더 | `src/infra/model_loader.py` | ✅ | TRT → ONNX Fallback 전략 |
+| 구조화 로거 | `src/infra/logger.py` | ✅ | structlog JSON 포맷 |
+| ONNX 변환기 | `src/core/onnx_converter.py` | ✅ | PyTorch → ONNX 스크립트 |

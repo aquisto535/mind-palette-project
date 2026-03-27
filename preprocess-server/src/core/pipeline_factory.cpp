@@ -16,7 +16,8 @@ FilterPipeline PipelineFactory::createHybridPipeline() {
     FilterPipeline pipeline;
     
     // Step 1: Initial Resize (768) to optimize AdaptiveThreshold and FindContours speed (< 100ms target)
-    pipeline.add(std::make_unique<ResizeFilter>(768));
+    // withPadding=false to avoid black bars interfering with ROI detection
+    pipeline.add(std::make_unique<ResizeFilter>(768, false));
     
     // Step 2: Denoise (Gaussian Only)
     // Gaussian: 5x5, Median: 0 (Disabled)

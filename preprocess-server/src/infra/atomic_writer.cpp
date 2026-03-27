@@ -1,18 +1,22 @@
-﻿#include "infra/atomic_writer.h"
+#include "infra/atomic_writer.h"
 #include "utils/Logger.h"
 #include <fstream>
 
-bool AtomicFileWriter::write(const cv::Mat& image, const std::string& path, const std::string& requestId) {
-    if (image.empty()) {
+bool AtomicFileWriter::write(const cv::Mat& image, const std::string& path, const std::string& requestId) 
+{
+    if (image.empty()) 
+    {
         return false;
     }
     
-    std::string tempPath = getTempPath(path);
+    std::string tempPath = getTempPath(path); // 임시 파일 경로 생성
     
-    try {
+    try
+    {
         // Ensure parent directory exists
         fs::path filePath(path);
-        if (filePath.has_parent_path()) {
+        if (filePath.has_parent_path())
+        {
             fs::create_directories(filePath.parent_path());
         }
         
@@ -22,42 +26,36 @@ bool AtomicFileWriter::write(const cv::Mat& image, const std::string& path, cons
         
         // Try cv::imencode + binary write (more reliable than cv::imwrite)
         std::vector<uchar> buffer;
-        try {
-            if (cv::imencode(ext, image, buffer)) {
+        try 
+        {
+            if (cv::imencode(ext, image, buffer)) // 이미지를 버퍼에 인코딩
+            {
                 // Write binary data to temp file
                 std::ofstream ofs(tempPath, std::ios::binary);
-                if (ofs && !buffer.empty()) {
-                    ofs.write(reinterpret_cast<const char*>(buffer.data()), buffer.size());
+                if (ofs && !buffer.empty())
+                {
+                    ofs.write(reinterpret_cast<const char*>(buffer.data()), buffer.size()); // 버퍼에 인코딩된 이미지 데이터를 파일에 쓴다
                     ofs.close();
-                    if (ofs) {
+                    if (ofs) 
+                    {
                         // Atomic rename
-                        fs::rename(tempPath, path);
+                        fs::rename(tempPath, path); // 원본 파일로 원자적으로 이름 변경
                         return true;
                     }
                 }
             }
-        } catch (const cv::Exception& e) {
+
+        } 
+        catch (const cv::Exception& e)
+        {
             LOG_ERROR(requestId, "cv::imencode failed: {}", e.what());
-        } catch (...) {
-            // Ignore to try fallback
+        } 
+        catch (...)
+        {
+            // Unknown encoding error
         }
         
-        LOG_WARN(requestId, "Failed to write image (imencode). Attempting PPM fallback...");
-        
-        // Fallback to PPM
-        std::string ppmPath = path;
-        if (ppmPath.find(".ppm") == std::string::npos) {
-            ppmPath = fs::path(path).replace_extension(".ppm").string();
-        }
-        std::string tempPpmPath = getTempPath(ppmPath);
-        
-        if (saveAsPPM(image, tempPpmPath)) {
-            fs::rename(tempPpmPath, ppmPath);
-            LOG_INFO(requestId, "Fallback success: Saved as {}", ppmPath);
-            try { if (fs::exists(tempPath)) fs::remove(tempPath); } catch (...) {}
-            return true;
-        }
-        
+        LOG_ERROR(requestId, "cv::imencode failed for path: {}", path);
         return false;
         
     } catch (const std::exception& e) {
@@ -118,26 +116,5 @@ bool AtomicFileWriter::atomicDelete(const std::string& path) {
 
 std::string AtomicFileWriter::getTempPath(const std::string& path) {
     return path + ".tmp";
-}
-
-bool AtomicFileWriter::saveAsPPM(const cv::Mat& image, const std::string& path) {
-    std::ofstream ofs(path);
-    if (!ofs) return false;
-    
-    ofs << "P3\n" << image.cols << " " << image.rows << "\n255\n";
-    
-    cv::Mat rgb;
-    if (image.channels() == 1) cv::cvtColor(image, rgb, cv::COLOR_GRAY2RGB);
-    else if (image.channels() == 4) cv::cvtColor(image, rgb, cv::COLOR_BGRA2RGB);
-    else cv::cvtColor(image, rgb, cv::COLOR_BGR2RGB);
-
-    for(int y=0; y<rgb.rows; ++y) {
-        for(int x=0; x<rgb.cols; ++x) {
-            cv::Vec3b p = rgb.at<cv::Vec3b>(y,x);
-            ofs << (int)p[0] << " " << (int)p[1] << " " << (int)p[2] << " ";
-        }
-        ofs << "\n";
-    }
-    return true;
 }
 

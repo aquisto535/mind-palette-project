@@ -74,9 +74,9 @@ export interface DimensionCheckResult {
   error?: string;
 }
 
-export function checkImageDimensions(filePath: string): DimensionCheckResult {
+export async function checkImageDimensions(filePath: string): Promise<DimensionCheckResult> {
   try {
-    const fileBuffer = fs.readFileSync(filePath);
+    const fileBuffer = await fs.promises.readFile(filePath);
     const dimensions = imageSize(fileBuffer);
     const width = dimensions.width ?? 0;
     const height = dimensions.height ?? 0;
