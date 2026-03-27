@@ -1,5 +1,5 @@
 import fs from 'node:fs/promises';
-import path from 'node:path';
+import { getSafePath } from '../utils/pathValidator';
 import logger from '../utils/logger';
 import { hasValidMagicBytes, checkImageDimensions, UPLOAD_DIR } from '../utils/fileStorage';
 
@@ -17,23 +17,7 @@ export class ImageValidator {
    */
   static async validate(file: Express.Multer.File): Promise<ValidationResult> {
     try {
-      const filePath = path.resolve(file.path);
-      const resolvedUploadDir = path.resolve(UPLOAD_DIR);
-
-      // Windows case-insensitivity handling
-      const isWindows = process.platform === 'win32';
-      const checkPath = isWindows ? filePath.toLowerCase() : filePath;
-      const checkUploadDir = (isWindows ? resolvedUploadDir.toLowerCase() : resolvedUploadDir) + path.sep;
-
-      // 1. Path Injection Protection
-      if (!checkPath.startsWith(checkUploadDir)) {
-        logger.error('Security Alert: Path traversal attempt blocked', { 
-          path: file.path, 
-          resolvedPath: filePath, 
-          expectedDir: resolvedUploadDir 
-        });
-        return { valid: false, error: 'Access denied' };
-      }
+      const filePath = getSafePath(file.path, UPLOAD_DIR);
 
       // 2. L2: Magic Byte Validation (Header-only 12 bytes)
       const fd = await fs.open(filePath, 'r');

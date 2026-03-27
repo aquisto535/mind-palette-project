@@ -74,9 +74,12 @@ export interface DimensionCheckResult {
   error?: string;
 }
 
+import { getSafePath } from './pathValidator';
+
 export async function checkImageDimensions(filePath: string): Promise<DimensionCheckResult> {
   try {
-    const fileBuffer = await fs.promises.readFile(filePath);
+    const safePath = getSafePath(filePath, UPLOAD_DIR);
+    const fileBuffer = await fs.promises.readFile(safePath);
     const dimensions = imageSize(fileBuffer);
     const width = dimensions.width ?? 0;
     const height = dimensions.height ?? 0;

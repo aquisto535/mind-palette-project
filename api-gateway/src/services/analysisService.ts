@@ -4,6 +4,7 @@ import axios from 'axios';
 import FormData from 'form-data';
 import { RESULT_DIR, UPLOAD_DIR } from '../utils/fileStorage';
 import { saveWithHash } from '../utils/hashIntegrity';
+import { getSafePath } from '../utils/pathValidator';
 import logger, { maskPII } from '../utils/logger';
 
 const PREPROCESS_SERVER_URL = process.env.PREPROCESS_SERVER_URL || 'http://127.0.0.1:8081';
@@ -88,24 +89,9 @@ async function invokePreprocessServer(filePath: string, requestId: string): Prom
 
 async function invokeAiServer(processedImagePath: string, requestId: string): Promise<AnalysisResult> {
   const formData = new FormData();
-  const resolvedPath = path.resolve(processedImagePath);
-  const resolvedUploadDir = path.resolve(UPLOAD_DIR);
+  const safeProcessedPath = getSafePath(processedImagePath, UPLOAD_DIR, 'SECURITY_PATH_VIOLATION');
 
-  // Windows case-insensitivity handling
-  const isWindows = process.platform === 'win32';
-  const checkPath = isWindows ? resolvedPath.toLowerCase() : resolvedPath;
-  const checkUploadDir = (isWindows ? resolvedUploadDir.toLowerCase() : resolvedUploadDir) + path.sep;
-
-  if (!checkPath.startsWith(checkUploadDir)) {
-    logger.error('Security Alert: AI server path violation', { 
-      path: processedImagePath, 
-      resolvedPath, 
-      expectedDir: resolvedUploadDir 
-    });
-    throw new Error('SECURITY_PATH_VIOLATION');
-  }
-
-  formData.append('file', await fs.readFile(resolvedPath), path.basename(resolvedPath));
+  formData.append('file', await fs.readFile(safeProcessedPath), path.basename(safeProcessedPath));
 
   const aiRes = await axios.post(`${AI_SERVER_URL}/analyze`, formData, {
     headers: { ...formData.getHeaders(), 'X-Request-ID': requestId }
@@ -120,24 +106,21 @@ async function cleanupTempImages(originalPath: string, processedPath: string, re
   const keepImages = process.env.KEEP_IMAGES === 'true';
   if (keepImages) return;
 
-  const resolvedUploadDir = path.resolve(UPLOAD_DIR);
-  const isWindows = process.platform === 'win32';
-  const checkUploadDir = (isWindows ? resolvedUploadDir.toLowerCase() : resolvedUploadDir) + path.sep;
-
   const validateAndUnlink = async (targetPath: string) => {
-    const resolvedPath = path.resolve(targetPath);
-    const checkPath = isWindows ? resolvedPath.toLowerCase() : resolvedPath;
-
-    if (!checkPath.startsWith(checkUploadDir)) {
-      logger.warn('Cleanup blocked: path outside upload directory', { path: targetPath, requestId });
-      return;
+    try {
+      const safePath = getSafePath(targetPath, UPLOAD_DIR);
+      await fs.unlink(safePath).catch(e => { 
+        if (e.code !== 'ENOENT') {
+          logger.error('File unlink failed:', { path: targetPath, error: e.message, requestId });
+        }
+      });
+    } catch (e) {
+      logger.warn('Cleanup blocked or invalid path:', { 
+        path: targetPath, 
+        requestId,
+        error: e instanceof Error ? e.message : String(e)
+      });
     }
-
-    await fs.unlink(resolvedPath).catch(e => { 
-      if (e.code !== 'ENOENT') {
-        logger.error('File unlink failed:', { path: targetPath, error: e.message, requestId });
-      }
-    });
   };
 
   try {
