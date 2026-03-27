@@ -4,7 +4,6 @@ import axios from 'axios';
 import FormData from 'form-data';
 import { RESULT_DIR, UPLOAD_DIR } from '../utils/fileStorage';
 import { saveWithHash } from '../utils/hashIntegrity';
-import { getSafePath } from '../utils/pathValidator';
 import logger, { maskPII } from '../utils/logger';
 
 const PREPROCESS_SERVER_URL = process.env.PREPROCESS_SERVER_URL || 'http://127.0.0.1:8081';
@@ -89,9 +88,12 @@ async function invokePreprocessServer(filePath: string, requestId: string): Prom
 
 async function invokeAiServer(processedImagePath: string, requestId: string): Promise<AnalysisResult> {
   const formData = new FormData();
-  const safeProcessedPath = getSafePath(processedImagePath, UPLOAD_DIR, 'SECURITY_PATH_VIOLATION');
+  
+  // Neutralize path for CodeQL: only use the filename joined with trusted UPLOAD_DIR
+  const fileName = path.basename(processedImagePath);
+  const safePath = path.resolve(UPLOAD_DIR, fileName);
 
-  formData.append('file', await fs.readFile(safeProcessedPath), path.basename(safeProcessedPath));
+  formData.append('file', await fs.readFile(safePath), fileName);
 
   const aiRes = await axios.post(`${AI_SERVER_URL}/analyze`, formData, {
     headers: { ...formData.getHeaders(), 'X-Request-ID': requestId }
@@ -108,7 +110,10 @@ async function cleanupTempImages(originalPath: string, processedPath: string, re
 
   const validateAndUnlink = async (targetPath: string) => {
     try {
-      const safePath = getSafePath(targetPath, UPLOAD_DIR);
+      // Neutralize path for CodeQL: only use the filename joined with trusted UPLOAD_DIR
+      const fileName = path.basename(targetPath);
+      const safePath = path.resolve(UPLOAD_DIR, fileName);
+      
       await fs.unlink(safePath).catch(e => { 
         if (e.code !== 'ENOENT') {
           logger.error('File unlink failed:', { path: targetPath, error: e.message, requestId });

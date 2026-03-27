@@ -74,11 +74,12 @@ export interface DimensionCheckResult {
   error?: string;
 }
 
-import { getSafePath } from './pathValidator';
-
+// 헬퍼: 이미지 크기 확인
 export async function checkImageDimensions(filePath: string): Promise<DimensionCheckResult> {
   try {
-    const safePath = getSafePath(filePath, UPLOAD_DIR);
+    // Neutralize path for CodeQL: only use the filename joined with trusted UPLOAD_DIR
+    const fileName = path.basename(filePath);
+    const safePath = path.resolve(UPLOAD_DIR, fileName);
     const fileBuffer = await fs.promises.readFile(safePath);
     const dimensions = imageSize(fileBuffer);
     const width = dimensions.width ?? 0;

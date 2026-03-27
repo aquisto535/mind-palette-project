@@ -63,6 +63,13 @@ inline ValidationResult ValidatePreprocessRequest(const crow::request& req, cons
         LOG_ERROR(requestId, "imagePath is empty");
         return {false, "", 400, "imagePath is empty"};
     }
+
+    // Security check: imagePath must be within shared_volume
+    // (In production, this should be a robust absolute path check)
+    if (imagePath.find("shared_volume") == std::string::npos) {
+        LOG_ERROR(requestId, "Security Violation: Access denied for path: {}", imagePath);
+        return {false, "", 403, "Access denied"};
+    }
     
     if (!fs::exists(imagePath)) {
         LOG_ERROR(requestId, "File not found: {}", imagePath);

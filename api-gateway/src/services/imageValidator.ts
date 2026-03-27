@@ -1,5 +1,5 @@
 import fs from 'node:fs/promises';
-import { getSafePath } from '../utils/pathValidator';
+import path from 'node:path';
 import logger from '../utils/logger';
 import { hasValidMagicBytes, checkImageDimensions, UPLOAD_DIR } from '../utils/fileStorage';
 
@@ -17,20 +17,24 @@ export class ImageValidator {
    */
   static async validate(file: Express.Multer.File): Promise<ValidationResult> {
     try {
-      const filePath = getSafePath(file.path, UPLOAD_DIR);
+      // Neutralize path for CodeQL: only use the filename joined with trusted UPLOAD_DIR
+      const fileName = path.basename(file.path);
+      const filePath = path.resolve(UPLOAD_DIR, fileName);
 
       // 2. L2: Magic Byte Validation (Header-only 12 bytes)
       const fd = await fs.open(filePath, 'r');
-      const headerBuffer = Buffer.allocUnsafe(12);
+      const headerBuffer = Buffer.alloc(12); // Use zero-initialized buffer
       try {
-        await fd.read(headerBuffer, 0, 12, 0);
+        const { bytesRead } = await fd.read(headerBuffer, 0, 12, 0);
+        const actualHeader = headerBuffer.subarray(0, bytesRead);
+        
+        if (!hasValidMagicBytes(actualHeader)) {
+          await fd.close(); // Close before early return
+          await fs.unlink(filePath).catch(() => undefined);
+          return { valid: false, error: '파일 내용이 올바른 이미지 형식이 아닙니다.' };
+        }
       } finally {
         await fd.close();
-      }
-
-      if (!hasValidMagicBytes(headerBuffer)) {
-        await fs.unlink(filePath).catch(() => undefined);
-        return { valid: false, error: '파일 내용이 올바른 이미지 형식이 아닙니다.' };
       }
 
       // 3. L5: Resolution Limit (Pixel Flood protection)
