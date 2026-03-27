@@ -6,9 +6,9 @@ import { RESULT_DIR, UPLOAD_DIR } from '../utils/fileStorage';
 import { saveWithHash } from '../utils/hashIntegrity';
 import logger, { maskPII } from '../utils/logger';
 
-const PREPROCESS_SERVER_URL = process.env.PREPROCESS_SERVER_URL || 'http://localhost:8081';
+const PREPROCESS_SERVER_URL = process.env.PREPROCESS_SERVER_URL || 'http://127.0.0.1:8081';
 // AI 서버 기본 포트는 ai-server/src/config.py :: ServerConfig.port = 8082 와 일치
-const AI_SERVER_URL = process.env.AI_SERVER_URL || 'http://localhost:8082';
+const AI_SERVER_URL = process.env.AI_SERVER_URL || 'http://127.0.0.1:8082';
 
 interface AnalysisResult {
   score: number;
@@ -65,22 +65,81 @@ function mapAiResponseToResult(ai: AiServerResponse): AnalysisResult {
   };
 }
 
-/**
- * 더미 분석 결과를 생성합니다.
- * 실제 AI 모델 연동 시 제거 또는 Mocking 용도로 사용
- */
-function generateDummyResult(): AnalysisResult {
-  return {
-    score: Math.floor(Math.random() * (95 - 70) + 70), // 70~95점 랜덤
-    percentile: Math.floor(Math.random() * (99 - 60) + 60),
-    date: new Date().toLocaleDateString(),
-    interpretation: "AI 분석 결과가 여기에 표시됩니다. (현재는 Mock 데이터입니다)",
-    details: {
-      creativity: 85,
-      expression: 90,
-      observational: 88
+async function invokePreprocessServer(filePath: string, requestId: string): Promise<{ processedImagePath: string; sanitized: boolean }> {
+  let processedImagePath = filePath;
+  let sanitized = false;
+  try {
+    const preprocessRes = await axios.post(`${PREPROCESS_SERVER_URL}/preprocess`, { imagePath: filePath }, { headers: { 'X-Request-ID': requestId } });
+    if (preprocessRes.data?.processedPath) {
+      processedImagePath = preprocessRes.data.processedPath;
+      sanitized = true;
+      logger.info('Preprocessing completed (L6 sanitized):', maskPII({ path: processedImagePath, requestId }));
+    } else {
+      logger.warn('L6 Sanitization skipped: preprocessing did not return processedPath', { requestId });
+    }
+  } catch (error: unknown) {
+    logger.warn('L6 Sanitization skipped: preprocessing failed, using original image:', {
+      error: error instanceof Error ? error.message : String(error),
+      requestId
+    });
+  }
+  return { processedImagePath, sanitized };
+}
+
+async function invokeAiServer(processedImagePath: string, requestId: string): Promise<AnalysisResult> {
+  const formData = new FormData();
+  
+  // Neutralize path for CodeQL: only use the filename joined with trusted UPLOAD_DIR
+  const fileName = path.basename(processedImagePath);
+  const safePath = path.resolve(UPLOAD_DIR, fileName);
+
+  formData.append('file', await fs.readFile(safePath), fileName);
+
+  const aiRes = await axios.post(`${AI_SERVER_URL}/analyze`, formData, {
+    headers: { ...formData.getHeaders(), 'X-Request-ID': requestId }
+  });
+
+  const resultData = mapAiResponseToResult(aiRes.data as AiServerResponse);
+  logger.info('AI Analysis completed:', { requestId });
+  return resultData;
+}
+
+async function cleanupTempImages(originalPath: string, processedPath: string, requestId: string): Promise<void> {
+  const keepImages = process.env.KEEP_IMAGES === 'true';
+  if (keepImages) return;
+
+  const validateAndUnlink = async (targetPath: string) => {
+    try {
+      // Neutralize path for CodeQL: only use the filename joined with trusted UPLOAD_DIR
+      const fileName = path.basename(targetPath);
+      const safePath = path.resolve(UPLOAD_DIR, fileName);
+      
+      await fs.unlink(safePath).catch(e => { 
+        if (e.code !== 'ENOENT') {
+          logger.error('File unlink failed:', { path: targetPath, error: e.message, requestId });
+        }
+      });
+    } catch (e) {
+      logger.warn('Cleanup blocked or invalid path:', { 
+        path: targetPath, 
+        requestId,
+        error: e instanceof Error ? e.message : String(e)
+      });
     }
   };
+
+  try {
+    await validateAndUnlink(originalPath);
+    if (processedPath !== originalPath) {
+      await validateAndUnlink(processedPath);
+    }
+    logger.info('Cleaned up temp image files', { requestId });
+  } catch (cleanupError) {
+    logger.error('Failed to clean up temp image files', { 
+      error: cleanupError instanceof Error ? cleanupError.message : String(cleanupError), 
+      requestId 
+    });
+  }
 }
 
 /**
@@ -89,7 +148,7 @@ function generateDummyResult(): AnalysisResult {
  * @param {string} requestId - 요청 추적을 위한 고유 ID
  * @returns {Promise<AnalysisResult>} 분석 결과 객체
  */
-export const processAnalysis = async (file: Express.Multer.File, requestId: string): Promise<AnalysisResult> => {
+export const processAnalysis = async (file: Express.Multer.File, requestId: string): Promise<AnalysisResult & { sanitized: boolean }> => {
   if (!file) {
     throw new Error('NO_FILE');
   }
@@ -99,66 +158,22 @@ export const processAnalysis = async (file: Express.Multer.File, requestId: stri
   const timestamp = Date.now();
   const resultPath = path.join(RESULT_DIR, `${timestamp}_result.json`);
 
-  // [Phase 3] C++ 전처리 서버 호출
-  let processedImagePath = file.path; // 기본값은 원본 이미지
+  let sanitized = false;
+  let processedImagePath = file.path;
+
   try {
-    const preprocessRes = await axios.post(`${PREPROCESS_SERVER_URL}/preprocess`, {
-      imagePath: file.path
-    }, {
-      headers: { 'X-Request-ID': requestId }
-    });
+    const preprocessResult = await invokePreprocessServer(file.path, requestId);
+    processedImagePath = preprocessResult.processedImagePath;
+    sanitized = preprocessResult.sanitized;
 
-    if (preprocessRes.data?.processedPath) {
-      processedImagePath = preprocessRes.data.processedPath;
-      logger.info('Preprocessing completed:', maskPII({ path: processedImagePath, requestId }));
-    }
-  } catch (error: unknown) {
-    logger.warn('Preprocessing failed, using original image:', {
-      error: error instanceof Error ? error.message : String(error),
-      requestId
-    });
+    const resultData = await invokeAiServer(processedImagePath, requestId);
+
+    const resultContent = JSON.stringify(resultData, null, 2);
+    await saveWithHash(resultContent, resultPath);
+    logger.info('Result saved:', maskPII({ path: resultPath, requestId }));
+
+    return { ...resultData, sanitized };
+  } finally {
+    await cleanupTempImages(file.path, processedImagePath, requestId);
   }
-
-  // Phase 4 - Python AI 서버 호출
-  let resultData: AnalysisResult;
-  try {
-    const formData = new FormData();
-    const resolvedPath = path.resolve(processedImagePath);
-    // ─────────────────────────────────────────────────────────
-    // P2 Fix: 트레일링 path.sep을 추가하여 sibling prefix bypass 방어
-    //   예: resolvedUploadDir = /foo/uploads
-    //       /foo/uploads_malicious/ → startsWith(/foo/uploads/) → false ✅
-    // ─────────────────────────────────────────────────────────
-    const resolvedUploadDir = path.resolve(UPLOAD_DIR) + path.sep;
-
-    if (!resolvedPath.startsWith(resolvedUploadDir)) {
-      throw new Error('SECURITY_PATH_VIOLATION');
-    }
-
-    formData.append('file', await fs.readFile(resolvedPath), path.basename(resolvedPath));
-
-    const aiRes = await axios.post(`${AI_SERVER_URL}/analyze`, formData, {
-      headers: {
-        ...formData.getHeaders(),
-        'X-Request-ID': requestId
-      }
-    });
-
-    resultData = mapAiResponseToResult(aiRes.data as AiServerResponse);
-    logger.info('AI Analysis completed:', { requestId });
-  } catch (error: unknown) {
-    logger.warn('AI Analysis failed, falling back to dummy data:', {
-      error: error instanceof Error ? error.message : String(error),
-      requestId
-    });
-    // AI 서버 실패 시에만 더미 데이터 생성 (또는 에러 상황에 따라 다르게 처리 가능)
-    resultData = generateDummyResult();
-  }
-
-  // 결과 JSON 파일 저장 (SHA-256 해시 함께 저장 — 무결성 검증용)
-  const resultContent = JSON.stringify(resultData, null, 2);
-  await saveWithHash(resultContent, resultPath);
-  logger.info('Result saved:', maskPII({ path: resultPath, requestId }));
-
-  return resultData;
 };

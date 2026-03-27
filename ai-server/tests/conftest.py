@@ -50,8 +50,9 @@ def onnx_model_path(config):
     path = os.path.join(tmpdir, "model.onnx")
 
     dummy_input = torch.zeros(1, config.input_channels, config.input_size, config.input_size)
-    # dynamo=False (기본값) 사용: TorchScript 기반 안정적 변환
-    # dynamo=True는 dynamic_axes 대신 dynamic_shapes가 필요하며 실험적 기능
+    # dynamo=True + dynamic_shapes: PyTorch 2.9+ 새 ONNX exporter 사용
+    batch_dim = torch.export.Dim("batch_size", min=1, max=16)
+    dynamic_shapes = {"x": {0: batch_dim}}
     torch.onnx.export(
         model,
         (dummy_input,),
@@ -59,8 +60,9 @@ def onnx_model_path(config):
         opset_version=config.onnx_opset_version,
         input_names=["input"],
         output_names=["head_a", "head_b", "head_c", "head_d"],
-        dynamic_axes={"input": {0: "batch_size"}},
+        dynamic_shapes=dynamic_shapes,
         do_constant_folding=True,
+        dynamo=True,
     )
 
     yield path

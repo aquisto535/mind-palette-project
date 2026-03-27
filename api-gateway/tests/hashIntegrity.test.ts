@@ -45,7 +45,7 @@ describe('Hash Integrity', () => {
     const resultPath = path.join(tmpDir, 'result.json');
     const content = JSON.stringify({ score: 85, percentile: 90 });
 
-    await saveWithHash(content, resultPath);
+    await saveWithHash(content, resultPath, tmpDir);
 
     const hashPath = resultPath + '.sha256';
     const hashExists = await fs.access(hashPath).then(() => true).catch(() => false);
@@ -59,7 +59,7 @@ describe('Hash Integrity', () => {
     const resultPath = path.join(tmpDir, 'result2.json');
     const content = JSON.stringify({ score: 75 });
 
-    await saveWithHash(content, resultPath);
+    await saveWithHash(content, resultPath, tmpDir);
 
     const hashPath = resultPath + '.sha256';
     const savedHash = (await fs.readFile(hashPath, 'utf-8')).trim();
@@ -72,21 +72,21 @@ describe('Hash Integrity', () => {
   it('[RED] 변조되지 않은 파일은 verifyHash가 true를 반환한다', async () => {
     const resultPath = path.join(tmpDir, 'valid.json');
     const content = JSON.stringify({ score: 88 });
-    await saveWithHash(content, resultPath);
+    await saveWithHash(content, resultPath, tmpDir);
 
-    const isValid = await verifyHash(resultPath);
+    const isValid = await verifyHash(resultPath, tmpDir);
     expect(isValid).toBe(true);
   });
 
   it('[RED] 결과 파일 변조 시 verifyHash가 false를 반환한다 (캐시 매칭 실패)', async () => {
     const resultPath = path.join(tmpDir, 'tampered.json');
     const original = JSON.stringify({ score: 88 });
-    await saveWithHash(original, resultPath);
+    await saveWithHash(original, resultPath, tmpDir);
 
     // 파일 변조 — 해시 파일은 그대로, 결과 파일만 수정
     await fs.writeFile(resultPath, JSON.stringify({ score: 99 }));
 
-    const isValid = await verifyHash(resultPath);
+    const isValid = await verifyHash(resultPath, tmpDir);
     expect(isValid).toBe(false);
   });
 
@@ -95,7 +95,7 @@ describe('Hash Integrity', () => {
     await fs.writeFile(resultPath, JSON.stringify({ score: 70 }));
     // .sha256 파일 없음
 
-    const isValid = await verifyHash(resultPath);
+    const isValid = await verifyHash(resultPath, tmpDir);
     expect(isValid).toBe(false);
   });
 });

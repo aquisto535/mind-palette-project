@@ -21,4 +21,14 @@ private:
     cv::Mat Binarize(const cv::Mat& input) const;
     cv::Rect GetContentROI(const cv::Mat& binary) const;
     cv::Mat Crop(const cv::Mat& image, const cv::Rect& roi) const;
+    
+    // Extraction Results structure
+    struct LetterboxParams {
+        cv::Mat resized_gray;
+        cv::Mat resized_binary;
+        cv::Rect target_roi;
+    };
+
+    LetterboxParams PrepareLetterbox(const cv::Mat& gray, const cv::Mat& binary, const cv::Rect& roi) const;
+    cv::Mat ConstructChannels(const LetterboxParams& params) const;
 };

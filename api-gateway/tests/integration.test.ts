@@ -1,7 +1,11 @@
 import request from 'supertest';
-import path from 'path';
-import fs from 'fs';
+import path from 'node:path';
+import fs from 'node:fs';
 import app from '../src/server';
+import axios from 'axios';
+
+jest.mock('axios');
+const mockedAxios = axios as jest.Mocked<typeof axios>;
 
 // 통합 테스트: 실제 파일 업로드 시나리오 검증
 describe('Integration Test: File Upload Flow', () => {
@@ -30,6 +34,26 @@ describe('Integration Test: File Upload Flow', () => {
   });
 
   test('POST /analyze - Should upload file and return analysis result', async () => {
+    mockedAxios.post.mockImplementation((url: string) => {
+      if (url.includes('/preprocess')) {
+        const mockProcessedPath = path.join(TEST_UPLOAD_DIR, 'integration_clean.jpg');
+        if (!fs.existsSync(mockProcessedPath)) fs.writeFileSync(mockProcessedPath, Buffer.from('fake-data'));
+        return Promise.resolve({ data: { processedPath: mockProcessedPath } });
+      }
+      if (url.includes('/analyze')) {
+        return Promise.resolve({
+          data: {
+            iq: 100,
+            percentile: 95,
+            raw_score: 10,
+            head_scores: { head_a: 10, head_b: 10, head_c: 10 },
+            date: '2026. 3. 27.'
+          }
+        });
+      }
+      return Promise.reject(new Error('Unknown URL'));
+    });
+
     const response = await request(app)
       .post('/analyze')
       .attach('image', DUMMY_IMAGE_PATH) // 파일 첨부 시뮬레이션

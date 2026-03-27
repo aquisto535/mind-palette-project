@@ -2,6 +2,10 @@ import request from 'supertest';
 import path from 'node:path';
 import fs from 'node:fs';
 import app from '../src/server';
+import axios from 'axios';
+
+jest.mock('axios');
+const mockedAxios = axios as jest.Mocked<typeof axios>;
 
 describe('File Upload Security', () => {
   const FIXTURES_DIR = path.join(__dirname, 'fixtures');
@@ -32,6 +36,16 @@ describe('File Upload Security', () => {
   });
 
   it('should accept valid image files (png/jpg/jpeg)', async () => {
+    mockedAxios.post.mockResolvedValue({
+      data: {
+        iq: 100,
+        percentile: 95,
+        raw_score: 10,
+        head_scores: { head_a: 10, head_b: 10, head_c: 10 },
+        date: '2026. 3. 27.'
+      }
+    });
+
     await request(app)
       .post('/analyze')
       .attach('image', TEST_IMAGE_PATH)

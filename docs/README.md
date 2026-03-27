@@ -12,7 +12,7 @@
 | 문서 | 용도 |
 |------|------|
 | [CODING_STANDARDS.md](standards/CODING_STANDARDS.md) | TDD, C++17, 커밋 규율, 코드 품질 표준 |
-| [ARCHITECTURE_DECISIONS.md](standards/ARCHITECTURE_DECISIONS.md) | 주요 아키텍처 선택과 근거 (ADR) |
+| [ARCHITECTURE_DECISIONS.md](standards/ARCHITECTURE_DECISIONS.md) | 주요 아키텍처 선택과 근거 (ADR-001 ~ ADR-024) |
 
 **💡 먼저 읽어야 할 문서**: 새 팀원은 이 디렉토리부터 시작하세요.
 
@@ -93,8 +93,9 @@ reference/
 
 | 문서 | 용도 |
 |------|------|
-| report_api_gateway.md | API Gateway 상태 리포트 |
-| report_frontend.md | Frontend 상태 리포트 |
+| [report_api_gateway.md](reports/report_api_gateway.md) | API Gateway 상태 리포트 |
+| [report_frontend.md](reports/report_frontend.md) | Frontend 상태 리포트 |
+| [preprocess_architecture_report.md](reports/preprocess_architecture_report.md) | **C++ 전처리 서버 아키텍처 리포트 (FilterPipeline)** |
 
 ---
 
@@ -165,4 +166,4 @@ reference/
 
 ---
 
-**마지막 업데이트**: 2026-03-01
+**마지막 업데이트**: 2026-03-21

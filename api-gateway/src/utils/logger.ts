@@ -5,7 +5,16 @@ const { combine, timestamp, printf, colorize, json } = winston.format;
 
 // 로그 포맷 정의
 const logFormat = printf(({ level, message, timestamp, ...metadata }) => {
-    const requestId = metadata.requestId ? ` [${metadata.requestId}]` : '';
+    // requestId가 존재하면 안전하게 문자열로 변환하여 출력 형식을 갖춘다.
+    // 객체인 경우 [object Object] 대신 JSON 문자열로 출력되도록 처리 (L1)
+    let requestIdStr = '';
+    if (metadata.requestId) {
+        requestIdStr = typeof metadata.requestId === 'object' 
+            ? JSON.stringify(metadata.requestId) 
+            : String(metadata.requestId);
+    }
+    
+    const requestId = requestIdStr ? ` [${requestIdStr}]` : '';
     let msg = `${timestamp}${requestId} [${level}] : ${message}`;
 
     // requestId는 이미 출력했으므로 메타데이터 복사본에서 삭제하여 중복 출력 방지

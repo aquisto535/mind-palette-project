@@ -62,9 +62,9 @@ private:
 template<class F>
 void ThreadPool::enqueue(F&& task) {
     {
-        std::lock_guard<std::mutex> lock(mutex_);
+        std::lock_guard<std::mutex> lock(mutex_);  // 큐 보호 잠금
         if (stop_) return;  // Don't accept new tasks after stop
-        tasks_.emplace(std::forward<F>(task));
+        tasks_.emplace(std::forward<F>(task)); // 람다를 큐에 넣음
     }
-    cv_.notify_one();
+    cv_.notify_one(); // 워커 스레드에게 작업이 왔음을 알림
 }

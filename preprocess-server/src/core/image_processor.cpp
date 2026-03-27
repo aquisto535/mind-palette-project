@@ -9,7 +9,6 @@
 #include "filters/invert_filter.h"
 #include "filters/rgb_convert_filter.h"
 #include "filters/hybrid_preprocess_filter.h"
-#include "filters/hybrid_preprocess_filter.h"
 #include "core/pipeline_factory.h"
 #include "utils/Logger.h"
 
@@ -27,36 +26,8 @@ cv::Mat ImageProcessor::Load(const std::string& path, const std::string& request
 cv::Mat ImageProcessor::Preprocess(const cv::Mat& input, const std::string& requestId) {
     if (input.empty()) return cv::Mat();
 
-    // 1단계: 정규화된 그레이스케일 획득
-    cv::Mat gray = NormalizeGrayscale(input);
-
-    // 2단계: 적응형 이진화 및 노이즈 제거
-    cv::Mat binary = ApplyAdaptiveBinarization(gray);
-
-    // 3단계: 스마트 ROI 크롭
-    cv::Rect roi = GetContentROI(binary);
-    cv::Mat roi_gray = Crop(gray, roi);
-    cv::Mat roi_binary = Crop(binary, roi);
-
-    if (roi_gray.empty() || roi_binary.empty()) return cv::Mat();
-
-    // 4단계: 레터박스 리사이즈 (각 채널 특성에 맞는 보간법 적용)
-    auto res_bin = ApplyLetterboxWithMetrics(roi_binary, kTargetSize, cv::INTER_NEAREST, 255);
-    auto res_gray = ApplyLetterboxWithMetrics(roi_gray, kTargetSize, cv::INTER_LINEAR, 255);
-
-    // 5단계: 하이브리드 채널 구성
-    // R: 그레이스케일, G: 반전 이진화(흰배경/검은선), B: 거리 변환
-    cv::Mat ch_gray = res_gray.canvas;
-    
-    cv::Mat ch_inv_binary;
-    cv::bitwise_not(res_bin.canvas, ch_inv_binary);
-    
-    cv::Mat ch_distance = GenerateDistanceMap(res_bin.canvas);
-
-    // 병합 및 반환
-    cv::Mat merged;
-    cv::merge(std::vector<cv::Mat>{ch_gray, ch_inv_binary, ch_distance}, merged);
-    return merged;
+    auto pipeline = PipelineFactory::createHybridPipeline();
+    return pipeline.execute(input);
 }
 
 cv::Mat ImageProcessor::NormalizeGrayscale(const cv::Mat& input) {
@@ -72,14 +43,10 @@ cv::Mat ImageProcessor::NormalizeGrayscale(const cv::Mat& input) {
 }
 
 cv::Mat ImageProcessor::ApplyAdaptiveBinarization(const cv::Mat& input) {
-    cv::Mat binary;
-    cv::adaptiveThreshold(input, binary, 255,
-                          cv::ADAPTIVE_THRESH_GAUSSIAN_C,
-                          cv::THRESH_BINARY_INV, 11, 2);
-    
-    cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3));
-    cv::morphologyEx(binary, binary, cv::MORPH_CLOSE, kernel);
-    return binary;
+    // 냄새: 이 로직은 BinarizeFilter와 MorphologyFilter에 중복되어 있음.
+    // 리팩토링: 기존 필터를 재사용하여 일관성 유지.
+    auto binary = Binarize(input);
+    return EnhanceContours(binary, 3);
 }
 
 ImageProcessor::ResizeResult ImageProcessor::ApplyLetterboxWithMetrics(const cv::Mat& input, int targetSize, int interpolation, uint8_t padValue) {
@@ -140,7 +107,11 @@ cv::Mat ImageProcessor::EnhanceContours(const cv::Mat& binary, int kernelSize) {
 
 cv::Mat ImageProcessor::Binarize(const cv::Mat& grayscale) {
     if (grayscale.empty()) return cv::Mat();
-    return ApplyAdaptiveBinarization(grayscale);
+    cv::Mat result;
+    cv::adaptiveThreshold(grayscale, result, 255,
+                          cv::ADAPTIVE_THRESH_GAUSSIAN_C,
+                          cv::THRESH_BINARY_INV, 11, 2);
+    return result;
 }
 
 cv::Mat ImageProcessor::ResizeKeepingAspectRatio(const cv::Mat& input, int targetSize) {
@@ -159,26 +130,33 @@ cv::Rect ImageProcessor::GetContentROI(const cv::Mat& binary) {
 
     if (contours.empty()) return cv::Rect(0, 0, binary.cols, binary.rows);
 
-    cv::Rect unionRect;
-    bool first = true;
     double totalArea = binary.cols * binary.rows;
 
+    // Step 1: 면적 0.1% 이상인 유효 컨투어 수집
+    std::vector<std::pair<double, cv::Rect>> validRects;
     for (const auto& contour : contours) {
-        if (cv::contourArea(contour) < totalArea * 0.001) continue;
-        cv::Rect rect = cv::boundingRect(contour);
-        if (first) { unionRect = rect; first = false; }
-        else { unionRect |= rect; }
+        double area = cv::contourArea(contour);
+        if (area < totalArea * 0.001) continue;
+        validRects.push_back({area, cv::boundingRect(contour)});
     }
 
-    if (first) return cv::Rect(0, 0, binary.cols, binary.rows);
-    
-    int padding = 10;
-    unionRect.x = std::max(0, unionRect.x - padding);
-    unionRect.y = std::max(0, unionRect.y - padding);
-    unionRect.width = std::min(binary.cols - unionRect.x, unionRect.width + 2 * padding);
-    unionRect.height = std::min(binary.rows - unionRect.y, unionRect.height + 2 * padding);
+    if (validRects.empty()) return cv::Rect(0, 0, binary.cols, binary.rows);
 
-    return unionRect;
+    // Step 2: 가장 큰 컨투어 = Dominant (메인 인물)
+    auto dominantIt = std::max_element(validRects.begin(), validRects.end(),
+        [](const std::pair<double, cv::Rect>& a, const std::pair<double, cv::Rect>& b) {
+            return a.first < b.first;
+        });
+    cv::Rect dominantRect = dominantIt->second;
+
+    // Dominant bbox에 padding 적용 후 반환
+    int padding = 10;
+    dominantRect.x = std::max(0, dominantRect.x - padding);
+    dominantRect.y = std::max(0, dominantRect.y - padding);
+    dominantRect.width = std::min(binary.cols - dominantRect.x, dominantRect.width + 2 * padding);
+    dominantRect.height = std::min(binary.rows - dominantRect.y, dominantRect.height + 2 * padding);
+
+    return dominantRect;
 }
 
 cv::Mat ImageProcessor::Crop(const cv::Mat& image, const cv::Rect& roi) {
