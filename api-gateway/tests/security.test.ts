@@ -36,14 +36,20 @@ describe('File Upload Security', () => {
   });
 
   it('should accept valid image files (png/jpg/jpeg)', async () => {
-    mockedAxios.post.mockResolvedValue({
-      data: {
-        iq: 100,
-        percentile: 95,
-        raw_score: 10,
-        head_scores: { head_a: 10, head_b: 10, head_c: 10 },
-        date: '2026. 3. 27.'
+    mockedAxios.post.mockImplementation((url: string) => {
+      if (url.includes('/preprocess')) {
+        return Promise.resolve({ data: {}, headers: {} });
       }
+      return Promise.resolve({
+        data: {
+          iq: 100,
+          percentile: 95,
+          raw_score: 10,
+          head_scores: { head_a: 10, head_b: 10, head_c: 10 },
+          date: '2026. 3. 27.'
+        },
+        headers: {}
+      });
     });
 
     await request(app)

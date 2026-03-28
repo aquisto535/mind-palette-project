@@ -60,11 +60,13 @@ describe('API Gateway Tests', () => {
 
       // 2. 요청 수행 (Mock Backend)
       const MOCK_PROCESSED_FILENAME = path.basename(DUMMY_IMAGE_PATH) + '_clean.jpg';
-      const MOCK_PROCESSED_PATH = path.join(TEST_UPLOAD_DIR, MOCK_PROCESSED_FILENAME);
+      const TEST_PROCESSED_DIR = path.join(__dirname, '../../shared_volume/processed');
+      if (!fs.existsSync(TEST_PROCESSED_DIR)) fs.mkdirSync(TEST_PROCESSED_DIR, { recursive: true });
+      const MOCK_PROCESSED_PATH = path.join(TEST_PROCESSED_DIR, MOCK_PROCESSED_FILENAME);
 
       mockedAxios.post.mockImplementation((url: string) => {
         if (url.includes('/preprocess')) {
-          return Promise.resolve({ data: { processedPath: MOCK_PROCESSED_PATH } });
+          return Promise.resolve({ data: { processedPath: MOCK_PROCESSED_PATH }, headers: {} });
         }
         if (url.includes('/analyze')) {
           return Promise.resolve({
@@ -74,7 +76,8 @@ describe('API Gateway Tests', () => {
               raw_score: 10,
               head_scores: { head_a: 10, head_b: 10, head_c: 10 },
               date: '2026. 3. 27.'
-            }
+            },
+            headers: {}
           });
         }
         return Promise.reject(new Error('Unknown URL'));
