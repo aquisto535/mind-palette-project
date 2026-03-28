@@ -2,7 +2,7 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import axios from 'axios';
 import FormData from 'form-data';
-import { RESULT_DIR, UPLOAD_DIR } from '../utils/fileStorage';
+import { RESULT_DIR, UPLOAD_DIR, PROCESSED_DIR } from '../utils/fileStorage';
 import { saveWithHash } from '../utils/hashIntegrity';
 import logger, { maskPII } from '../utils/logger';
 
@@ -65,11 +65,15 @@ function mapAiResponseToResult(ai: AiServerResponse): AnalysisResult {
   };
 }
 
-async function invokePreprocessServer(filePath: string, requestId: string): Promise<{ processedImagePath: string; sanitized: boolean }> {
+async function invokePreprocessServer(filePath: string, requestId: string, adminProfileKey?: string): Promise<{ processedImagePath: string; sanitized: boolean, serverTiming?: string }> {
   let processedImagePath = filePath;
   let sanitized = false;
+  let serverTiming: string | undefined;
   try {
-    const preprocessRes = await axios.post(`${PREPROCESS_SERVER_URL}/preprocess`, { imagePath: filePath }, { headers: { 'X-Request-ID': requestId } });
+    const headers: Record<string, string> = { 'X-Request-ID': requestId };
+    if (adminProfileKey) headers['X-Admin-Profile-Key'] = adminProfileKey;
+
+    const preprocessRes = await axios.post(`${PREPROCESS_SERVER_URL}/preprocess`, { imagePath: filePath }, { headers });
     if (preprocessRes.data?.processedPath) {
       processedImagePath = preprocessRes.data.processedPath;
       sanitized = true;
@@ -77,42 +81,47 @@ async function invokePreprocessServer(filePath: string, requestId: string): Prom
     } else {
       logger.warn('L6 Sanitization skipped: preprocessing did not return processedPath', { requestId });
     }
+    serverTiming = preprocessRes.headers['server-timing'];
   } catch (error: unknown) {
     logger.warn('L6 Sanitization skipped: preprocessing failed, using original image:', {
       error: error instanceof Error ? error.message : String(error),
       requestId
     });
   }
-  return { processedImagePath, sanitized };
+  return { processedImagePath, sanitized, serverTiming };
 }
 
-async function invokeAiServer(processedImagePath: string, requestId: string): Promise<AnalysisResult> {
+async function invokeAiServer(processedImagePath: string, sanitized: boolean, requestId: string, adminProfileKey?: string): Promise<AnalysisResult & { serverTiming?: string }> {
   const formData = new FormData();
-  
-  // Neutralize path for CodeQL: only use the filename joined with trusted UPLOAD_DIR
+
+  // Neutralize path for CodeQL: resolve filename against the appropriate trusted directory.
+  // If sanitized, the file is in PROCESSED_DIR; otherwise fall back to UPLOAD_DIR.
   const fileName = path.basename(processedImagePath);
-  const safePath = path.resolve(UPLOAD_DIR, fileName);
+  const baseDir = sanitized ? PROCESSED_DIR : UPLOAD_DIR;
+  const safePath = path.resolve(baseDir, fileName);
 
   formData.append('file', await fs.readFile(safePath), fileName);
 
-  const aiRes = await axios.post(`${AI_SERVER_URL}/analyze`, formData, {
-    headers: { ...formData.getHeaders(), 'X-Request-ID': requestId }
-  });
+  const headers: Record<string, string> = { ...formData.getHeaders(), 'X-Request-ID': requestId };
+  if (adminProfileKey) headers['X-Admin-Profile-Key'] = adminProfileKey;
+
+  const aiRes = await axios.post(`${AI_SERVER_URL}/analyze`, formData, { headers });
 
   const resultData = mapAiResponseToResult(aiRes.data as AiServerResponse);
   logger.info('AI Analysis completed:', { requestId });
-  return resultData;
+  
+  return { ...resultData, serverTiming: aiRes.headers['server-timing'] };
 }
 
 async function cleanupTempImages(originalPath: string, processedPath: string, requestId: string): Promise<void> {
   const keepImages = process.env.KEEP_IMAGES === 'true';
   if (keepImages) return;
 
-  const validateAndUnlink = async (targetPath: string) => {
+  const validateAndUnlink = async (targetPath: string, baseDir: string) => {
     try {
-      // Neutralize path for CodeQL: only use the filename joined with trusted UPLOAD_DIR
+      // Neutralize path for CodeQL: only use the filename joined with trusted base directory
       const fileName = path.basename(targetPath);
-      const safePath = path.resolve(UPLOAD_DIR, fileName);
+      const safePath = path.resolve(baseDir, fileName);
       
       await fs.unlink(safePath).catch(e => { 
         if (e.code !== 'ENOENT') {
@@ -129,9 +138,9 @@ async function cleanupTempImages(originalPath: string, processedPath: string, re
   };
 
   try {
-    await validateAndUnlink(originalPath);
+    await validateAndUnlink(originalPath, UPLOAD_DIR);
     if (processedPath !== originalPath) {
-      await validateAndUnlink(processedPath);
+      await validateAndUnlink(processedPath, PROCESSED_DIR);
     }
     logger.info('Cleaned up temp image files', { requestId });
   } catch (cleanupError) {
@@ -146,9 +155,12 @@ async function cleanupTempImages(originalPath: string, processedPath: string, re
  * 이미지 분석 요청을 처리합니다.
  * @param {Express.Multer.File} file - 업로드된 파일 객체
  * @param {string} requestId - 요청 추적을 위한 고유 ID
+ * @param {string} [clientProfileKey] - 벤치마킹을 위한 X-Admin-Profile-Key 
  * @returns {Promise<AnalysisResult>} 분석 결과 객체
  */
-export const processAnalysis = async (file: Express.Multer.File, requestId: string): Promise<AnalysisResult & { sanitized: boolean }> => {
+export const processAnalysis = async (file: Express.Multer.File, requestId: string, clientProfileKey?: string): Promise<AnalysisResult & { sanitized: boolean; serverTiming?: string }> => {
+  const gatewayStartTime = performance.now();
+  
   if (!file) {
     throw new Error('NO_FILE');
   }
@@ -160,19 +172,34 @@ export const processAnalysis = async (file: Express.Multer.File, requestId: stri
 
   let sanitized = false;
   let processedImagePath = file.path;
+  
+  const envAdminKey = process.env.ADMIN_PROFILE_KEY;
+  const isProfileMode = Boolean(envAdminKey && clientProfileKey === envAdminKey);
+  const passKey = isProfileMode ? envAdminKey : undefined;
 
   try {
-    const preprocessResult = await invokePreprocessServer(file.path, requestId);
+    const preprocessResult = await invokePreprocessServer(file.path, requestId, passKey);
     processedImagePath = preprocessResult.processedImagePath;
     sanitized = preprocessResult.sanitized;
 
-    const resultData = await invokeAiServer(processedImagePath, requestId);
+    const resultData = await invokeAiServer(processedImagePath, sanitized, requestId, passKey);
 
-    const resultContent = JSON.stringify(resultData, null, 2);
+    const { serverTiming: aiTiming, ...finalResultData } = resultData;
+
+    const resultContent = JSON.stringify(finalResultData, null, 2);
     await saveWithHash(resultContent, resultPath);
     logger.info('Result saved:', maskPII({ path: resultPath, requestId }));
 
-    return { ...resultData, sanitized };
+    let serverTiming: string | undefined;
+    if (isProfileMode) {
+      const gatewayDur = (performance.now() - gatewayStartTime).toFixed(1);
+      const parts = [`gateway;dur=${gatewayDur}`];
+      if (preprocessResult.serverTiming) parts.push(preprocessResult.serverTiming);
+      if (aiTiming) parts.push(aiTiming);
+      serverTiming = parts.join(', ');
+    }
+
+    return { ...finalResultData, sanitized, serverTiming };
   } finally {
     await cleanupTempImages(file.path, processedImagePath, requestId);
   }

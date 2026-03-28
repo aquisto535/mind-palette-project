@@ -18,8 +18,20 @@ namespace fs = std::filesystem;
 // Separates heavy processing from Crow's I/O threads
 // ============================================================================
 inline ThreadPool& GetWorkerPool() {
-    // hardware_concurrency workers (typically 4-8)
-    static ThreadPool pool(0);
+    static ThreadPool pool([]() -> size_t {
+        // Allow runtime tuning via environment variable
+        char* valRaw = nullptr;
+        size_t valLen = 0;
+        _dupenv_s(&valRaw, &valLen, "PREPROCESS_WORKERS");
+        std::unique_ptr<char, decltype(&free)> guard(valRaw, &free);
+        if (valRaw) {
+            size_t n = static_cast<size_t>(std::atoi(valRaw));
+            if (n > 0) return n;
+        }
+        // Default: cap at 4 to prevent over-provisioning on high-core-count machines
+        size_t hw = std::thread::hardware_concurrency();
+        return (hw > 0) ? std::min(hw, size_t(4)) : 2;
+    }());
     return pool;
 }
 
@@ -28,15 +40,21 @@ inline ThreadPool& GetWorkerPool() {
 // ============================================================================
 
 // Generate output path from input path
-// Example: .../shared_volume/uploads/test.jpg -> /shared/processed/test_clean.jpg
+// Example: .../shared_volume/uploads/test.jpg -> .../shared_volume/processed/test_clean.jpg
 inline std::string GenerateOutputPath(const std::string& inputPath) {
     fs::path p(inputPath);
     std::string stem = p.stem().string();
     std::string ext = p.extension().string();
-    
-    // Security: Use a fixed authorized output directory
-    // This prevents writing to arbitrary locations near the input file
-    fs::path outputDir = "/shared/processed";
+
+    // Derive output dir from the absolute input path to be independent of CWD.
+    // uploads/ and processed/ are siblings under shared_volume/, so go up two levels.
+    fs::path outputDir = p.parent_path().parent_path() / "processed";
+
+    // Ensure directory exists
+    if (!fs::exists(outputDir)) {
+        fs::create_directories(outputDir);
+    }
+
     return (outputDir / (stem + "_clean" + ext)).string();
 }
 
@@ -127,13 +145,18 @@ inline bool SaveProcessedImage(const cv::Mat& img, const std::string& outputPath
 }
 
 // Creates success response with performance metrics
-inline crow::response CreatePreprocessResponse(const std::string& outputPath, int64_t durationMs, const std::string& requestId) {
+inline crow::response CreatePreprocessResponse(const std::string& outputPath, int64_t durationMs, const std::string& requestId, const std::string& serverTimingHeader = "") {
+    // LOG_INFO(id, fmt, args...) -> ID is used for [{}]
     LOG_INFO(requestId, "Successfully processed image in {}ms. Saved to: {}", durationMs, outputPath);
     
     crow::json::wvalue res;
     res["processedPath"] = outputPath;
     
-    return crow::response(200, res);
+    crow::response response(200, res);
+    if (!serverTimingHeader.empty()) {
+        response.add_header("Server-Timing", serverTimingHeader);
+    }
+    return response;
 }
 
 
@@ -197,6 +220,16 @@ inline void setup_routes(crow::SimpleApp& app) {
         auto endTime = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
         
-        return CreatePreprocessResponse(outputPath, duration, requestId);
+        std::string serverTiming;
+        std::string clientKey = req.get_header_value("X-Admin-Profile-Key");
+        char* envKeyRaw = nullptr;
+        size_t envKeyLen = 0;
+        _dupenv_s(&envKeyRaw, &envKeyLen, "ADMIN_PROFILE_KEY");
+        std::unique_ptr<char, decltype(&free)> envKeyGuard(envKeyRaw, &free);
+        if (envKeyRaw && clientKey == envKeyRaw) {
+            serverTiming = "preprocess;dur=" + std::to_string(duration);
+        }
+        
+        return CreatePreprocessResponse(outputPath, duration, requestId, serverTiming);
     });
 }

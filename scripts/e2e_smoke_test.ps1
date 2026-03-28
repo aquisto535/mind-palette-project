@@ -1,6 +1,11 @@
-# Mind Palette E2E Smoke Test
-# V14: Dynamic health checks and literal path handling for Korean directories
+param (
+    [switch]$ProfileMode,
+    [int]$Concurrency = 1,
+    [string]$FixedImage = ""
+)
 
+# Mind Palette E2E Smoke Test
+# V15: Dynamic health checks, concurrency, and Server-Timing profiling
 $LOG_FILE = "e2e_final_log.txt"
 if (Test-Path $LOG_FILE) { Remove-Item $LOG_FILE }
 
@@ -79,46 +84,120 @@ if (-not (Wait-ForServer "http://127.0.0.1:3000/health" 30)) { exit 1 }
 # ─────────────────────────────────────────────────────────
 # 3. 이미지 선택 (LiteralPath 사용)
 # ─────────────────────────────────────────────────────────
-$selectedSubDir = $TARGET_DIRS | Get-Random
-$selectedImage = $selectedSubDir | Get-ChildItem -File | Where-Object { $_.Extension -match "jpg|png" } | Get-Random
-
-if ($null -eq $selectedImage) {
-    Write-LogInfo "Error: No images found in selected directory."
-    exit 1
-}
-
-# 8.3 Short Path를 사용하여 인코딩 문제 원천 차단 (최후의 수단)
-$imgPath = $selectedImage.FullName
-try {
-    $fso = New-Object -ComObject Scripting.FileSystemObject
-    $shortPath = $fso.GetFile($imgPath).ShortPath
-    if ($shortPath) { $imgPath = $shortPath }
-} catch { }
-
-Write-LogInfo "Selected Image: $imgPath"
-
-# Analysis Request
-Write-LogInfo "Sending analysis request..."
-try {
-    $response = & curl.exe -X POST "http://127.0.0.1:3000/analyze" -F "image=@$imgPath" --silent
-    if (-not $response) { throw "No response received" }
-    
-    $json = $response | ConvertFrom-Json
-    $json | ConvertTo-Json -Depth 5 | Out-File $LOG_FILE -Append
-    
-    if ($null -ne $json.score -and $json.score -gt 0) {
-        Write-LogInfo "TEST STATUS: PASSED (OK) - Real AI Result Received"
-        Write-LogInfo "IQ: $($json.score), Percentile: $($json.percentile)%"
-    } else {
-        Write-LogInfo "TEST STATUS: FAILED (ERR) - Response mismatch"
-        Write-LogInfo "Response: $response"
+if ($FixedImage -ne "") {
+    # 고정 이미지 모드: 성능 비교 테스트에 사용
+    if (-not (Test-Path -LiteralPath $FixedImage)) {
+        Write-LogInfo "Error: FixedImage not found: $FixedImage"
+        exit 1
     }
-} catch {
-    Write-LogInfo "Error during analysis: $($_.Exception.Message)"
+    $imgPath = $FixedImage
+    Write-LogInfo "[Fixed] Selected Image: $imgPath"
+} else {
+    # 랜덤 이미지 모드 (기본)
+    $selectedSubDir = $TARGET_DIRS | Get-Random
+    $selectedImage = $selectedSubDir | Get-ChildItem -File | Where-Object { $_.Extension -match "jpg|png" } | Get-Random
+
+    if ($null -eq $selectedImage) {
+        Write-LogInfo "Error: No images found in selected directory."
+        exit 1
+    }
+
+    # 8.3 Short Path를 사용하여 인코딩 문제 원천 차단 (최후의 수단)
+    $imgPath = $selectedImage.FullName
+    try {
+        $fso = New-Object -ComObject Scripting.FileSystemObject
+        $shortPath = $fso.GetFile($imgPath).ShortPath
+        if ($shortPath) { $imgPath = $shortPath }
+    } catch { }
+
+    Write-LogInfo "[Random] Selected Image: $imgPath"
 }
 
 # ─────────────────────────────────────────────────────────
-# 4. 종료 및 정리
+# 4. Analysis Request (With Concurrency & Profiling)
+# ─────────────────────────────────────────────────────────
+Write-LogInfo "Sending analysis requests (Concurrency: $Concurrency, ProfileMode: $ProfileMode)..."
+
+$adminKey = $env:ADMIN_PROFILE_KEY
+if ($ProfileMode -and (-not $adminKey)) {
+    Write-LogInfo "Warning: ProfileMode is switched ON but ADMIN_PROFILE_KEY environment variable is not set."
+}
+
+$scriptBlock = {
+    param($imgPath, $ProfileMode, $adminKey)
+    $curlArgs = @("-X", "POST", "http://127.0.0.1:3000/analyze", "-F", "image=@$imgPath", "-s")
+    if ($ProfileMode -and $adminKey) {
+        $curlArgs += "-H", "X-Admin-Profile-Key: $adminKey", "-i"
+    }
+    
+    $startTime = Get-Date
+    $rawResponse = & curl.exe $curlArgs 2>&1
+    $endTime = Get-Date
+    $totalMs = ($endTime - $startTime).TotalMilliseconds
+
+    return [PSCustomObject]@{
+        RawOutput = $rawResponse -join "`n"
+        TotalMs = $totalMs
+    }
+}
+
+$jobs = @()
+for ($i = 1; $i -le $Concurrency; $i++) {
+    $jobs += Start-Job -ScriptBlock $scriptBlock -ArgumentList $imgPath, $ProfileMode, $adminKey
+}
+
+Write-LogInfo "Waiting for $($jobs.Count) requests to complete..."
+$completedJobs = $jobs | Wait-Job | Receive-Job
+Remove-Job -State Completed
+
+$metrics = @()
+
+foreach ($result in $completedJobs) {
+    $out = $result.RawOutput
+    
+    if ($ProfileMode) {
+        $parts = $out -split "\r?\n\r?\n", 2
+        $headers = if ($parts.Count -gt 0) { $parts[0] } else { "" }
+        # $body logic removed as it's not used in ProfileMode summary table
+        
+        $gatewayDur = 0; $preprocessDur = 0; $aiDur = 0; $totalE2EDur = [math]::Round($result.TotalMs, 1)
+        
+        if ($headers -match "Server-Timing:\s*(.*?)(?=\r?\n|$)") {
+            $timingHeader = $matches[1]
+            if ($timingHeader -match "gateway;dur=([\d\.]+)") { $gatewayDur = [math]::Round([double]$matches[1], 1) }
+            if ($timingHeader -match "preprocess;dur=([\d\.]+)") { $preprocessDur = [math]::Round([double]$matches[1], 1) }
+            if ($timingHeader -match "ai_inference;dur=([\d\.]+)") { $aiDur = [math]::Round([double]$matches[1], 1) }
+        }
+        
+        $metrics += [PSCustomObject]@{
+            Total_E2E_Ms = $totalE2EDur
+            Gateway_Ms   = $gatewayDur
+            CPP_Pre_Ms   = $preprocessDur
+            Python_AI_Ms = $aiDur
+        }
+    } else {
+        try {
+            $json = $out | ConvertFrom-Json
+            if ($null -ne $json.score -and $json.score -gt 0) {
+                Write-LogInfo "TEST STATUS: PASSED (OK) - Real AI Result Received. IQ: $($json.score)"
+            } else {
+                Write-LogInfo "TEST STATUS: FAILED (ERR) - Response mismatch"
+            }
+        } catch {
+            Write-LogInfo "Error parsing JSON: $out"
+        }
+    }
+}
+
+if ($ProfileMode -and ($metrics.Count -gt 0)) {
+    Write-LogInfo "=== PROFILING REPORT ($Concurrency Concurrent Requests) ==="
+    $tableString = $metrics | Format-Table -AutoSize | Out-String
+    Write-Host $tableString
+    $tableString | Out-File $LOG_FILE -Append
+}
+
+# ─────────────────────────────────────────────────────────
+# 5. 종료 및 정리
 # ─────────────────────────────────────────────────────────
 Write-LogInfo "Cleaning up..."
 Stop-Process -Id $preprocessProc.Id, $aiProc.Id, $gatewayProc.Id -Force -ErrorAction SilentlyContinue

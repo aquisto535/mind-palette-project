@@ -5,6 +5,12 @@
 
 ---
   
+## 💡 핵심 아키텍처 철학 (Core Philosophy)
+
+> "데이터가 많아서 모델이 정확하다는 것은 시스템 엔지니어의 핵심 무기가 아닙니다. **현재의 우수한 아키텍처 설계를 클라우드에 PoC 형태로 단단하게 배포하고, 어떤 거대한 트래픽이나 무거운 모델이 들어와도 버틸 수 있는 견고한 구조(MSA)를 짰음을 증명하는 것**이 이 프로젝트의 최우선 목표입니다."
+
+---
+  
 ## 📋 의사결정 목록 (Decision Index)
 
 | ID | 제목 | 날짜 | 상태 |
@@ -32,9 +38,13 @@
 | ADR-021 | 마이크로서비스 간 API 계약 및 자동 검증 도입 | 2026-03 | ✅ Accepted |
 | ADR-022 | TDD Quality Guardian 서브 에이전트의 보안 감사 역할 확장 | 2026-03 | ✅ Accepted |
 | ADR-023 | EfficientNet-B2 기반 HFD 지능 측정 모델 아키텍처 | 2026-03 | ✅ Accepted |
-| ADR-024 | PowerShell 기반 E2E 스모크 테스트 자동화 채택 | 2026-03 | ✅ Accepted |
----
+| ADR-024 | FilterPipeline 패턴 및 Early Resize 최적화 채택 | 2026-03 | ✅ Accepted |
+| ADR-025 | PowerShell 기반 E2E 스모크 테스트 자동화 채택 | 2026-03 | ✅ Accepted |
+| ADR-026 | W3C Server-Timing 기반 Zero-Disk E2E 프로파일링 시스템 구축 | 2026-03 | ✅ Accepted |
+| ADR-027 | EC2 인스턴스 타입 선택 전략 (t3.medium 기각, c5.large 채택) | 2026-03 | ✅ Accepted |
+| ADR-028 | C++ 동시 처리 최적화: WorkerPool 튜닝 및 콜드 스타트 수용 | 2026-03 | ✅ Accepted |
 
+---
 ## ADR-001: 마이크로서비스 아키텍처 채택 (Node.js + C++ + Python)
 
 ### 상태
@@ -1896,7 +1906,7 @@ Phase 3 C++ 전처리 서버의 `ImageProcessor::Preprocess` 함수가 수백 �
 
 ---
 
-## ADR-024: PowerShell 기반 E2E 스모크 테스트 자동화 채택
+## ADR-025: PowerShell 기반 E2E 스모크 테스트 자동화 채택
 
 ### 상태
 ✅ **Accepted** (2026-03)
@@ -1929,3 +1939,202 @@ Mind Palette 프로젝트는 Node.js, C++, Python이라는 3개의 서로 다른
 ### 결론 (Consequences)
 - ✅ **장점**: 개발 생산성 향상, 통합 이슈 조기 발견, 수동 테스트 비용 절감.
 - ⚠️ **주의사항**: 테스트 종료 시 백그라운드 프로세스가 남지 않도록 Cleanup 로직을 철저히 관리해야 함.
+
+---
+
+## ADR-026: W3C Server-Timing 기반 Zero-Disk E2E 프로파일링 시스템 구축
+
+### 상태
+✅ **Accepted** (2026-03)
+
+### 컨텍스트 (Context)
+마이크로서비스 구조(Node.js → C++ → Python)에서 성능 병목을 특정하기 위해 E2E 구간별 소요 시간(Metrics)을 수집해야 했습니다. 하지만 프로덕션(AWS T3.medium) 환경에서는 파일 로깅(File Logging)이 디스크 풀(Disk Exhaustion) 장애를 유발할 위험이 매우 높으며, API JSON 본문에 측정 시간을 포함할 경우 데이터 규격 오염 문제가 발생합니다.
+
+### 의사결정 (Decision)
+**W3C `Server-Timing` 헤더와 환경변수 기반 관리자 시크릿 키 아키텍처**를 도입합니다.
+1. 각 마이크로서비스 모듈 내부에 계측 타이머를 삽입합니다.
+2. HTTP 요청 헤더에 `X-Admin-Profile-Key: [시크릿]`(환경변수로 보안 유지)가 존재하는 경우에만 각 구간의 소요 시간을 `Server-Timing` 헤더에 담아 릴레이합니다.
+3. E2E 스크립트에 벤치마킹 모드(`-ProfileMode`)와 동시성 테스트(`-Concurrency N`) 부하 옵션을 탑재하여 콘솔 리포트로 시각화 표출합니다.
+
+### 근거 (Rationale)
+
+#### 1️⃣ Zero Disk I/O (디스크 오버헤드 원천 차단)
+- T3.medium 환경에서 디스크 스토리지 한계에 구애받지 않고, 메모리와 네트워크 패킷(HTTP Header)만 활용하여 수백 번의 동시성 부하 테스트를 즉시 수행할 수 있습니다.
+
+#### 2️⃣ 무중단 프로덕션 실시간 검증 (Secret Key Auth)
+- 일반 사용자에게는 원래의 JSON 데이터만 노출시키고 성능 메트릭은 철저히 은닉합니다. 오직 인가된 E2E 벤치마킹 스크립트만 프로덕션 서버를 멈추지 않고도 타임라인 폭포수(Waterfall) 지표를 수집할 수 있습니다.
+
+#### 3️⃣ 시스템 아키텍트 관점에서의 MVP 구현
+- Prometheus/Grafana 같은 APM은 T3.medium에서 500MB 이상의 상주 메모리를 차지할 우려가 있습니다. W3C 웹 표준인 `Server-Timing`을 채택함으로써 가장 가볍고(Lightweight) 안전한 형태로 시스템 운영을 모니터링할 수 있는 결단이었습니다.
+
+### 대안 및 트레이드오프 (Alternatives)
+- **Log Rotation 방식**: 순환 파일 로깅을 통한 제한 용량(예: 최대 30MB) 로깅.
+  - ❌ **Rejected**: E2E 에이전트가 각 서버의 로그 파일을 원격으로 종합(Aggregation)하기 까다로워 자동 프로파일링 도구 구현 효율이 떨어짐.
+- **ELK 스택 / APM 모니터링 툴**:
+  - ❌ **Rejected**: 프로젝트 규모상 오버엔지니어링(Over-engineering)이며 제한된 리소스 환경에 적합하지 않음.
+
+### 결론 (Consequences)
+- ✅ **장점**: 디스크 I/O 없이 프로덕션 성능을 실시간 파악하고, 병목 모듈 정밀 타겟팅(Node vs C++ vs Python) 가능.
+- ⚠️ **주의사항**: C++ 및 Python 프레임워크 모두에서 커스텀 HTTP Header 조작 규격을 정확히 맞추어 릴레이(Relay)해야 합니다.
+- ✅ **실증 사례**: 동시성 3 부하 테스트(`-Concurrency 3`)에서 CPP_Pre_Ms `537ms / 115ms / 118ms`의 이상값을 최초 발견. 이 프로파일링 시스템이 OpenCV CPU 오버 서브스크립션 문제를 특정하는 데 직접 기여했으며, ADR-028의 최적화 결정으로 이어짐.
+
+---
+
+## ADR-027: EC2 인스턴스 타입 선택 전략 (t3.medium 기각, c5.large 채택)
+
+### 상태
+✅ **Accepted** (2026-03)
+
+### 컨텍스트 (Context)
+마이크로서비스(C++ 전처리 + Python AI 추론 + Node.js API Gateway)를 단일 EC2 인스턴스에 배포하는 시나리오에서 인스턴스 타입을 결정해야 했습니다. 초기 후보는 비용이 낮은 **t3.medium(vCPU 2개, RAM 4GB, 월 ~$30)**이었으나, E2E 프로파일링 결과(`ADR-026`)와 서비스 리소스 요구사항을 정밀 분석한 결과 부적합 판정을 내렸습니다.
+
+### 의사결정 (Decision)
+**c5.large(vCPU 2개, RAM 4GB, 월 ~$62)를 MVP 배포 기준 인스턴스**로 채택합니다.
+단, AI 추론을 ONNX Runtime CPU 최적화로 전환하여 `c5.large` 수준에서 운영 가능한 성능을 확보합니다.
+
+### 근거 (Rationale)
+
+#### 1️⃣ t3.medium 기각 — 버스터블 CPU의 구조적 한계
+t3.medium은 **기준 성능이 vCPU 2개의 20%(= 0.4 vCPU 상당)**입니다. CPU 크레딧이 있을 때만 최대 2 vCPU를 사용하며, 크레딧 소진 후 성능이 즉시 기준치로 강제 제한됩니다.
+이 프로젝트는 요청 1건당 다음 세 연산이 동시에 CPU를 점유합니다:
+
+| 연산 | 예상 시간 | CPU 특성 |
+|------|---------|---------|
+| OpenCV 이미지 전처리 (C++) | 115~537ms | CPU-bound |
+| EfficientNet-B2 추론 (Python, CPU) | 500ms~2s | CPU-bound |
+| Node.js 라우팅 + 파일 I/O | ~50ms | I/O-bound |
+
+CPU 크레딧 소진 시 위 연산들이 **0.4 vCPU 기준으로 직렬 처리**되어 실사용 불가 수준의 응답 지연이 발생합니다.
+
+#### 2️⃣ c5.large 채택 — 고정 성능 보장
+c5.large는 버스트 없이 **항상 2 vCPU 전체를 보장**합니다(Compute-optimized, Intel Xeon Platinum). 동일한 vCPU 수·RAM이지만 지속 부하에서 성능이 저하되지 않습니다.
+
+#### 3️⃣ 메모리 적합성
+서비스별 예상 메모리 점유:
+
+| 서비스 | 예상 메모리 |
+|--------|-----------|
+| Node.js API Gateway | ~150MB |
+| C++ Preprocess Server (OpenCV) | ~150MB |
+| Python AI Server (ONNX Runtime) | ~500MB (PyTorch 대비 절반) |
+| OS + 버퍼 | ~500MB |
+| **합계** | **~1.3GB / 4GB** |
+
+PyTorch(~1.2GB) 대신 ONNX Runtime(~500MB)으로 전환 시 4GB RAM 내에서 여유 있게 운영 가능합니다.
+
+#### 4️⃣ ONNX Runtime CPU 최적화 (필수 연계 결정)
+c5.large 채택의 전제 조건으로 **Python AI 서버의 추론 엔진을 PyTorch → ONNX Runtime으로 전환**합니다.
+- EfficientNet-B2 PyTorch 추론 (CPU): ~1~2s/req
+- EfficientNet-B2 ONNX Runtime 추론 (CPU): ~300~600ms/req (2~3배 개선)
+- `plan.md Phase 5`의 `Inference Optimization` 항목과 직결됩니다.
+
+### 대안 및 트레이드오프 (Alternatives)
+
+| 인스턴스 | vCPU | RAM | 월 비용 | 판정 |
+|---------|------|-----|--------|------|
+| t3.medium | 2 (버스터블) | 4GB | ~$30 | ❌ CPU 크레딧 소진 위험 |
+| **c5.large** | **2 (고정)** | **4GB** | **~$62** | **✅ 채택** |
+| c5.xlarge | 4 (고정) | 8GB | ~$124 | ⚪ 트래픽 증가 시 업그레이드 경로 |
+| g4dn.xlarge | 4 + T4 GPU | 16GB | ~$380 | ⚪ GPU 추론 필요 시 고려 (TensorRT 연계) |
+
+- **c5.xlarge**: 동시 처리 요구가 높아질 경우 자연스러운 업그레이드 경로.
+- **g4dn.xlarge**: TensorRT 기반 GPU 추론(ADR-023)이 요구될 때 전환. ONNX → TensorRT 변환 경로가 이미 ADR-023에 설계되어 있어 이전 비용 낮음.
+
+### 결론 (Consequences)
+- ✅ **장점**: 지속 부하에서 안정적인 응답 시간 보장. 버스터블 CPU로 인한 불예측 성능 저하 없음.
+- ✅ **장점**: ONNX Runtime 전환으로 메모리 사용량 감소 및 추론 속도 개선.
+- ⚠️ **주의사항**: t3.medium 대비 월 ~$32 추가 비용 발생. MVP 단계에서는 단일 사용자(아동 검사) 시나리오이므로 동시 요청 수가 낮아 실제 비용 부담은 제한적.
+- ⚠️ **주의사항**: `Inference Optimization(ONNX 전환)`이 c5.large 운영의 전제 조건. PyTorch 그대로 유지 시 응답 시간이 허용 범위를 초과할 수 있음.
+
+---
+
+## ADR-028: C++ 동시 처리 최적화: WorkerPool 튜닝 및 콜드 스타트 수용
+
+### 상태
+✅ **Accepted** (2026-03) — 실험 기반으로 최종 결론 도출
+
+### 컨텍스트 (Context)
+ADR-026의 W3C Server-Timing 프로파일링 시스템을 통해 동시성 3 부하 테스트(`-Concurrency 3`)에서 C++ 전처리 서버의 응답 시간이 `537ms / 115ms / 118ms`로 첫 번째 요청만 4.7배 느린 이상값이 발견되었습니다. 단일 요청 기준 처리 시간이 ~115ms임에도 첫 요청이 537ms를 기록하는 원인을 분석해야 했습니다.
+
+또한, `GetWorkerPool()`이 `hardware_concurrency()`를 그대로 사용하여 고성능 머신에서 과도한 워커 스레드가 생성될 가능성이 있었습니다.
+
+### 병목 분석 (Bottleneck Analysis)
+
+W3C Server-Timing 프로파일링 결과를 기준으로 파이프라인 전체의 병목을 계측했습니다.
+
+```
+Total_E2E_Ms: ~664ms
+├── Gateway_Ms:   ~607ms  (대부분 C++ 대기 시간)
+│   └── CPP_Pre_Ms: ~530ms  ← 병목 (전체의 ~80%)
+└── Python_AI_Ms:  ~18ms  (안정적, 문제 없음)
+```
+
+**병목: C++ 전처리 서버**, 그 중에서도 서버 재시작 후 첫 요청에서만 ~530ms가 발생하는 **콜드 스타트**가 핵심 원인입니다. 이후 요청은 ~130ms로 안정적입니다.
+
+### 개선 시도 (How to Improve)
+
+아래 두 가지를 시도했으며, 실험 결과를 통해 최종 결론을 도출했습니다.
+
+### 실험 기록 (Experiments)
+
+#### 실험 1: cv::setNumThreads(1) — 실패
+**가설**: 3개 요청이 동시에 OpenCV 내부 스레드를 모두 점유하려 경쟁(CPU 오버 서브스크립션)하여 537ms 이상값이 발생한다.
+
+**적용**: `ProcessImageFile()` 진입 시 `cv::setNumThreads(1)` 호출
+
+**결과**:
+| 측정 | Before | After |
+|------|--------|-------|
+| 1번 (콜드) | 537ms | 585ms |
+| 2번 | 115ms | 190ms |
+| 3번 | 118ms | 246ms |
+| 평균 | 257ms | 340ms |
+
+**실패 원인 분석**:
+- `cv::setNumThreads()`는 **프로세스 전역(global) 설정**으로, 동시 요청에서 여러 스레드가 이를 경쟁적으로 호출하면 간섭 발생
+- 개별 OpenCV 병렬 처리가 비활성화되어 각 요청의 처리 시간 자체가 증가
+- 1번 이상값은 CPU 오버 서브스크립션이 아닌 **콜드 스타트**가 원인임을 역으로 증명
+
+#### 실험 2: 워밍업(WarmUpProcessingPipeline) — 실패
+**가설**: 첫 요청 시 OpenCV SIMD/TBB 초기화 및 OS 페이지 매핑이 발생(콜드 스타트)하여 537ms가 발생한다. 서버 기동 시 미리 실행하면 해결된다.
+
+**시도 1**: `main()` 메인 스레드에서 워밍업 실행 → 여전히 556ms (워커 스레드 미초기화)
+
+**시도 2**: `GetWorkerPool().enqueue()`로 워커 스레드에서 워밍업 실행 → 여전히 556ms
+
+**결론**: 워커 스레드가 여러 개이므로 워밍업이 초기화한 스레드와 실제 요청을 처리하는 스레드가 다를 수 있음. 완전한 해결을 위해서는 모든 워커 스레드에 워밍업을 enqueue해야 하지만, 복잡도 증가 대비 실익이 불분명하여 중단.
+
+### 의사결정 (Decision)
+**1개 변경만 최종 적용합니다.**
+
+1. **`GetWorkerPool()`**: 워커 스레드 수를 `min(hardware_concurrency, 4)`로 상한 설정, `PREPROCESS_WORKERS` 환경변수로 런타임 튜닝 가능
+2. **콜드 스타트 수용**: 서버 재시작 시 1회 발생하는 ~500ms 콜드 스타트는 운영 환경에서 허용 가능한 비용으로 수용
+
+**제거된 변경**:
+- `cv::setNumThreads(1)`: 성능 악화로 롤백
+- `WarmUpProcessingPipeline()`: 효과 없어 제거
+
+### 근거 (Rationale)
+
+#### WorkerPool 상한 4 + 환경변수 튜닝
+- 기본값 `min(hw, 4)`: 4코어 이하 환경(c5.large: 2코어 포함)에서는 하드웨어 최대치를 사용하되, 고성능 머신에서 과도한 스레드 생성을 방지
+- `PREPROCESS_WORKERS` 환경변수: 배포 환경별 최적값을 코드 재배포 없이 조정 가능
+
+#### 콜드 스타트 수용 근거
+- HFD 검사 특성상 서버는 장시간 유지되며, 콜드 스타트는 서버 재시작 시 1회만 발생
+- 실제 사용자 영향 없음 (운영 중 재시작은 드묾)
+- 2번째 요청부터 안정적으로 ~130ms 유지
+- 향후 운영 환경에서 문제 발생 시 `ProcessImageFile()` 내 단계별 타이밍 로그로 원인 특정 후 재검토
+
+### 결론 (Consequences)
+
+#### 최종 측정 결과 (고정 이미지 기준)
+| 요청 | CPP_Pre_Ms | 비고 |
+|------|-----------|------|
+| 1번 | ~530ms | 콜드 스타트 (수용) |
+| 2번 | ~124ms | 정상 |
+| 3번 | ~138ms | 정상 |
+
+- ✅ **운영 유연성**: `PREPROCESS_WORKERS` 환경변수로 배포 환경에 따라 워커 수 튜닝 가능
+- ✅ **단순성 유지**: 불필요한 전역 설정 변경 없이 기본 OpenCV 멀티스레드 동작 유지
+- ⚠️ **콜드 스타트 미해결**: 서버 기동 후 첫 요청 ~500ms. 운영 환경에서 문제 시 단계별 타이밍 프로파일링으로 재분석 필요
