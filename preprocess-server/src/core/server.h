@@ -10,8 +10,28 @@
 #include <optional>
 #include <future>
 #include <memory>
+#include <cstdlib>
 
 namespace fs = std::filesystem;
+
+// ============================================================================
+// Cross-platform Environment Variable Helper
+// ============================================================================
+inline std::string GetEnvVar(const char* key) {
+#ifdef _MSC_VER
+    char* val = nullptr;
+    size_t len = 0;
+    if (_dupenv_s(&val, &len, key) == 0 && val != nullptr) {
+        std::string result(val);
+        free(val);
+        return result;
+    }
+    return "";
+#else
+    const char* val = std::getenv(key);
+    return val ? std::string(val) : "";
+#endif
+}
 
 // ============================================================================
 // Global Thread Pool (Worker threads for CPU-bound image processing)
@@ -20,12 +40,9 @@ namespace fs = std::filesystem;
 inline ThreadPool& GetWorkerPool() {
     static ThreadPool pool([]() -> size_t {
         // Allow runtime tuning via environment variable
-        char* valRaw = nullptr;
-        size_t valLen = 0;
-        _dupenv_s(&valRaw, &valLen, "PREPROCESS_WORKERS");
-        std::unique_ptr<char, decltype(&free)> guard(valRaw, &free);
-        if (valRaw) {
-            size_t n = static_cast<size_t>(std::atoi(valRaw));
+        std::string workersStr = GetEnvVar("PREPROCESS_WORKERS");
+        if (!workersStr.empty()) {
+            size_t n = static_cast<size_t>(std::atoi(workersStr.c_str()));
             if (n > 0) return n;
         }
         // Default: cap at 4 to prevent over-provisioning on high-core-count machines
@@ -222,11 +239,8 @@ inline void setup_routes(crow::SimpleApp& app) {
         
         std::string serverTiming;
         std::string clientKey = req.get_header_value("X-Admin-Profile-Key");
-        char* envKeyRaw = nullptr;
-        size_t envKeyLen = 0;
-        _dupenv_s(&envKeyRaw, &envKeyLen, "ADMIN_PROFILE_KEY");
-        std::unique_ptr<char, decltype(&free)> envKeyGuard(envKeyRaw, &free);
-        if (envKeyRaw && clientKey == envKeyRaw) {
+        std::string adminKey = GetEnvVar("ADMIN_PROFILE_KEY");
+        if (!adminKey.empty() && clientKey == adminKey) {
             serverTiming = "preprocess;dur=" + std::to_string(duration);
         }
         
