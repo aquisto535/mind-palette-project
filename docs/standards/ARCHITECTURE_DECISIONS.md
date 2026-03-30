@@ -1978,6 +1978,27 @@ Mind Palette 프로젝트는 Node.js, C++, Python이라는 3개의 서로 다른
 - ⚠️ **주의사항**: C++ 및 Python 프레임워크 모두에서 커스텀 HTTP Header 조작 규격을 정확히 맞추어 릴레이(Relay)해야 합니다.
 - ✅ **실증 사례**: 동시성 3 부하 테스트(`-Concurrency 3`)에서 CPP_Pre_Ms `537ms / 115ms / 118ms`의 이상값을 최초 발견. 이 프로파일링 시스템이 OpenCV CPU 오버 서브스크립션 문제를 특정하는 데 직접 기여했으며, ADR-028의 최적화 결정으로 이어짐.
 
+### 구현 현황 (Implementation)
+
+ADR-026의 의사결정 3항("E2E 스크립트에 벤치마킹 모드 탑재")은 아래 파일들로 구현되었습니다.
+
+| 파일 | 역할 |
+|------|------|
+| `api-gateway/src/tools/trafficBot.ts` | TrafficBot 클래스. `profileKey` 설정 시 `X-Admin-Profile-Key` 헤더를 포함하여 요청을 전송하고, 응답의 `Server-Timing` 헤더를 파싱하여 서비스별(gateway / preprocess / ai_inference) 평균 응답시간을 집계한다. |
+| `api-gateway/src/tools/runTrafficBot.ts` | CLI 진입점. `--profile-key` 옵션으로 프로파일링 모드를 활성화하고 집계 결과를 콘솔에 출력한다. |
+| `scripts/e2e_smoke_test.ps1` | 서버 3개(C++ / Python / Node.js) 기동 → TrafficBot N발 분산사격 → Server-Timing 집계 출력 → 클린 종료를 한 번에 수행하는 E2E 오케스트레이션 스크립트. `-ProfileMode` 스위치로 Server-Timing 수집을 활성화한다. |
+
+**실행 예시** (서버 3개 모두 실행 중, `ADMIN_PROFILE_KEY` 환경변수 설정 시):
+```
+.\scripts\e2e_smoke_test.ps1 -ProfileMode -Requests 5 -Concurrency 3
+
+[TrafficBot] 완료: 5/5 성공, avgResponseMs=214ms, P95=841ms
+서비스별 평균 응답시간 (Server-Timing):
+  gateway:      607ms
+  preprocess:   530ms   ← ADR-028 콜드 스타트 분석의 근거 수치
+  ai_inference:  18ms
+```
+
 ---
 
 ## ADR-027: EC2 인스턴스 타입 선택 전략 (t3.medium 기각, c5.large 채택)
@@ -2003,6 +2024,8 @@ t3.medium은 **기준 성능이 vCPU 2개의 20%(= 0.4 vCPU 상당)**입니다. 
 | OpenCV 이미지 전처리 (C++) | 115~537ms | CPU-bound |
 | EfficientNet-B2 추론 (Python, CPU) | 500ms~2s | CPU-bound |
 | Node.js 라우팅 + 파일 I/O | ~50ms | I/O-bound |
+
+> **측정 방법**: 위 수치는 `scripts/e2e_smoke_test.ps1 -ProfileMode -Concurrency 3`으로 TrafficBot을 실행하여 `Server-Timing` 헤더에서 수집한 실측값이다. (ADR-026 구현체)
 
 CPU 크레딧 소진 시 위 연산들이 **0.4 vCPU 기준으로 직렬 처리**되어 실사용 불가 수준의 응답 지연이 발생합니다.
 
@@ -2060,7 +2083,7 @@ ADR-026의 W3C Server-Timing 프로파일링 시스템을 통해 동시성 3 부
 
 ### 병목 분석 (Bottleneck Analysis)
 
-W3C Server-Timing 프로파일링 결과를 기준으로 파이프라인 전체의 병목을 계측했습니다.
+`scripts/e2e_smoke_test.ps1 -ProfileMode -Concurrency 3`으로 TrafficBot을 실행하고 응답 헤더의 `Server-Timing` 값을 수집하여 파이프라인 전체의 병목을 계측했습니다.
 
 ```
 Total_E2E_Ms: ~664ms
@@ -2075,6 +2098,8 @@ Total_E2E_Ms: ~664ms
 
 아래 두 가지를 시도했으며, 실험 결과를 통해 최종 결론을 도출했습니다.
 
+> **실험 방법**: 모든 실험은 `scripts/e2e_smoke_test.ps1 -ProfileMode -Concurrency 3`으로 TrafficBot을 실행하여 응답의 `Server-Timing: preprocess;dur=N` 헤더에서 `CPP_Pre_Ms` 수치를 수집했다. C++ 코드 변경 → 서버 재빌드·재기동 → 스크립트 재실행의 반복 사이클로 A/B 비교를 수행했다.
+
 ### 실험 기록 (Experiments)
 
 #### 실험 1: cv::setNumThreads(1) — 실패
@@ -2082,7 +2107,7 @@ Total_E2E_Ms: ~664ms
 
 **적용**: `ProcessImageFile()` 진입 시 `cv::setNumThreads(1)` 호출
 
-**결과**:
+**결과** (TrafficBot `-Concurrency 3`, `Server-Timing` 수집):
 | 측정 | Before | After |
 |------|--------|-------|
 | 1번 (콜드) | 537ms | 585ms |
@@ -2098,9 +2123,9 @@ Total_E2E_Ms: ~664ms
 #### 실험 2: 워밍업(WarmUpProcessingPipeline) — 실패
 **가설**: 첫 요청 시 OpenCV SIMD/TBB 초기화 및 OS 페이지 매핑이 발생(콜드 스타트)하여 537ms가 발생한다. 서버 기동 시 미리 실행하면 해결된다.
 
-**시도 1**: `main()` 메인 스레드에서 워밍업 실행 → 여전히 556ms (워커 스레드 미초기화)
+**시도 1**: `main()` 메인 스레드에서 워밍업 실행 → TrafficBot 1번 요청 여전히 556ms (워커 스레드 미초기화)
 
-**시도 2**: `GetWorkerPool().enqueue()`로 워커 스레드에서 워밍업 실행 → 여전히 556ms
+**시도 2**: `GetWorkerPool().enqueue()`로 워커 스레드에서 워밍업 실행 → TrafficBot 1번 요청 여전히 556ms
 
 **결론**: 워커 스레드가 여러 개이므로 워밍업이 초기화한 스레드와 실제 요청을 처리하는 스레드가 다를 수 있음. 완전한 해결을 위해서는 모든 워커 스레드에 워밍업을 enqueue해야 하지만, 복잡도 증가 대비 실익이 불분명하여 중단.
 

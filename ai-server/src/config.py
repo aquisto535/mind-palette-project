@@ -5,6 +5,8 @@ from typing import Tuple
 class ModelConfig(BaseSettings):
     """HFD 분류 모델 설정. 하드코딩 방지를 위해 모든 파라미터를 중앙 관리."""
 
+    ##EfficientNet-B2라는 엔진을 가져다가 'HFD 인물화 지능 검사'라는 전용 도구로 개조하기 위한 정밀 설계도"
+
     # 입력 차원 (ADR-018: EfficientNet-B2 원논문 = 260x260)
     input_size: int = 260
     input_channels: int = 3

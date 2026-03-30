@@ -101,19 +101,15 @@ describe('API Gateway Tests', () => {
       if (process.env.KEEP_IMAGES === 'true') {
         expect(finalUploads.length).toBeGreaterThan(initialUploads.length);
       } else {
-        // 모든 파일이 삭제되었는지 확인 (동기화 이슈 방지를 위해 잠시 대기할 수도 있으나, 여기서는 일치 여부만 확인)
-        if (finalUploads.length !== initialUploads.length) {
-          logger.warn('Cleanup mismatch detected, forcing manual cleanup of leak:', {
-            leaked: finalUploads.filter(f => !initialUploads.includes(f))
-          });
-          // 강제 정리 (테스트 안정성)
-          finalUploads.forEach(f => {
-            if (!initialUploads.includes(f)) {
-              try { fs.unlinkSync(path.join(TEST_UPLOAD_DIR, f)); } catch {}
-            }
+        // 이 테스트에서 업로드된 파일이 정리되었는지 확인 (leaked 파일 없음)
+        const leaked = finalUploads.filter(f => !initialUploads.includes(f));
+        if (leaked.length > 0) {
+          logger.warn('Cleanup mismatch detected, forcing manual cleanup of leak:', { leaked });
+          leaked.forEach(f => {
+            try { fs.unlinkSync(path.join(TEST_UPLOAD_DIR, f)); } catch {}
           });
         }
-        expect(fs.readdirSync(TEST_UPLOAD_DIR).length).toEqual(initialUploads.length);
+        expect(leaked.length).toEqual(0);
       }
 
       // 5. 결과 저장 검증 (Results)

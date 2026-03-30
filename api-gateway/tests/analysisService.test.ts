@@ -2,7 +2,7 @@ import nock from 'nock';
 import path from 'node:path';
 import fs from 'node:fs';
 import * as analysisService from '../src/services/analysisService';
-import { UPLOAD_DIR } from '../src/utils/fileStorage';
+import { UPLOAD_DIR, PROCESSED_DIR } from '../src/utils/fileStorage';
 
 describe('Analysis Service', () => {
   const dummyFilename = 'dummy.jpg';
@@ -17,14 +17,15 @@ describe('Analysis Service', () => {
 
   beforeEach(() => {
     if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+    if (!fs.existsSync(PROCESSED_DIR)) fs.mkdirSync(PROCESSED_DIR, { recursive: true });
     // 실제 파일 읽기 로직이 있으므로 파일이 존재해야 함
     fs.writeFileSync(mockFile.path, Buffer.from('fake-image-data'));
-    fs.writeFileSync(path.join(UPLOAD_DIR, dummyProcessedFilename), Buffer.from('fake-processed-data'));
+    fs.writeFileSync(path.join(PROCESSED_DIR, dummyProcessedFilename), Buffer.from('fake-processed-data'));
   });
 
   afterAll(() => {
     if (fs.existsSync(mockFile.path)) fs.unlinkSync(mockFile.path);
-    const pPath = path.join(UPLOAD_DIR, dummyProcessedFilename);
+    const pPath = path.join(PROCESSED_DIR, dummyProcessedFilename);
     if (fs.existsSync(pPath)) fs.unlinkSync(pPath);
   });
 

@@ -368,10 +368,19 @@
 > 목표: 서비스의 안정성을 검증하고, 대량의 로그를 생성하여 시스템의 한계를 테스트한다.
 
 #### Traffic Generation - Phase 3~4 (검증용)
-- [ ] **[MCP]** `sequential-thinking`을 사용한 대량 로그 발생 시 파일 I/O 병목 및 시스템 영향도 분석
-- [ ] **Node.js Traffic Bot**:
-  - [ ] [TDD] 봇 가동 시 로그 파일 크기 증가 및 로테이션 발동 여부 테스트 (Red)
-  - [ ] `axios` 기반 주기적 요청 자동화 스크립트 작성 (Green)
+- [x] **[MCP]** `sequential-thinking`을 사용한 대량 로그 발생 시 파일 I/O 병목 및 시스템 영향도 분석
+  > **분석 결과 요약** (2026-03-29):
+  > - **디스크 쓰기 경로 3개**: `logs/` (Winston), `shared_volume/uploads/` (multer 임시), `shared_volume/results/` (분석 결과 JSON)
+  > - **병목 가능성**: `logs/combined-*.log`가 요청당 3~5줄씩 누적 → 10 req/min rate limit 기준 하루 약 43,200줄 → 로테이션 없으면 수 MB/일
+  > - **현재 대책**: `DailyRotateFile(maxSize: 10m, maxFiles: 7d, zippedArchive: true)` 적용 완료 → 10MB 초과 시 즉시 로테이션, 7일분만 보관
+  > - **업로드 임시 파일**: `cleanupTempImages()`로 요청 완료 후 즉시 삭제 → 누적 없음
+  > - **결론**: 현재 구현이 파일 I/O 병목을 충분히 방어하고 있음. Phase 5 대규모 부하 시 `logs/` 디렉토리 디스크 사용량 모니터링 권장
+- [x] **Node.js Traffic Bot**:
+  - [x] [TDD] 봇 가동 시 로그 파일 크기 증가 및 로테이션 발동 여부 테스트 (Red)
+  - [x] `axios` 기반 주기적 요청 자동화 스크립트 작성 (Green)
+- [x] **Server-Timing 통합** (ADR-026 연동):
+  - [x] [TDD] `--profile-key` 옵션 설정 시 Server-Timing 헤더 수집 테스트 (Red)
+  - [x] TrafficBot에 `profileKey` 지원 및 서비스별 평균 응답시간 집계 구현 (Green)
 
 #### Load Testing - Phase 5 (최종 성능)
 - [ ] **k6 부하 테스트**:

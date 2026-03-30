@@ -36,9 +36,15 @@ describe('File Upload Security', () => {
   });
 
   it('should accept valid image files (png/jpg/jpeg)', async () => {
+    const PROCESSED_DIR = path.join(__dirname, '../../shared_volume/processed');
+    if (!fs.existsSync(PROCESSED_DIR)) fs.mkdirSync(PROCESSED_DIR, { recursive: true });
+    const MOCK_PROCESSED_FILENAME = 'test-image_clean.jpg';
+    const MOCK_PROCESSED_PATH = path.join(PROCESSED_DIR, MOCK_PROCESSED_FILENAME);
+    fs.writeFileSync(MOCK_PROCESSED_PATH, Buffer.from('fake-processed-data'));
+
     mockedAxios.post.mockImplementation((url: string) => {
       if (url.includes('/preprocess')) {
-        return Promise.resolve({ data: {}, headers: {} });
+        return Promise.resolve({ data: { processedPath: MOCK_PROCESSED_PATH }, headers: {} });
       }
       return Promise.resolve({
         data: {
@@ -56,6 +62,8 @@ describe('File Upload Security', () => {
       .post('/analyze')
       .attach('image', TEST_IMAGE_PATH)
       .expect(200);
+
+    if (fs.existsSync(MOCK_PROCESSED_PATH)) fs.unlinkSync(MOCK_PROCESSED_PATH);
   });
 
   it('should reject non-image files', async () => {
