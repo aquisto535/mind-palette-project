@@ -246,21 +246,27 @@ TEST_F(ImageProcessorTest, Load_NonExistentFileReturnsEmpty) {
 // ============================================================================
 
 TEST(GenerateOutputPathTest, GeneratesCorrectPath) {
-    std::string input = "/shared/uploads/test.jpg";
-    std::string expected = "/shared/processed/test_clean.jpg";
+    std::string input = "test_shared/uploads/test.jpg";
+    std::string expected = "test_shared/processed/test_clean.jpg";
     
     std::string result = GenerateOutputPath(input);
     
     // Normalize path separators for cross-platform
     std::replace(result.begin(), result.end(), '\\', '/');
     EXPECT_EQ(result, expected);
+
+    // Cleanup generated directories
+    std::filesystem::remove_all("test_shared");
 }
 
 TEST(GenerateOutputPathTest, PreservesExtension) {
-    std::string input = "/shared/uploads/photo.png";
+    std::string input = "test_shared/uploads/photo.png";
     std::string result = GenerateOutputPath(input);
     
     EXPECT_TRUE(result.find(".png") != std::string::npos);
+
+    // Cleanup generated directories
+    std::filesystem::remove_all("test_shared");
 }
 
 // ============================================================================
