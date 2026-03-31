@@ -8,11 +8,11 @@ class ModelConfig(BaseSettings):
     ##EfficientNet-B2라는 엔진을 가져다가 'HFD 인물화 지능 검사'라는 전용 도구로 개조하기 위한 정밀 설계도"
 
     # 입력 차원 (ADR-018: EfficientNet-B2 원논문 = 260x260)
-    input_size: int = 260
-    input_channels: int = 3
+    input_size: int = 260 # EfficientNet-B2의 입력 차원
+    input_channels: int = 3 # EfficientNet-B2의 입력 채널
 
     # EfficientNet-B2 feature dimension
-    backbone_feature_dim: int = 1408
+    backbone_feature_dim: int = 1408 # EfficientNet-B2의 마지막 레이어에서 나오는 피처의 개수(추출되는 특징의 개수)
 
     # Head 출력 크기 (ADR-018: PDF 원본 60문항 기준)
     head_a_size: int = 19  # 머리/얼굴
