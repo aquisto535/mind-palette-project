@@ -100,3 +100,8 @@ data/synthetic_sketches/
 # --- Benchmark artifacts ---
 benchmark_output/
 data/synthetic_sketches/
+
+# --- Environments ---
+.env
+.env.local
+.env.*.local

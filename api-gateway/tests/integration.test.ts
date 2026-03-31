@@ -34,11 +34,14 @@ describe('Integration Test: File Upload Flow', () => {
   });
 
   test('POST /analyze - Should upload file and return analysis result', async () => {
+    const TEST_PROCESSED_DIR = path.join(__dirname, '../../shared_volume/processed');
+    if (!fs.existsSync(TEST_PROCESSED_DIR)) fs.mkdirSync(TEST_PROCESSED_DIR, { recursive: true });
+
     mockedAxios.post.mockImplementation((url: string) => {
       if (url.includes('/preprocess')) {
-        const mockProcessedPath = path.join(TEST_UPLOAD_DIR, 'integration_clean.jpg');
+        const mockProcessedPath = path.join(TEST_PROCESSED_DIR, 'integration_clean.jpg');
         if (!fs.existsSync(mockProcessedPath)) fs.writeFileSync(mockProcessedPath, Buffer.from('fake-data'));
-        return Promise.resolve({ data: { processedPath: mockProcessedPath } });
+        return Promise.resolve({ data: { processedPath: mockProcessedPath }, headers: {} });
       }
       if (url.includes('/analyze')) {
         return Promise.resolve({
@@ -48,7 +51,8 @@ describe('Integration Test: File Upload Flow', () => {
             raw_score: 10,
             head_scores: { head_a: 10, head_b: 10, head_c: 10 },
             date: '2026. 3. 27.'
-          }
+          },
+          headers: {}
         });
       }
       return Promise.reject(new Error('Unknown URL'));

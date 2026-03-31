@@ -69,9 +69,16 @@ router.post('/',
   async (req: Request, res: Response) => {
     try {
       const requestId = (req as any).requestId;
-      const result = await processAnalysis(req.file!, requestId); // Non-null assertion safe due to middleware
+      const adminProfileKey = req.header('x-admin-profile-key');
+
+      const result = await processAnalysis(req.file!, requestId, adminProfileKey);
+      
       res.set('X-Sanitization-Status', result.sanitized ? 'applied' : 'skipped');
-      const { sanitized: _sanitized, ...responseData } = result;
+      if (result.serverTiming) {
+        res.set('Server-Timing', result.serverTiming);
+      }
+
+      const { sanitized: _sanitized, serverTiming: _serverTiming, ...responseData } = result;
       res.json(responseData);
     } catch (error: unknown) {
       logger.error('Analysis Error:', { error: error instanceof Error ? error.message : String(error) });

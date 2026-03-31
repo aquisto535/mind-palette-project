@@ -5,12 +5,14 @@
 """
 
 import io
+import os
+import time
 from datetime import datetime
 from typing import Annotated, Optional
 
 import numpy as np
 import structlog
-from fastapi import APIRouter, Form, HTTPException, UploadFile, Request
+from fastapi import APIRouter, Form, HTTPException, UploadFile, Request, Response
 from PIL import Image
 
 from src.core.augmentation import get_val_transform
@@ -112,6 +114,7 @@ def _compute_head_scores(items: dict) -> dict:
 )
 async def analyze_image(
     request: Request,
+    response: Response,
     file: UploadFile,
     age: Annotated[int, Form()] = 10,
     child_gender: Annotated[str, Form()] = "male",
@@ -158,7 +161,14 @@ async def analyze_image(
         img_tensor = transform(pil_image).unsqueeze(0)  # (1,3,H,W)
         img_np = img_tensor.numpy()
 
+        t0 = time.perf_counter()
         outputs = engine.run(img_np)  # (head_a, head_b, head_c, head_d)
+        duration_ms = (time.perf_counter() - t0) * 1000
+        
+        admin_key = os.getenv("ADMIN_PROFILE_KEY")
+        client_key = request.headers.get("x-admin-profile-key")
+        if admin_key and client_key == admin_key:
+            response.headers["Server-Timing"] = f"ai_inference;dur={duration_ms:.1f}"
 
     except HTTPException as e:
         # 503(OOM/미로드) 등 명시적 예외는 그대로 전달하도록 상단에 배치

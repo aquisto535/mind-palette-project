@@ -1,6 +1,12 @@
-# Mind Palette E2E Smoke Test
-# V14: Dynamic health checks and literal path handling for Korean directories
+param (
+    [switch]$ProfileMode,          #프로파일링 모드
+    [int]$Concurrency = 1,          #동시 요청 수
+    [int]$Requests = 10,            #총 요청 수
+    [int]$IntervalMs = 7000         #요청 간격
+)
 
+# Mind Palette E2E Smoke Test
+# V16: TrafficBot integration — 서버 3개 기동 + TrafficBot N발 분산사격 + Server-Timing 집계 + 클린 종료
 $LOG_FILE = "e2e_final_log.txt"
 if (Test-Path $LOG_FILE) { Remove-Item $LOG_FILE }
 
@@ -34,36 +40,10 @@ Write-LogInfo "Cleaning up old processes..."
 Get-Process | Where-Object { $_.ProcessName -match "preprocess_server|node|python" } | Stop-Process -Force -ErrorAction SilentlyContinue
 Start-Sleep -Seconds 2
 
-$PROJECT_ROOT = (Get-Item .).FullName
+$PROJECT_ROOT = Split-Path -Parent $PSScriptRoot
 
 # ─────────────────────────────────────────────────────────
-# 1. 경로 탐색 (인코딩 우회를 위해 오브젝트 파이프라인 사용)
-# ─────────────────────────────────────────────────────────
-$DOC_PATH = [Environment]::GetFolderPath("MyDocuments")
-$KAKAO_DIR = Get-ChildItem -LiteralPath $DOC_PATH -Directory | Where-Object { $_.Name -like "*카카오톡*" -or $_.Name -like "*Kakao*" } | Select-Object -First 1
-
-if ($null -eq $KAKAO_DIR) {
-    $KAKAO_DIR = Get-ChildItem -LiteralPath $DOC_PATH -Directory -Recurse -Depth 1 | Where-Object { 
-        (Get-ChildItem -LiteralPath $_.FullName -Directory -Filter "VS_*") 
-    } | Select-Object -First 1
-}
-
-if ($null -eq $KAKAO_DIR) {
-    Write-LogInfo "Error: Could not find image directories."
-    exit 1
-}
-
-# VS_* 폴더 탐색 (Pipeline 사용)
-$TARGET_DIRS = $KAKAO_DIR | Get-ChildItem -Directory -Filter "VS_*"
-if ($TARGET_DIRS.Count -eq 0) {
-    Write-LogInfo "Error: No folders matching 'VS_*' found."
-    exit 1
-}
-
-Write-LogInfo "Target directories found successfully."
-
-# ─────────────────────────────────────────────────────────
-# 2. 서버 구동
+# 1. 서버 구동
 # ─────────────────────────────────────────────────────────
 Write-LogInfo "Starting servers..."
 
@@ -77,48 +57,42 @@ $gatewayProc = Start-Process -FilePath "cmd.exe" -ArgumentList "/c npm run dev" 
 if (-not (Wait-ForServer "http://127.0.0.1:3000/health" 30)) { exit 1 }
 
 # ─────────────────────────────────────────────────────────
-# 3. 이미지 선택 (LiteralPath 사용)
+# 2. TrafficBot 실행 (분산 사격)
 # ─────────────────────────────────────────────────────────
-$selectedSubDir = $TARGET_DIRS | Get-Random
-$selectedImage = $selectedSubDir | Get-ChildItem -File | Where-Object { $_.Extension -match "jpg|png" } | Get-Random
-
-if ($null -eq $selectedImage) {
-    Write-LogInfo "Error: No images found in selected directory."
-    exit 1
+$adminKey = $env:ADMIN_PROFILE_KEY
+if ($ProfileMode -and (-not $adminKey)) {
+    Write-LogInfo "Warning: ProfileMode is ON but ADMIN_PROFILE_KEY is not set. Server-Timing will not be collected."
 }
 
-# 8.3 Short Path를 사용하여 인코딩 문제 원천 차단 (최후의 수단)
-$imgPath = $selectedImage.FullName
-try {
-    $fso = New-Object -ComObject Scripting.FileSystemObject
-    $shortPath = $fso.GetFile($imgPath).ShortPath
-    if ($shortPath) { $imgPath = $shortPath }
-} catch { }
+Write-LogInfo "=== TrafficBot 시작 (requests=$Requests, interval=${IntervalMs}ms, concurrency=$Concurrency, profileMode=$ProfileMode) ==="
 
-Write-LogInfo "Selected Image: $imgPath"
+$botArgs = @(
+    "src/tools/runTrafficBot.ts",
+    "--requests", "$Requests",
+    "--interval", "$IntervalMs",
+    "--concurrency", "$Concurrency",
+    "--url", "http://127.0.0.1:3000",
+    "--endpoint", "/analyze"
+)
+if ($ProfileMode -and $adminKey) {
+    $botArgs += "--profile-key", $adminKey
+}
 
-# Analysis Request
-Write-LogInfo "Sending analysis request..."
+Push-Location "$PROJECT_ROOT\api-gateway"
 try {
-    $response = & curl.exe -X POST "http://127.0.0.1:3000/analyze" -F "image=@$imgPath" --silent
-    if (-not $response) { throw "No response received" }
-    
-    $json = $response | ConvertFrom-Json
-    $json | ConvertTo-Json -Depth 5 | Out-File $LOG_FILE -Append
-    
-    if ($null -ne $json.score -and $json.score -gt 0) {
-        Write-LogInfo "TEST STATUS: PASSED (OK) - Real AI Result Received"
-        Write-LogInfo "IQ: $($json.score), Percentile: $($json.percentile)%"
-    } else {
-        Write-LogInfo "TEST STATUS: FAILED (ERR) - Response mismatch"
-        Write-LogInfo "Response: $response"
-    }
-} catch {
-    Write-LogInfo "Error during analysis: $($_.Exception.Message)"
+    $tsNode = ".\node_modules\.bin\ts-node.cmd"
+    $prevEncoding = [Console]::OutputEncoding
+    [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+    $botOutput = & $tsNode $botArgs 2>&1
+    [Console]::OutputEncoding = $prevEncoding
+    $botOutput | ForEach-Object { Write-LogInfo $_ }
+    $botOutput | Out-File $LOG_FILE -Append -Encoding utf8
+} finally {
+    Pop-Location
 }
 
 # ─────────────────────────────────────────────────────────
-# 4. 종료 및 정리
+# 3. 종료 및 정리
 # ─────────────────────────────────────────────────────────
 Write-LogInfo "Cleaning up..."
 Stop-Process -Id $preprocessProc.Id, $aiProc.Id, $gatewayProc.Id -Force -ErrorAction SilentlyContinue

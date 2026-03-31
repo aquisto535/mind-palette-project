@@ -60,11 +60,13 @@ describe('API Gateway Tests', () => {
 
       // 2. 요청 수행 (Mock Backend)
       const MOCK_PROCESSED_FILENAME = path.basename(DUMMY_IMAGE_PATH) + '_clean.jpg';
-      const MOCK_PROCESSED_PATH = path.join(TEST_UPLOAD_DIR, MOCK_PROCESSED_FILENAME);
+      const TEST_PROCESSED_DIR = path.join(__dirname, '../../shared_volume/processed');
+      if (!fs.existsSync(TEST_PROCESSED_DIR)) fs.mkdirSync(TEST_PROCESSED_DIR, { recursive: true });
+      const MOCK_PROCESSED_PATH = path.join(TEST_PROCESSED_DIR, MOCK_PROCESSED_FILENAME);
 
       mockedAxios.post.mockImplementation((url: string) => {
         if (url.includes('/preprocess')) {
-          return Promise.resolve({ data: { processedPath: MOCK_PROCESSED_PATH } });
+          return Promise.resolve({ data: { processedPath: MOCK_PROCESSED_PATH }, headers: {} });
         }
         if (url.includes('/analyze')) {
           return Promise.resolve({
@@ -74,7 +76,8 @@ describe('API Gateway Tests', () => {
               raw_score: 10,
               head_scores: { head_a: 10, head_b: 10, head_c: 10 },
               date: '2026. 3. 27.'
-            }
+            },
+            headers: {}
           });
         }
         return Promise.reject(new Error('Unknown URL'));
@@ -98,19 +101,15 @@ describe('API Gateway Tests', () => {
       if (process.env.KEEP_IMAGES === 'true') {
         expect(finalUploads.length).toBeGreaterThan(initialUploads.length);
       } else {
-        // 모든 파일이 삭제되었는지 확인 (동기화 이슈 방지를 위해 잠시 대기할 수도 있으나, 여기서는 일치 여부만 확인)
-        if (finalUploads.length !== initialUploads.length) {
-          logger.warn('Cleanup mismatch detected, forcing manual cleanup of leak:', {
-            leaked: finalUploads.filter(f => !initialUploads.includes(f))
-          });
-          // 강제 정리 (테스트 안정성)
-          finalUploads.forEach(f => {
-            if (!initialUploads.includes(f)) {
-              try { fs.unlinkSync(path.join(TEST_UPLOAD_DIR, f)); } catch {}
-            }
+        // 이 테스트에서 업로드된 파일이 정리되었는지 확인 (leaked 파일 없음)
+        const leaked = finalUploads.filter(f => !initialUploads.includes(f));
+        if (leaked.length > 0) {
+          logger.warn('Cleanup mismatch detected, forcing manual cleanup of leak:', { leaked });
+          leaked.forEach(f => {
+            try { fs.unlinkSync(path.join(TEST_UPLOAD_DIR, f)); } catch {}
           });
         }
-        expect(fs.readdirSync(TEST_UPLOAD_DIR).length).toEqual(initialUploads.length);
+        expect(leaked.length).toEqual(0);
       }
 
       // 5. 결과 저장 검증 (Results)

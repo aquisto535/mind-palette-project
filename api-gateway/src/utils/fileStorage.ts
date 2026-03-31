@@ -12,10 +12,12 @@ export interface CustomRequest extends Request {
 // 저장소 경로 설정 (프로젝트 루트의 shared_volume 사용)
 const SHARED_ROOT = path.join(__dirname, '../../../shared_volume');
 export const UPLOAD_DIR = path.join(SHARED_ROOT, 'uploads');
+export const PROCESSED_DIR = path.join(SHARED_ROOT, 'processed');
 export const RESULT_DIR = path.join(SHARED_ROOT, 'results');
 
 // 폴더가 없으면 생성 (안전장치)
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+if (!fs.existsSync(PROCESSED_DIR)) fs.mkdirSync(PROCESSED_DIR, { recursive: true });
 if (!fs.existsSync(RESULT_DIR)) fs.mkdirSync(RESULT_DIR, { recursive: true });
 
 interface MagicSignature {

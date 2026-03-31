@@ -1,4 +1,5 @@
 import winston from 'winston';
+import 'winston-daily-rotate-file';
 import path from 'node:path';
 
 const { combine, timestamp, printf, colorize, json } = winston.format;
@@ -37,14 +38,24 @@ const logger = winston.createLogger({
         json()
     ),
     transports: [
-        // 에러 로그는 별도 파일에 저장
-        new winston.transports.File({
-            filename: path.join(LOG_DIR, 'error.log'),
+        // 에러 로그는 별도 파일에 저장 (일별 로테이션)
+        new winston.transports.DailyRotateFile({
+            dirname: LOG_DIR,
+            filename: 'error-%DATE%.log',
+            datePattern: 'YYYY-MM-DD',
+            maxSize: '10m',
+            maxFiles: '7d',
+            zippedArchive: true,
             level: 'error',
         }),
-        // 모든 로그를 통합 파일에 저장
-        new winston.transports.File({
-            filename: path.join(LOG_DIR, 'combined.log'),
+        // 모든 로그를 통합 파일에 저장 (일별 로테이션)
+        new winston.transports.DailyRotateFile({
+            dirname: LOG_DIR,
+            filename: 'combined-%DATE%.log',
+            datePattern: 'YYYY-MM-DD',
+            maxSize: '10m',
+            maxFiles: '7d',
+            zippedArchive: true,
         }),
     ],
 });
