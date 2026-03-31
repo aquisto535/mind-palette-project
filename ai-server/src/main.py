@@ -38,7 +38,7 @@ def create_app(model_config: Optional[ModelConfig] = None) -> FastAPI:
     logger.info("Server initialized", device=config.device)
 
     app.include_router(health_router) # health_router를 앱에 포함
-    app.include_router(analyze_router) # analyze_router를 앱에 포함
+    app.include_router(analyze_router) # analyze_router를 앱에 포함. 분석 요청이 오면 analyze_router의 함수가 실행됨.
     return app
 
 

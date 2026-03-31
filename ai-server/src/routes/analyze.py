@@ -103,7 +103,7 @@ def _compute_head_scores(items: dict) -> dict:
         for head_name, item_list in _HEAD_ITEM_MAP
     }
 
-
+# HTTP POST 요청을 처리하는 함수. analyze_image 함수가 실행됨.@ 기호는 코드가 실행될 때 "바로 아래에 있는 대상을 감싸 안는다"는 뜻
 @router.post(
     "/analyze",
     responses={
