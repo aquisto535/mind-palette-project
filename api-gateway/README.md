@@ -10,13 +10,16 @@ API Gateway를 Python이나 C++ 대신 **Node.js(Express)**로 분리하여 설�
 2. **풀스택 TypeScript 생태계:** Frontend(React)와 동일하게 TypeScript를 채택함으로써, 데이터 타입과 인터페이스를 손쉽게 공유하고 컨텍스트 스위칭 비용을 최소화했습니다.
 3. **비용 효율적 트래픽 댐 (Traffic Dam):** 무거운 CPU 연산 코어(C++, Python)가 외부 트래픽에 직격으로 노출되지 않도록 막아주는 방어벽 역할을 합니다.
 
-## ✨ 핵심 기능
+## ✨ 핵심 기능 (Core Features)
 
-- **파일 업로드 & 보안 검열:** `multer`를 이용한 파일 수신 및 매직 바이트(Magic Byte) 기반 확장자/파일 변조 사전 차단 (`ImageValidator`).
-- **상태 없는(Stateless) 아키텍처:** 클라우드 디스크 용량 고갈 방지를 위해, 분석이 끝나는 즉시 원본 및 임시 파일들을 원자적(`try-finally`)으로 파쇄하는 **Auto-Cleanup** 로직 구현. (단, `KEEP_IMAGES=true` 환경 변수로 개발 환경 보존 가능)
-- **무결성 보장:** 분석이 완료된 JSON 결과 파일과 함께 SHA-256 해시를 생성하여, 결과 데이터의 위변조 방지.
-- **분산 추적 (Distributed Tracing):** `X-Request-ID`를 발급하여 C++ 전처리 서버 및 Python AI 서버 간의 로그 흐름을 연결하고 디버깅 가능성 시인성 확보.
-- **Path Traversal 방어:** `path.resolve()`와 경로 프리픽스 검사를 통한 샌드박싱 적용.
+- **6-Layer 파일 업로드 보안 & 방어:**
+  - 단순 확장자 비교를 넘어, 메모리 상의 **Magic Byte 검증(L2)** 및 샌드박스 경로 제어(Path Traversal 방어)를 통해 악성 파일 투입을 원천 차단합니다 (ADR-020).
+- **성능 오케스트레이션 및 무결성 제어:**
+  - **Auto-Cleanup (Stateless):** 클라우드 디스크 용량 고갈 방지를 위해, 분석이 끝나면 원본 및 `.tmp` 버퍼 파일을 원자적(`try-finally`)으로 파쇄합니다.
+  - **SHA-256 해시 무결성:** 분석된 결과 JSON에 원본 이미지의 해시를 첨부하여 위변조를 막고, 동일 요청 시 **10ms 이내 응답을 보장하는 스마트 캐싱 레이어**의 기반으로 활용합니다.
+- **분산 추적 (Distributed Tracing) 및 무중단 프로파일링:**
+  - **X-Request-ID 전파:** 게이트웨이가 발급한 UUID가 C++(전처리)와 Python(AI) 로그로 일관되게 전파되어, MSA 환경의 디버깅 가시성을 확보합니다.
+  - **W3C Server-Timing API (ADR-026):** 병목 구간 튜닝을 위해 데이터베이스 기록(I/O Overhead) 없이, 클라이언트 HTTP 응답 헤더에 각 마이크로서비스의 소요 시간(ms)을 동적으로 삽입합니다.
 
 ## 🛠️ 기술 스택
 

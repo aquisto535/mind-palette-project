@@ -232,33 +232,96 @@ Hero → InfoForm → Guide → Upload → Loading → Result
 
 ## 데이터 흐름
 
+### 전체 시퀀스 다이어그램
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant U as 🖥️ React Frontend<br/>(Port 5173)
+    participant G as 🔀 API Gateway<br/>(Port 3000)
+    participant FS as 📁 shared_volume/
+    participant C as ⚡ C++ Preprocess<br/>(Port 8081)
+    participant A as 🧠 AI Server<br/>(Port 8082)
+
+    Note over U,A: 📤 Phase 1 — 이미지 업로드 및 검증
+
+    U->>G: POST /analyze<br/>multipart/form-data<br/>{image: File, childInfo: JSON}
+    activate G
+
+    Note right of G: 🛡️ 보안 미들웨어 체인<br/>① Rate Limit (1분/10회)<br/>② Multer 파일 크기 검사 (≤5MB)<br/>③ Magic Bytes 검증 (JPEG/PNG/BMP/WebP)<br/>④ 해상도 검사 (≤4096x4096)
+
+    G->>FS: 💾 uploads/{timestamp}.jpg
+
+    Note over G,C: 🔧 Phase 2 — C++ 이미지 전처리
+
+    G->>C: POST /preprocess<br/>{"imagePath": "shared_volume/uploads/xxx.jpg"}
+    activate C
+
+    Note right of C: 🧵 ThreadPool 워커 스레드 할당
+
+    C->>FS: 📖 uploads/xxx.jpg 읽기
+    FS-->>C: Raw Image (JPEG/PNG)
+
+    Note right of C: 🔬 ImageProcessor 파이프라인<br/>① Resize (260×260 Letterbox)<br/>② Grayscale 정규화<br/>③ Adaptive Binarization (Otsu)<br/>④ Morphology (침식/팽창)<br/>⑤ Distance Transform 생성<br/>⑥ 3채널 합성<br/>   R=Grayscale, G=Binary, B=Distance
+
+    C->>FS: 💾 processed/xxx_clean.jpg<br/>(AtomicWriter: .tmp→rename)
+    C-->>G: {"processedPath": "shared_volume/processed/xxx_clean.jpg"}
+    deactivate C
+
+    Note over G,A: 🧠 Phase 3 — AI 추론
+
+    G->>FS: 📖 processed/xxx_clean.jpg 읽기
+    FS-->>G: Processed 3-Channel Image
+
+    G->>A: POST /analyze<br/>multipart/form-data<br/>{file: 3ch_image, age, child_gender, figure_gender}
+    activate A
+
+    Note right of A: 🔄 전처리 파이프라인<br/>① PIL.Image.open → RGB 변환<br/>② val_transform (260×260 리사이즈)<br/>③ Normalize<br/>   mean=(0.972, 0.031, 0.012)<br/>   std=(0.156, 0.174, 0.074)<br/>④ Tensor → numpy (1,3,260,260)
+
+    Note right of A: ⚙️ 추론 엔진 (자동 폴백)<br/>TensorRT → ONNX Runtime → PyTorch
+
+    Note right of A: 🏗️ EfficientNet-B2 추론<br/>Backbone(frozen) → Feature(1,1408)<br/>→ 4 Linear Heads<br/>   Head A: 19문항 (머리/얼굴)<br/>   Head B: 14문항 (몸통/비례)<br/>   Head C: 16문항 (사지/말단)<br/>   Head D: 11문항 (의복/질적)
+
+    Note right of A: 📊 후처리<br/>① Sigmoid → 확률값 변환<br/>② Threshold(0.5) → 0/1 이진 판정<br/>③ 60문항 합산 → raw_score<br/>④ IQ = 100 + 15×(raw−M)/SD<br/>   (연령·성별 규준표 기반)<br/>⑤ IQ → 백분위 매핑
+
+    A-->>G: {"iq": 105, "percentile": 63,<br/>"raw_score": 51, "items": {60문항},<br/>"head_scores": {4개 Head}}
+    deactivate A
+
+    Note over G,U: 📦 Phase 4 — 응답 조립 및 정리
+
+    Note right of G: 🔄 응답 매핑<br/>mapAiResponseToResult()<br/>iq → score<br/>head_a/19×100 → creativity<br/>head_b/14×100 → expression<br/>head_c/16×100 → observational
+
+    G->>FS: 💾 results/{timestamp}_result.json<br/>(SHA256 무결성 해시 포함)
+
+    Note right of G: 🧹 임시 파일 정리<br/>uploads/xxx.jpg 삭제<br/>processed/xxx_clean.jpg 삭제
+
+    G-->>U: {"score": 105, "percentile": 63,<br/>"details": {creativity, expression, observational},<br/>"interpretation": "HFD 검사 결과..."}
+    deactivate G
+
+    Note over U: 🎨 Result 화면 렌더링<br/>IQ 점수 표시 + 발달 트리 애니메이션<br/>+ PDF 저장 (html2canvas + jsPDF)
 ```
-[사용자] 이미지 업로드 (JPEG/PNG)
-    ↓
-[API Gateway] 검증 → uploads/에 저장
-    ↓
-[Preprocess Server]
-  ├─ Resize(260x260)
-  ├─ Grayscale
-  ├─ Binarize (Otsu)
-  ├─ Morphology (노이즈 제거)
-  ├─ Distance Transform
-  └─ 3채널 이미지 → processed/에 저장
-    ↓
-[AI Server]
-  ├─ 정규화: mean=(0.972, 0.031, 0.012), std=(0.156, 0.174, 0.074)
-  ├─ EfficientNet-B2 → Feature(1408)
-  ├─ 4 Linear Heads → 60문항 예측 (Sigmoid)
-  └─ 원점수 → IQ + 백분위 (연령별 표준화)
-    ↓
-[API Gateway]
-  ├─ score: iq
-  ├─ percentile
-  ├─ details.creativity:    head_a / 19 * 100
-  ├─ details.expression:    head_b / 14 * 100
-  └─ details.observational: head_c / 16 * 100
-    ↓
-[Frontend] IQ 표시 + 발달 트리 애니메이션 + PDF 저장
+
+### 서비스 간 공유 파일 시스템
+
+```mermaid
+graph LR
+    subgraph shared_volume
+        UP[📂 uploads/]
+        PR[📂 processed/]
+        RS[📂 results/]
+    end
+
+    GW[API Gateway] -->|"① 원본 저장"| UP
+    CPP[C++ Server] -->|"② 읽기"| UP
+    CPP -->|"③ 전처리 결과 저장"| PR
+    GW -->|"④ 전처리 이미지 읽기"| PR
+    GW -->|"⑤ 분석 결과 저장"| RS
+    GW -.->|"⑥ 정리: 임시 파일 삭제"| UP
+    GW -.->|"⑥ 정리: 임시 파일 삭제"| PR
+
+    style UP fill:#fef3c7,stroke:#f59e0b
+    style PR fill:#dbeafe,stroke:#3b82f6
+    style RS fill:#d1fae5,stroke:#10b981
 ```
 
 ---

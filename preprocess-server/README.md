@@ -26,39 +26,57 @@ Mind Palette 시스템의 **고성능 이미지 전처리 및 정제**를 담당
 - **Fail-Fast 원칙**: `OpenCV imencode` 실패와 같은 데이터 오류를 숨기기 위한 구형 Fallback 로직을 제거하여, 500 에러를 통해 즉각 오류를 드러내도록 설계되었습니다.
 
 ### 3. Core Layer (핵심 도메인)
-이미지 5단계 전처리(축소 → 노이즈 제거 → 이진화 → ROI 추츨 → 합성) 로직을 **FilterPipeline** 구조로 관리합니다.
+이미지 5단계 전처리(축소 → 노이즈 제거 → 이진화 → ROI 추출 → 합성) 로직을 **FilterPipeline** 구조로 관리하며, 각 단계는 **제1원칙(First Principles)**에 따라 설계되었습니다.
 
-#### 3.1 확장에 열려있는 설계 (Strategy & Composite Pattern)
+#### 3.1 전처리 알고리즘 딥다이브 (데이터 흐름 3단계)
+
+본 프로젝트의 전처리는 단순한 정제를 넘어, AI 모델(EfficientNet-B2)이 스케치 도메인의 특징을 가장 잘 추출할 수 있도록 하는 **도메인 적응(Domain Adaptation)** 과정입니다.
+
+| 알고리즘 (Algorithm) | L1: 데이터 구조 (What) | L2: 변환 로직 (How) | L3: 제약과 검증 (Why) |
+| :--- | :--- | :--- | :--- |
+| **CLAHE & NlMeans** | `[H, W, 1]` Grayscale | 로컬 히스토그램 평활화 + 비지역적 평균 노이즈 제거 | **조명 불균일 및 저화질 방어**: 그림자가 진 스캔본이나 구겨진 종이에서도 일관된 선 명도를 확보합니다. |
+| **Adaptive Binarize** | `[H, W, 1]` 0/255 Binary | 주변 픽셀 평균 대비 임계값 결정 (`Gaussian C`) | **선 두께 강건성**: 연필, 볼펜, 네임펜 등 도구에 상관없이 형태의 기하학적 구조를 이진 공간에 고정합니다. |
+| **Morphology Close** | 이진화된 텐서 데이터 | 팽창(Dilation) 후 침식(Erosion) 연산 | **선 끊김 보정**: 아이들이 살살 그려 끊어진 실선을 하나로 연결하여 AI가 윤곽선을 놓치지 않게 합니다. |
+| **Smart ROI (Contour)** | `std::vector<Point>` | 최대 면적 컨투어(`Dominant`) 기반 바운딩 박스 추출 | **부속 자극 제거**: 인물화 외의 잡영이나 종이 끝부분을 제거하고 분석 대상인 '인물'에만 초점을 맞춥니다. |
+| **Hybrid 3-Channel** | `[512, 512, 3]` Multi-channel | R(Gray), G(InvBinary), B(DistanceMap) 합성 | **도메인 한계 극복**: RGB 질감에 최적화된 사전학습 모델에 '공간적 거리감'과 '필압' 정보를 채널별로 주입합니다. |
+
+#### 3.2 정량적 분석 레이어 (Analysis Layer)
+
+AI 추론이 놓칠 수 있는 수치적 특징을 직접 추출하여 임상적 힌트를 제공합니다.
+
+*   **PressureAnalyzer (필압 분석)**: R-채널(Grayscale)의 픽셀 히스토그램을 분석하여 평균 밝기와 밀도를 산출합니다. 과도한 필압(공격성)이나 너무 낮은 필압(무기력)을 수치화합니다.
+*   **TremorAnalyzer (선 떨림 분석)**: **Hu Moments (불변 모멘트)**를 활용하여 선의 기하학적 복잡도를 계산합니다. 신경학적 미세 떨림이나 형태의 왜곡 정도를 정량적으로 측정합니다.
+
+#### 3.3 확장에 열려있는 설계 (Strategy & Composite Pattern)
 - `IFilter`: 모든 필터의 규격 (Strategy).
 - `FilterPipeline`: 여러 필터를 담아 한 번에 실행하는 컨테이너 (Composite).
 - 개방-폐쇄 원칙(OCP): 새로운 효과를 추가할 때 기존 코드를 수정하지 않고 새로운 `IFilter` 구현체만 추가하면 됩니다.
 
-#### 3.2 Fluent Interface & Method Chaining
-```cpp
-pipeline.add(std::make_unique<ResizeFilter>())
-        .add(std::make_unique<DenoiseFilter>())
-        .add(std::make_unique<HybridPreprocessFilter>());
-```
-- `add()` 함수가 얕은 복사나 이동 대신 `FilterPipeline&`(자신의 참조)을 반환하게 하여 가독성을 높이고 불필요한 메모리 복사를 원천 차단했습니다.
-
 #### 3.3 소유권과 이동 시맨틱 (Modern C++)
 - 각 필터(`IFilter`)는 `std::unique_ptr`로 독점 소유됩니다.
-- 이는 복사 금지(`= delete`)를 통해 컴파일 타임에 물리적으로 얕은 복사로 인한 Dangling Pointer 등 메모리 버그를 원천 차단하며, 필요한 경우 이동 생성자(`&& = default`)를 통해 안전하게 소유권을 전달(`std::move`)합니다.
+- 이는 복사 금지(`= delete`)를 통해 컴파일 타임에 메모리 버그를 원천 차단하며, `std::move`를 통해 안전하게 소유권을 전달합니다.
 
 ---
 
 ## 🚀 워크플로우 (이미지 하나가 처리되는 과정)
 
-1. **수신**: HTTP POST 요청 도착
-2. **위임**: I/O 스레드가 `Promise/Future` 쌍을 만들고 `ThreadPool`의 `tasks_` 큐에 전처리 람다 함수(작업) 삽입 (`enqueue`)
-3. **가동**: 자고 있던 워커 스레드가 `notify_one()`을 듣고 깨어나 큐에서 작업을 `pop`함
-4. **전처리 (자물쇠 해제된 상태)**:
-   - `ResizeFilter`: 768px 이하로 크기를 축소하여 성능 향상 (< 100ms)
-   - `DenoiseFilter`: 종이 질감을 블러(가우시안)로 날림
-   - `HybridPreprocessFilter`: Binarize(흰색/검은색 분리) → SmartCrop(의미없는 여백 제거) → Merge(EfficientNet-B2 입력 형태인 3채널 합성)
-5. **완료 알림**: 결과를 `promise->set_value()`에 담아 I/O 스레드를 깨움
-6. **안전 저장**: `AtomicFileWriter`로 `.tmp`에 임시 저장 후 `rename` 발동
-7. **응답**: API Gateway에 처리된 이미지의 파일 경로 반환
+1. **수신**: HTTP POST 요청 도착 및 `ThreadPool` 작업 큐 삽입.
+2. **최적화 축소 (Early Resize)**: 성능 향상을 위해 768px 이하로 선제 축소 (전체 지연시간 < 100ms 달성).
+3. **심층 정제 (Deep Clean)**: 
+   - `ClaheFilter`: 부분적 명암 대비 극대화.
+   - `NlMeansDenoiseFilter`: 엣지는 보존하고 배경의 종이 질감만 제거.
+4. **기하학적 복원 (Geometric Reconstruction)**: 
+   - `AdaptiveThreshold`: 조명에 강건한 이진화.
+   - `MorphologyFilter`: 미세한 선 떨림 보정 및 끊어진 선 연결.
+5. **도메인 합성 (Hybrid Merge)**: 
+   - **R 채널**: 원본 필압 정보 보존.
+   - **G 채널**: 순수 형태 윤곽선.
+   - **B 채널**: Distance Transform을 통한 윤곽선 거리 정보 (공간적 특징).
+6. **안전 저장 (Atomic Write)**: `AtomicFileWriter`를 통한 파일 무결성 보장.
+7. **응답**: 분석용 하이브리드 이미지 경로 반환.
+
+---
+
 
 ---
 
