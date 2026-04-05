@@ -7,12 +7,33 @@ const client = axios.create({
 });
 
 // 인터셉터 설정 (가이드라인 2.3 참고)
-// 추후 JWT 인증 구현 시 토큰 추가 로직이 들어갈 위치
 client.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  // TODO: JWT 인증 구현 시 아래와 같이 토큰을 추가
-  // store.getState().auth.token을 사용하여 Authorization 헤더 설정
+  // localStorage에서 토큰을 가져와 Authorization 헤더에 추가
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
   return config;
 });
+
+// 응답 인터셉터 추가 (ADR-033 비연필 이미지 예외 처리 대응)
+client.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // 422 Unprocessable Entity: ADR-033 (비연필/컬러 이미지 감지 등)
+    if (error.response?.status === 422) {
+      console.error('Validation Error (ADR-033):', error.response.data);
+      // 알림창이나 UI 상의 에러 처리를 위한 커스텀 에러 객체 반환 가능
+    }
+
+    // 401 Unauthorized: 토큰 만료 등
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token');
+    }
+
+    return Promise.reject(error);
+  }
+);
 
 export default client;
 

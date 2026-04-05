@@ -48,6 +48,7 @@ set(FILTER_SOURCES
     src/filters/invert_filter.cpp
     src/filters/rgb_convert_filter.cpp
     src/filters/hybrid_preprocess_filter.cpp
+    src/filters/color_validation_filter.cpp
     src/filters/clahe_filter.cpp
     src/filters/nlmeans_denoise_filter.cpp
     src/filters/otsu_canny_filter.cpp

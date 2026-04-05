@@ -47,6 +47,7 @@
 | ADR-030 | AI 사각지대 보완을 위한 C++ 정량 분석 레이어(Hu Moments, Histogram) 도입 | 2026-04 | ✅ Accepted |
 | ADR-031 | API Gateway 해시(SHA-256) 기반 스마트 캐싱 아키텍처 채택 | 2026-04 | ✅ Accepted |
 | ADR-032 | 부하 테스트 및 성능 검증 도구로 오픈소스 k6 채택 | 2026-04 | ✅ Accepted |
+| ADR-033 | 비연필(컬러) 이미지 조기 필터링 및 예외 처리 전략 | 2026-04 | ✅ Accepted |
 
 ---
 ## ADR-001: 마이크로서비스 아키텍처 채택 (Node.js + C++ + Python)
@@ -2244,3 +2245,38 @@ Total_E2E_Ms: ~664ms
 ### Consequences (결과)
 * ✅ **고효율 테스트**: 단일 워크스테이션 환경에서도 부담 없이 100~500 VU 이상의 대규모 부하 파동(Wave)을 스크립트로 구현할 수 있으며, CLI를 통해 직관적인 성능 리포트를 발급받을 수 있습니다.
 * ✅ **테스트 파이프라인 내재화 자동화**: k6 시나리오를 추후 CI/CD 환경에 통합하여 배포 시 성능 회귀(Performance Regression)가 일어나는지 모니터링할 수 있는 SRE 기반을 다졌습니다.
+
+---
+## ADR-033: 비연필(컬러) 이미지 조기 필터링 및 예외 처리 전략
+
+### 상태
+✅ **Accepted** (2026-04)
+
+### 컨텍스트 (Context)
+Mind Palette 프로젝트는 **연필로 그린 아동화(HFD)**를 분석 대상으로 합니다. 크레파스, 수채화, 마커 펜 등으로 그려진 이미지는 모델의 추론 정확도를 심각하게 저하시키거나 잘못된 해석을 낳을 수 있습니다. 또한, 명백히 잘못된 데이터를 AI 서버(GPU/Heavy CPU)까지 전달하여 연산 자원을 낭비하는 것을 방지해야 합니다.
+
+### 의사결정 (Decision)
+**"Two-Tier (2단계) 검증 및 조기 Reject 전략"**을 채택합니다.
+
+#### 1. [Tier 1] C++ Preprocess Server: 결정적 필터링 (Deterministic Filtering)
+- **위치**: `FilterPipeline`의 `ResizeFilter` 직후.
+- **로직**: `ColorValidationFilter` 도입.
+  - 이미지를 HSV 색공간으로 변환하여 **채도(Saturation)** 값을 분석.
+  - 특정 채도 임계값(Threshold)을 넘는 픽셀의 비율이 전체의 일정 수준(예: 5%) 이상이면 즉시 중단.
+- **응답**: 파이프라인에서 `ValidationException`을 발생시키고, Crow 서버는 이를 캐치하여 **HTTP 422 (Unprocessable Entity)**를 반환.
+
+#### 2. [Tier 2] Python AI Server: 확률적 검증 (Semantic Validation)
+- **로직**: 흑백 볼펜이나 인쇄물처럼 C++ 채도 검사를 통과한 '비연필' 데이터에 대응.
+  - EfficientNet-B2 추론 결과의 **Confidence Score** 또는 **OOD(Out-Of-Distribution)** 탐지 로직을 활용.
+  - 신뢰도가 낮을 경우 "판독 불가(Pencil texture not detected)" 판정.
+
+### 근거 (Rationale)
+1. **물리적 특성 활용 (Color vs Monochrome)**: 연필 그림은 근본적으로 무채색(R≈G≈B)입니다. HSV 공간에서의 S(채도) 값은 조명 변화에 강건하게 색상 존재 여부를 판단할 수 있는 가장 효율적인 지표입니다.
+2. **비용 효율성 (Fail-Fast)**: C++ OpenCV 연산은 Python 딥러닝 추론보다 수십 배 빠르고 가볍습니다. 1차 관문에서 조기 드랍함으로써 전체 시스템의 Throughput을 최적화합니다.
+3. **사용자 경험 (UX) 개선**: 단순히 "서버 에러(500)"가 아닌 "처리할 수 없는 데이터(422)"와 구체적인 메시지를 반환하여 사용자가 올바른 행동을 하도록 유도합니다.
+
+### 결론 (Consequences)
+- ✅ **장점**: 시스템 무결성 향상, AI 서버 부하 경감, 명확한 에러 핸들링 체계 구축.
+- ⚠️ **단점**: 조명 보정이 완벽하지 않을 경우 연필 그림이 컬러로 오인될 위험(False Negative) 존재.
+- **후속 작업**: `ColorValidationFilter` 구현 및 API Gateway/Frontend의 422 에러 UI 대응.
+

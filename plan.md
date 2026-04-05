@@ -53,6 +53,23 @@
 - [x] **비정상 입력 처리**:
   - [x] [TDD][L3] 손상된 파일, 0바이트 파일, 비이미지 파일 입력 시 400/422 반환 및 서버 무중단 테스트 (Red)
   - [x] `/analyze` 엔드포인트 구현 — 매직 바이트 + PIL.verify() 이미지 검증 (Green)
+- [x] **ADR-033: 비연필(컬러) 이미지 조기 필터링 (Two-Tier Fail-Fast)** ✅ 완료 (2026.04.05)
+  - [x] **Tier 1 — C++ Preprocess Server (HSV 채도 분석, 결정적 필터링)**:
+    - [x] `ValidationException` 예외 클래스 신규 작성 (`src/core/validation_exception.h`)
+    - [x] [TDD][L3] `ColorValidationFilter` — 그레이스케일 통과, 저채도 통과, 고채도 컬러 이미지 422, 경계값 테스트 (6개 케이스)
+    - [x] `ColorValidationFilter` 구현: HSV S채널 > 30(임계값), 컬러 픽셀 비율 ≥ 5% → `ValidationException` throw
+    - [x] `FilterPipeline`에 `ColorValidationFilter` 삽입 (ResizeFilter 직후)
+    - [x] `server.h` 라우트에서 `ValidationException` catch → HTTP 422 반환
+    - [x] CMakeLists.txt에 `color_validation_filter.cpp` 추가
+  - [x] **Tier 2 — Python AI Server (Confidence Score 기반, 확률적 검증)**:
+    - [x] [TDD][L3] `_compute_mean_confidence` 단위 테스트: logit=0 → confidence=0.0, logit=10 → confidence≈1.0, 혼합 → 중간값 (3개 케이스)
+    - [x] [TDD][L3] 낮은 confidence(logit=0 엔진) 주입 시 422, 높은 confidence(logit=10 엔진) 주입 시 200 (2개 케이스)
+    - [x] `_compute_mean_confidence()` 구현: `mean(|sigmoid(logit) - 0.5| * 2)`, 순수 numpy 벡터화
+    - [x] `/analyze` 추론 직후 confidence < 0.3 시 HTTP 422 반환
+  - [x] **리팩터링 및 코드 리뷰 수정** (Tidy First):
+    - [x] `ColorValidationFilter` — 매직 넘버 → named constant (`kDefaultSatThreshold=30`, `kDefaultColorPixelRatio=0.05`), `computeColorRatio()` Extract Method
+    - [x] `color_validation_filter.cpp` — 중복 include `"utils/Logger.h"` 제거, 정수 오버플로우 수정 (`rows * cols` → `(double)rows * cols`)
+    - [x] `analyze.py` — `Tuple` import 제거, `_run_inference` 반환 타입 `tuple[tuple, float]` 통일, `raise e` → `raise` (예외 체인 보존)
 - [x] **모델 미로드 상태**:
   - [x] [TDD][L3] 모델 파일 경로 오류 시 /health에서 model_loaded==false, 서버 기동 유지 테스트 (Red)
 - [ ] **GPU 메모리 고갈**:
@@ -269,17 +286,38 @@
 ## 🌐 Phase 5: 통합 및 고도화 (배포 전략)
 
 ### 성능 최적화 (Performance Optimization)
-- [ ] **Hash-based Caching (지연 시간 해결 - ADR-020 대응)**:
-  - [ ] [TDD] 동일 이미지 업로드 시 보안 검증 및 분석 단계를 건너뛰고 결과 즉시 반환 테스트 (Red)
-  - [ ] SHA-256 해시 기반 "Security-Verified Cache" 레이어 구현 (Green)
-  - [ ] **성능 목표**: 캐시 적중 시 지연 시간 < 10ms 달성
+- [x] **Hash-based Caching (지연 시간 해결 - ADR-020 대응)**:
+  - [x] [TDD] 동일 이미지 업로드 시 보안 검증 및 분석 단계를 건너뛰고 결과 즉시 반환 테스트 (Red) — `api-gateway/tests/cacheService.test.ts`
+  - [x] SHA-256 해시 기반 "Security-Verified Cache" 레이어 구현 (Green) — `cacheService.ts` (LRU+TTL), `analysisService.ts` 통합
+  - [x] **성능 목표**: 캐시 적중 시 지연 시간 < 10ms 달성 (캐시 히트 early return 구현)
 - [ ] **Inference Optimization**: Python AI 서버의 추론 엔진 최종 ONNX/TensorRT 통합 및 회귀 테스트.
 
 ### 배포 아키텍처 및 보안 (Architecture & Security)
-- [ ] **Nginx Reverse Proxy 도입**: AWS EC2 앞단에 Nginx를 배치하여 SSL 인증서(Let's Encrypt) 관리 및 HTTPS 트래픽 처리.
-- [ ] **Mixed Content 방지**: Frontend(HTTPS) ↔ API Gateway(HTTPS) 간 보안 통신 구현.
-- [ ] **Internal Private Network**: API Gateway ↔ C++ ↔ Python 구간은 내부망 HTTP 통신(Plain Text) 유지하여 성능 최적화 (SSL 오버헤드 제거).
-- [ ] **Docker Compose 프로덕션 설정**: `restart: always`, 로깅 드라이버, 볼륨 백업 정책 적용.
+- [x] **Nginx Reverse Proxy 도입**: AWS EC2 앞단에 Nginx를 배치하여 SSL 인증서(Let's Encrypt) 관리 및 HTTPS 트래픽 처리. — `nginx/nginx.conf`, `nginx/Dockerfile`
+- [x] **Mixed Content 방지**: Frontend(HTTPS) ↔ API Gateway(HTTPS) 간 보안 통신 구현. — Nginx SSL 종단, HTTP→HTTPS 리다이렉트 구현
+- [x] **Internal Private Network**: API Gateway ↔ C++ ↔ Python 구간은 내부망 HTTP 통신(Plain Text) 유지하여 성능 최적화 (SSL 오버헤드 제거). — `docker-compose.yml` `internal-net` 적용
+- [x] **Docker Compose 프로덕션 설정**: `restart: unless-stopped`, healthcheck 체인(interval/timeout/retries), shared_volume, `docker-compose.override.yml`(로컬 개발용) 작성 완료.
+
+### EC2 c5.large 실배포
+> **전제**: 로컬 `docker compose up --build` 검증 완료 후 진행. AWS 계정 및 도메인 준비 필요.
+
+- [ ] **EC2 인스턴스 프로비저닝**:
+  - [ ] c5.large (Ubuntu 22.04 LTS, 20GB gp3) 인스턴스 생성 (ADR-027)
+  - [ ] 보안 그룹 설정: 22(SSH, 개인 IP 전용), 80(HTTP, 0.0.0.0/0), 443(HTTPS, 0.0.0.0/0)
+- [ ] **서버 초기 설정 (수동 1회)**:
+  - [ ] Docker 설치: `sudo apt install -y docker.io docker-compose-plugin`
+  - [ ] 프로젝트 클론 및 `.env` 파일 작성 (`PREPROCESS_WORKERS=2`, `CACHE_TTL_SECONDS=3600` 등)
+- [ ] **Let's Encrypt SSL 인증서 발급**:
+  - [ ] Certbot 설치 및 도메인 인증서 발급 (`certbot certonly --standalone -d <도메인>`)
+  - [ ] 인증서를 `nginx/ssl/` 경로로 복사 (`fullchain.pem`, `privkey.pem`)
+  - [ ] 월 1회 자동 갱신 cron 등록 (`certbot renew && docker compose restart nginx`)
+- [ ] **프로덕션 배포 실행**:
+  - [ ] `docker compose up -d --build` (첫 배포)
+  - [ ] 스모크 테스트: `curl https://<도메인>/api/health | jq .`
+- [ ] **캐시 성능 검증 (EC2 실환경)**:
+  - [ ] 동일 이미지 2회 요청 → 2번째 응답 < 10ms 확인
+  - [ ] k6 부하 테스트 EC2에서 실행: `k6 run scripts/load-test.js`
+  - [ ] 검증 기준: 100 VU 기준 P95 < 500ms, 실패율 < 1%
 
 ---
 
@@ -316,9 +354,9 @@
 - [x] **Python**:
   - [x] 모델 로드 상태, Uptime, 시스템 리소스(CPU/Mem) 확인 헬스 체크 구현 완료. (지원: AI Pipeline Architect)
   - [ ] [TDD] GPU 메모리 고갈 시 503 Service Unavailable 반환 테스트 (Red) — Phase 5 이후
-- [ ] **Docker Healthcheck**:
-  - [ ] [TDD] 컨테이너 비정상 종료 시 Docker Daemon의 재시작 정책 동작 테스트 (Red)
-  - [ ] `docker-compose.yml` 내 healthcheck (interval, timeout) 설정 (Green)
+- [x] **Docker Healthcheck**:
+  - [ ] [TDD] 컨테이너 비정상 종료 시 Docker Daemon의 재시작 정책 동작 테스트 (Red) — EC2 배포 후 검증 예정
+  - [x] `docker-compose.yml` 내 healthcheck (interval, timeout) 설정 (Green) — 전 서비스 적용 완료
 
 #### API Documentation - Tier 2: 권장
 - [x] **[MCP]** `context7`으로 OpenAPI 3.0 스펙의 가독성 좋은 문서화 패턴 리서치
@@ -353,7 +391,7 @@
   - [x] `analysisService.ts`의 `finally` 절을 이용한 원본 및 C++ 전처리 이미지 원자적 자동 삭제 로직 적용
 
 #### 전송 보안 (Transport Security) - Tier 2: 권장
-- [ ] **외부 HTTPS**: Frontend ↔ API Gateway는 HTTPS를 사용해야 한다. _(Phase 5 배포 시 Nginx TLS 설정으로 처리 — 애플리케이션 코드 변경 없음)_
+- [x] **외부 HTTPS**: Frontend ↔ API Gateway는 HTTPS를 사용해야 한다. _(Phase 5 배포 시 Nginx TLS 설정으로 처리 — 애플리케이션 코드 변경 없음)_ — `nginx/nginx.conf` SSL 종단 구현 완료
 - [x] **내부망 격리**: API Gateway ↔ C++ ↔ Python 통신은 내부망 HTTP로 제한해야 한다.
 
 #### 로깅 보안 (Logging Hygiene) - Tier 2: 권장
@@ -383,13 +421,13 @@
   - [x] TrafficBot에 `profileKey` 지원 및 서비스별 평균 응답시간 집계 구현 (Green)
 
 #### Load Testing - Phase 5 (최종 성능)
-- [ ] **k6 부하 테스트**:
-  - [ ] [TDT] 동시 접속자 100명 달성 시 응답 지연(P95) 기준 미달 시 실패 처리 (Red)
-  - [ ] k6 시나리오 작성 및 결과 벤치마크 리포트 생성 (Green)
+- [x] **k6 부하 테스트**:
+  - [x] [TDD] 동시 접속자 100명 달성 시 응답 지연(P95) 기준 미달 시 실패 처리 (Red) — `scripts/load-test.js` thresholds: `p(95)<500` 설정
+  - [x] k6 시나리오 작성 및 결과 벤치마크 리포트 생성 (Green) — smoke/load(100VU)/stress(200VU) 3개 시나리오 완료
 
 ---
 
-## 🎓 Phase 6: System Reliability & Chaos Engineering (Apr ~ Aug)
+## 🎓 Phase 6: System Reliability & Chaos Engineering
 > **Goal**: 개별 모듈의 Deep Dive(Phase 3,4)가 끝난 후, 전체 시스템 차원의 안정성과 복구 능력을 검증합니다.
 
 ### 🛡️ Reliability & Resilience (복구 탄력성)

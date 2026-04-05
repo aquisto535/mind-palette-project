@@ -1,10 +1,12 @@
 import path from 'node:path';
 import fs from 'node:fs/promises';
+import crypto from 'node:crypto';
 import axios from 'axios';
 import FormData from 'form-data';
 import { RESULT_DIR, UPLOAD_DIR, PROCESSED_DIR } from '../utils/fileStorage';
 import { saveWithHash } from '../utils/hashIntegrity';
 import logger, { maskPII } from '../utils/logger';
+import { analysisCache } from './cacheService';
 
 const PREPROCESS_SERVER_URL = process.env.PREPROCESS_SERVER_URL || 'http://127.0.0.1:8081';
 // AI 서버 기본 포트는 ai-server/src/config.py :: ServerConfig.port = 8082 와 일치
@@ -160,9 +162,18 @@ async function cleanupTempImages(originalPath: string, processedPath: string, re
  */
 export const processAnalysis = async (file: Express.Multer.File, requestId: string, clientProfileKey?: string): Promise<AnalysisResult & { sanitized: boolean; serverTiming?: string }> => {
   const gatewayStartTime = performance.now();
-  
+
   if (!file) {
     throw new Error('NO_FILE');
+  }
+
+  // 캐시 히트 조회 — 동일 파일 내용이면 전처리/추론 건너뜀 (< 10ms 목표)
+  const imageBuffer = await fs.readFile(file.path);
+  const imageHash = crypto.createHash('sha256').update(imageBuffer).digest('hex');
+  const cached = analysisCache.get(imageHash);
+  if (cached !== undefined) {
+    logger.info('Cache hit:', { hash: imageHash.slice(0, 8), requestId });
+    return cached as AnalysisResult & { sanitized: boolean; serverTiming?: string };
   }
 
   logger.info('Image uploaded:', maskPII({ path: file.path, requestId }));
@@ -189,6 +200,9 @@ export const processAnalysis = async (file: Express.Multer.File, requestId: stri
     const resultContent = JSON.stringify(finalResultData, null, 2);
     await saveWithHash(resultContent, resultPath);
     logger.info('Result saved:', maskPII({ path: resultPath, requestId }));
+
+    // 캐시 저장 (serverTiming은 제외 — 캐시 히트 시 재사용 불가)
+    analysisCache.set(imageHash, { ...finalResultData, sanitized });
 
     let serverTiming: string | undefined;
     if (isProfileMode) {

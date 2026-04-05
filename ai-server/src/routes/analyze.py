@@ -8,7 +8,7 @@ import io
 import os
 import time
 from datetime import datetime
-from typing import Annotated, Literal, Tuple
+from typing import Annotated, Literal
 
 import numpy as np
 import structlog
@@ -30,6 +30,7 @@ Gender = Literal["male", "female"]
 # ── 상수 ──────────────────────────────────────────────────────────────────────
 _ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/bmp", "image/webp"}
 _THRESHOLD = 0.5
+_MIN_CONFIDENCE_THRESHOLD = 0.3  # ADR-033 Tier 2: 평균 확신도 30% 미만 → 판독 불가
 _HEAD_ITEM_MAP = [
     ("head_a", HEAD_A_ITEMS),
     ("head_b", HEAD_B_ITEMS),
@@ -111,7 +112,7 @@ def _preprocess_image(content: bytes, config: ModelConfig) -> np.ndarray:
     return img_tensor.numpy()
 
 
-def _run_inference(engine, img_np: np.ndarray) -> Tuple[tuple, float]:
+def _run_inference(engine, img_np: np.ndarray) -> tuple[tuple, float]:
     """추론 엔진을 실행하고 (출력, 소요시간_ms) 를 반환한다.
 
     Args:
@@ -142,6 +143,27 @@ def _logits_to_item_results(outputs: tuple) -> dict:
         for item_no, prob in zip(item_list, probs):
             items[str(item_no)] = int(prob >= _THRESHOLD)
     return items
+
+
+def _compute_mean_confidence(outputs: tuple[np.ndarray, ...]) -> float:
+    """모든 head의 평균 confidence score를 계산한다.
+
+    Confidence = |sigmoid(logit) - 0.5| * 2 (범위 0~1)
+    값이 낮을수록 모델이 판단을 못 하고 있음 (OOD 신호).
+
+    ADR-033 Tier 2: 연필 그림 특성 미감지 시 422 반환을 위한 지표.
+
+    Args:
+        outputs: ONNX 추론 엔진이 반환한 head별 로짓 배열 tuple.
+                 각 원소는 shape (1, N) 또는 (N,)의 float32 ndarray.
+
+    Returns:
+        전체 문항에 대한 평균 confidence (0.0~1.0).
+        0에 가까울수록 모델이 불확실한 상태 (OOD 의심).
+    """
+    all_logits = np.concatenate([arr.flatten() for arr in outputs])
+    probs = 1 / (1 + np.exp(-all_logits))
+    return float(np.mean(np.abs(probs - 0.5) * 2))
 
 
 def _compute_head_scores(items: dict) -> dict:
@@ -206,8 +228,9 @@ def _build_analysis_result(
     "/analyze",
     responses={
         400: {"description": "Bad Request - 유효하지 않은 이미지 파일 (0바이트, 비이미지 등)"},
+        422: {"description": "Unprocessable Entity - 연필 그림으로 판독 불가 (비연필 입력 의심)"},
         500: {"description": "Internal Server Error - 서버 내부 오류"},
-        503: {"description": "Service Unavailable - 모델 미로드 또는 GPU 리소스(OOM) 부족"}
+        503: {"description": "Service Unavailable - 모델 미로드 또는 GPU 리소스(OOM) 부족"},
     }
 )
 async def analyze_image(
@@ -259,14 +282,28 @@ async def analyze_image(
         # 4. 추론 실행 (책임: _run_inference)
         outputs, duration_ms = _run_inference(engine, img_np)
 
+        # 4-1. [ADR-033 Tier 2] Confidence Score 기반 비연필 감지
+        mean_conf = _compute_mean_confidence(outputs)
+        if mean_conf < _MIN_CONFIDENCE_THRESHOLD:
+            logger.warning("Low confidence detected — possible non-pencil input",
+                           mean_confidence=round(mean_conf, 3),
+                           threshold=_MIN_CONFIDENCE_THRESHOLD)
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    f"판독 불가: 연필 그림 특성이 감지되지 않았습니다. "
+                    f"(confidence={mean_conf:.2f}, threshold={_MIN_CONFIDENCE_THRESHOLD})"
+                ),
+            )
+
         # 5. Server-Timing 헤더 (관리자 전용 프로파일링)
         admin_key = os.getenv("ADMIN_PROFILE_KEY")
         client_key = request.headers.get("x-admin-profile-key")
         if admin_key and client_key == admin_key:
             response.headers["Server-Timing"] = f"ai_inference;dur={duration_ms:.1f}"
 
-    except HTTPException as e:
-        raise e
+    except HTTPException:
+        raise
     except RuntimeError as e:
         if "out of memory" in str(e).lower():
             logger.error("GPU Out of Memory during inference", error=str(e))
@@ -274,7 +311,7 @@ async def analyze_image(
                 status_code=503,
                 detail="서버 리소스(GPU) 부족으로 요청을 처리할 수 없습니다. 잠시 후 다시 시도해주세요."
             )
-        raise e
+        raise
     except Exception as e:
         logger.error("Unexpected error during inference", error=str(e), exc_info=True)
         raise HTTPException(status_code=500, detail=f"서버 내부 오류: {str(e)}")

@@ -18,8 +18,12 @@ FilterPipeline PipelineFactory::createHybridPipeline() {
     // Step 1: Initial Resize (768) to optimize AdaptiveThreshold and FindContours speed (< 100ms target)
     // withPadding=false to avoid black bars interfering with ROI detection
     pipeline.add(std::make_unique<ResizeFilter>(768, false));
-    
-    // Step 2: Denoise (Gaussian Only)
+
+    // Step 2: [ADR-033 Tier 1] Color Validation — 컬러 이미지 조기 거부
+    // 채도(S) > 30인 픽셀이 전체의 5% 이상이면 ValidationException throw → HTTP 422
+    pipeline.add(std::make_unique<ColorValidationFilter>(30, 0.05));
+
+    // Step 3: Denoise (Gaussian Only)
     // Gaussian: 5x5, Median: 0 (Disabled)
     pipeline.add(std::make_unique<DenoiseFilter>(5, 0));
     
