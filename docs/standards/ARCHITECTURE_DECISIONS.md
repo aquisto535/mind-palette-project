@@ -97,6 +97,8 @@
 - ⚠️ **단점**: 네트워크 통신 오버헤드 증가, 분산 시스템 디버깅 복잡도.
 - **완화 전략**: Docker Compose로 로컬 개발 환경 일관성 확보, Shared Volume으로 파일 경로 기반 통신.
 
+> 📌 **관련 압박 질문**: Q7 (MSA vs 모놀리식 네트워크 오버헤드), Q11 (gRPC vs HTTP REST 성능 손해) → [면접 압박 질문 & 답변](#-면접-압박-질문--답변-pressure-interview-qa)
+
 ---
 
 ## ADR-002: Kubernetes 대신 Docker Compose 선택
@@ -148,6 +150,8 @@ kubectl apply -f configmap.yaml
 - ✅ **장점**: 빠른 개발 속도, 낮은 러닝 커브, 비용 절감, 로컬 환경 재현 용이.
 - ⚠️ **단점**: 수평 확장 시 수동 작업 필요 (향후 사용자 급증 시 Kubernetes로 마이그레이션 고려).
 - **포트폴리오 가치**: "프로젝트 규모에 맞는 적절한 도구를 선택하는 엔지니어링 판단력"을 증명.
+
+> 📌 **관련 압박 질문**: Q10 (Kubernetes를 안 쓴 이유 — 비용·메모리·운영 복잡도 분석) → [면접 압박 질문 & 답변](#-면접-압박-질문--답변-pressure-interview-qa)
 
 ---
 
@@ -513,6 +517,8 @@ describe('POST /analyze', () => {
 - ⚠️ **단점**: gRPC 대비 약간의 네트워크 오버헤드 (하지만 체감 불가).
 - **향후 확장성**: 실제로 네트워크 병목이 발생하면 그때 gRPC로 전환 가능 (API Gateway 패턴으로 클라이언트 영향 최소화).
 
+> 📌 **관련 압박 질문**: Q11 (gRPC vs REST — 실측 병목이 네트워크가 아닌 이유, Server-Timing 기반 디버깅 이점) → [면접 압박 질문 & 답변](#-면접-압박-질문--답변-pressure-interview-qa)
+
 ---
 
 ## ADR-009: AI 프레임워크로 PyTorch 채택
@@ -831,6 +837,11 @@ input_tensor.to(device)
 - **기술적 의사결정 문서화**: 8개의 ADR(Architecture Decision Records)을 작성하여 모든 기술 선택의 근거를 명확히 기록. ([링크](https://github.com/yourrepo/docs/ARCHITECTURE_DECISIONS.md))
 ```
 
+### 압박 질문 대비
+"왜 이 수치인가?", "트레이드오프를 알고 선택했나?"를 파고드는 면접관의 압박 질문은 개별 ADR의 근거만으로 답하기 어렵습니다. 코드 레벨 디테일과 실험 결과까지 통합한 답변은 아래 섹션을 참고하세요.
+
+> 📎 **[→ 면접 압박 질문 & 답변 (12개)](#-면접-압박-질문--답변-pressure-interview-qa)**
+
 ---
 
 ## ADR-010: Transfer Learning 모델로 EfficientNet-B2 채택
@@ -953,6 +964,8 @@ for param in model.features[-3:].parameters():
 - **학습 자료**: 
   - [상세 분석 문서](tech-references/AI/ai_model_recommendation.md)
   - [PyTorch EfficientNet 공식 문서](https://pytorch.org/vision/stable/models/efficientnet.html)
+
+> 📌 **관련 압박 질문**: Q6 (EfficientNet-B2 선택 — ResNet-50보다 추론이 느린데 왜 채택했나?) → [면접 압박 질문 & 답변](#-면접-압박-질문--답변-pressure-interview-qa)
 
 ---
 
@@ -1906,6 +1919,8 @@ Phase 3 C++ 전처리 서버의 `ImageProcessor::Preprocess` 함수가 수백 �
 - ✅ **장점**: 코드 가독성 향상, 하드웨어 제약(< 100ms) 충족, 향후 기능 확장에 유연한 아키텍처 확보.
 - ⚠️ **주의**: 너무 낮은 해상도로 리사이즈 시 작은 컨투어(세밀한 필압)가 소실될 수 있으므로, 768px을 임계점으로 설정함.
 
+> 📌 **관련 압박 질문**: Q1 (47% 개선의 코드 레벨 기법 — Early Resize, 보간법 선택, Pipeline Pattern 구조) → [면접 압박 질문 & 답변](#-면접-압박-질문--답변-pressure-interview-qa)
+
 ---
 
 **마지막 업데이트**: 2026-03-21  
@@ -2006,6 +2021,8 @@ ADR-026의 의사결정 3항("E2E 스크립트에 벤치마킹 모드 탑재")�
   ai_inference:  18ms
 ```
 
+> 📌 **관련 압박 질문**: Q3 (Server-Timing 측정 환경 구성 — 파싱 정규식, 보안 게이팅, Prometheus 대신 선택한 이유) → [면접 압박 질문 & 답변](#-면접-압박-질문--답변-pressure-interview-qa)
+
 ---
 
 ## ADR-027: EC2 인스턴스 타입 선택 전략 (t3.medium 기각, c5.large 채택)
@@ -2075,6 +2092,7 @@ c5.large 채택의 전제 조건으로 **Python AI 서버의 추론 엔진을 Py
 - ✅ **장점**: ONNX Runtime 전환으로 메모리 사용량 감소 및 추론 속도 개선.
 - ⚠️ **주의사항**: t3.medium 대비 월 ~$32 추가 비용 발생. MVP 단계에서는 단일 사용자(아동 검사) 시나리오이므로 동시 요청 수가 낮아 실제 비용 부담은 제한적.
 - ⚠️ **주의사항**: `Inference Optimization(ONNX 전환)`이 c5.large 운영의 전제 조건. PyTorch 그대로 유지 시 응답 시간이 허용 범위를 초과할 수 있음.
+- ✅ **추가 최적화 (2026.04.05)**: 런타임 이미지에서 `torch`, `torchvision` 패키지를 완전히 제거하고 `onnxruntime-cpu` 및 `numpy` 기반 전처리로 대체하여 이미지 크기 및 메모리 점유율을 추가로 50% 이상 절감함.
 
 ---
 
@@ -2171,6 +2189,8 @@ Total_E2E_Ms: ~664ms
 - ✅ **단순성 유지**: 불필요한 전역 설정 변경 없이 기본 OpenCV 멀티스레드 동작 유지
 - ⚠️ **콜드 스타트 미해결**: 서버 기동 후 첫 요청 ~500ms. 운영 환경에서 문제 시 단계별 타이밍 프로파일링으로 재분석 필요
 
+> 📌 **관련 압박 질문**: Q4 (멀티스레딩 108% 향상 — Race Condition 방지 설계), Q5 (콜드 스타트 530ms — SLA 위반 아닌가? 수용 근거) → [면접 압박 질문 & 답변](#-면접-압박-질문--답변-pressure-interview-qa)
+
 ---
 ## ADR-029: 딥러닝 추론 최적화를 위한 TensorRT FP16 양자화 채택
 
@@ -2190,6 +2210,8 @@ Total_E2E_Ms: ~664ms
 * ✅ **극강의 성능 향상**: P95 Latency **14.1ms** (1.7배 향상), Throughput **325 QPS** (6.8배 향상)를 달성하여 시스템 병목을 완전히 해소했습니다.
 * ✅ **메모리 최적화**: GPU 메모리 할당량이 53MB(PyTorch)에서 **40MB**로 감소했습니다 (RTX 3050 Ti 기준).
 * ⚠️ **빌드 복잡도 증가**: 배포 환경(GPU 드라이버, CUDA 버전)에 강하게 결합되므로 하드웨어 스펙이 바뀔 때마다 `.engine` 파일을 재빌드해야 하는 제약이 발생합니다. 모델 로더 폴백 시스템을 통해 방어합니다.
+
+> 📌 **관련 압박 질문**: Q2 (ONNX vs TensorRT 근본 아키텍처 차이 — 커널 퓨전, FP16 Tensor Core, 하드웨어 프로파일링), Q9 (FP16 정확도 0.0004 검증 방법) → [면접 압박 질문 & 답변](#-면접-압박-질문--답변-pressure-interview-qa)
 
 ---
 ## ADR-030: AI 사각지대 보완을 위한 C++ 정량 분석 레이어(Hu Moments, Histogram) 도입
@@ -2278,5 +2300,251 @@ Mind Palette 프로젝트는 **연필로 그린 아동화(HFD)**를 분석 대�
 ### 결론 (Consequences)
 - ✅ **장점**: 시스템 무결성 향상, AI 서버 부하 경감, 명확한 에러 핸들링 체계 구축.
 - ⚠️ **단점**: 조명 보정이 완벽하지 않을 경우 연필 그림이 컬러로 오인될 위험(False Negative) 존재.
+- ✅ **테스트 안정화 (2026.04.05)**: C++ 유닛 테스트 시 단순히 비어있는 이미지가 아닌, 채도가 0인 중성 회색(Neutral Gray, RGB 128) 이미지를 입력으로 사용하여 `ColorValidationFilter`가 정상적인 연필 그림을 오탐지하지 않도록 검증 로직을 강화함.
 - **후속 작업**: `ColorValidationFilter` 구현 및 API Gateway/Frontend의 422 에러 UI 대응.
+
+---
+
+## 🎤 면접 압박 질문 & 답변 (Pressure Interview Q&A)
+
+> 이 섹션은 성능 수치나 기술 선택의 "왜?"를 코드 레벨까지 파고드는 압박 질문에 대한 답변 모음입니다.  
+> 각 답변은 관련 ADR과 실제 구현 파일을 근거로 합니다.
+
+---
+
+### 그룹 A: 성능 최적화
+
+---
+
+#### Q1. "C++ 전처리에서 47% 개선을 이룬 구체적인 코드 레벨의 기법은 무엇인가요?"
+
+핵심은 **Early Resize 전략**입니다. [pipeline_factory.cpp](../../preprocess-server/src/core/pipeline_factory.cpp)에서 파이프라인 첫 단계에 `ResizeFilter(768, false)`를 배치해, 이후 모든 필터가 축소된 이미지에서 동작하도록 했습니다.
+
+**병목 분석 근거:** 프로파일링 결과 `AdaptiveThreshold`가 ~94ms, `findContours` ROI 탐색이 ~70ms로, 둘 다 **픽셀 수에 비례하는 O(N) 연산**이었습니다. 원본 해상도에서 돌리면 183ms, 768px 선제 리사이즈 후 97ms로 감소합니다.
+
+**코드 레벨 디테일:**
+- [resize_filter.cpp](../../preprocess-server/src/filters/resize_filter.cpp): 종횡비 보존 스케일링 + `withPadding=false` (검은 패딩이 ROI 탐지 방해 방지)
+- 축소 시 `cv::INTER_AREA` (안티앨리어싱), 확대 시 `cv::INTER_CUBIC` — OpenCV 공식 권장 보간법
+- [filter_pipeline.cpp](../../preprocess-server/src/core/filter_pipeline.cpp): Composite 패턴으로 `IFilter::apply()`를 순차 체이닝
+
+**트레이드오프 인식:** 768px은 tremor 분석 정밀도를 약간 희생합니다. 하지만 HFD에서 임상적으로 유의미한 특징은 대부분 거시적 형태(머리/몸/팔 비율)이므로, 768px이 속도와 정확도의 균형점입니다.
+
+> 📎 관련 ADR: [ADR-024](#adr-024-filterpipeline-패턴-및-early-resize-최적화-채택)
+
+---
+
+#### Q2. "ONNX와 TensorRT의 성능 차이가 발생하는 근본적인 아키텍처 차이를 알고 있나요?"
+
+**ONNX Runtime은 범용 그래프 실행기**이고, **TensorRT는 GPU 하드웨어 특화 컴파일러**입니다. 세 가지 차이가 성능 격차를 만듭니다:
+
+1. **커널 퓨전(Kernel Fusion):** ONNX Runtime은 Conv → BN → ReLU를 개별 커널로 실행합니다. TensorRT는 빌드 타임에 이를 **하나의 퓨즈드 커널**로 합쳐, GPU 커널 런치 오버헤드와 중간 메모리 접근을 제거합니다.
+
+2. **FP16 혼합 정밀도:** `BuilderFlag.FP16`은 데이터 I/O는 FP32로 유지하면서 **행렬 곱셈만 FP16**으로 수행합니다. RTX 3050 Ti의 Tensor Core가 FP16을 네이티브로 가속합니다.
+
+3. **하드웨어 프로파일링:** 빌드 시 실제 GPU에서 수백 개의 커널 변형을 벤치마크하여 **최적 알고리즘을 선택**합니다. 이것이 `.engine` 파일이 특정 GPU/CUDA 버전에 종속되는 이유입니다.
+
+**수치:** P95 ONNX CPU 24.4ms → TensorRT FP16 14.1ms (1.7배), 처리량 48 QPS → 325 QPS (6.8배).
+
+**후속 압박 — "그러면 왜 처음부터 TensorRT를 안 썼나요?"**
+
+> 의도적인 하이브리드 전략입니다. EC2 c5.large(CPU)에서는 ONNX P95 24ms로 충분하고, GPU 인스턴스로 스케일업 시 TensorRT로 전환합니다. [engine_protocol.py](../../ai-server/src/infra/engine_protocol.py)의 `InferenceEngine` Protocol(duck typing)로 코드 변경 없이 엔진 교체가 가능합니다.
+
+> 📎 관련 ADR: [ADR-029](#adr-029-딥러닝-추론-최적화를-위한-tensorrt-fp16-양자화-채택)
+
+---
+
+#### Q3. "성능 측정 시 사용한 Server-Timing 헤더와 스모크 테스트 환경은 어떻게 구성했나요?"
+
+W3C Server-Timing 표준을 활용한 **Zero-Disk 프로파일링** 시스템입니다.
+
+**구조:**
+- 각 마이크로서비스가 `Server-Timing: preprocess;dur=97.3` 형식으로 HTTP 응답 헤더에 처리 시간 삽입
+- API Gateway([analysisService.ts](../../api-gateway/src/services/analysisService.ts))가 하위 서비스의 Server-Timing을 수집·병합하여 클라이언트에 전달
+- **보안 게이팅:** `X-Admin-Profile-Key` 헤더가 환경변수와 일치할 때만 타이밍 정보 노출
+
+**파싱 구현** ([trafficBot.ts](../../api-gateway/src/tools/trafficBot.ts)):
+```typescript
+private parseServerTiming(header: string): Record<string, number> {
+  const result: Record<string, number> = {};
+  const pattern = /^(\S+?);dur=([\d.]+)/;
+  for (const part of header.split(',')) {
+    const match = pattern.exec(part.trim());
+    if (match?.[1] !== undefined && match?.[2] !== undefined) {
+      result[match[1]] = Number.parseFloat(match[2]);
+    }
+  }
+  return result;
+}
+```
+정규식이 `name;dur=N.N` 형식을 파싱하여 서비스별 ms를 집계합니다.
+
+**왜 Prometheus/Grafana가 아닌가?** EC2 c5.large(4GB RAM)에서 Prometheus+Grafana는 500MB+ 메모리를 추가로 소비합니다. Server-Timing은 **디스크 I/O 0, 추가 인프라 0, W3C 표준 준수**로 MVP에 최적입니다.
+
+> 📎 관련 ADR: [ADR-026](#adr-026-w3c-server-timing-기반-zero-disk-e2e-프로파일링-시스템-구축)
+
+---
+
+#### Q9. "FP16 정확도 손실이 0.0004라고 했는데, 이게 의미 있는 수치인지 어떻게 검증했나요?"
+
+**sigmoid 확률 공간**에서 측정했습니다. 4개 head(head_a~d)가 이진 분류 확률을 출력하는데, FP32 ONNX 결과와 FP16 TensorRT 결과의 **최대 절대 오차(max absolute difference)**가 0.0004입니다.
+
+**검증 방법 ([test_tensorrt.py](../../ai-server/tests/test_tensorrt.py)):**
+- 5개 랜덤 시드로 더미 입력 생성 → 반복 측정으로 일관성 확인
+- **이진 분류 일치율 100%** — threshold 0.5 기준으로 FP32와 FP16의 판정이 단 한 건도 다르지 않음
+- 허용 기준 0.20 대비 실측값이 500배 이상 낮음
+
+**왜 안전한가:** HFD에서 "머리가 있는가/없는가" 이진 분류이므로 확률값 0.85 vs 0.8504의 차이는 임상적으로 무의미합니다. FP16이 위험한 경우는 **학습** 시 gradient 소실이고, **추론**에서는 거의 문제가 되지 않습니다.
+
+> 📎 관련 ADR: [ADR-029](#adr-029-딥러닝-추론-최적화를-위한-tensorrt-fp16-양자화-채택)
+
+---
+
+### 그룹 B: 아키텍처 설계
+
+---
+
+#### Q6. "EfficientNet-B2를 선택한 이유? ResNet-50이 추론 속도는 더 빠르지 않나요?"
+
+맞습니다, ResNet-50의 단순 추론은 ~40ms로 더 빠릅니다. 하지만 **Transfer Learning 관점**에서 EfficientNet-B2가 우월합니다.
+
+| | EfficientNet-B2 | ResNet-50 |
+|---|---|---|
+| 파라미터 | **9.2M** | 25.6M |
+| ImageNet Top-1 | **80.1%** | 76.1% |
+| 비율 | **파라미터 36%로 정확도 4% 우위** | |
+
+EfficientNet의 **Compound Scaling**(깊이·너비·해상도를 동시에 최적 비율로 스케일링)이 핵심입니다. 파라미터가 적다는 것은:
+- 소규모 데이터셋(아동 인물화)에서 **과적합 위험이 낮음**
+- ONNX 변환 후 메모리 ~500MB로 c5.large 4GB 내 운영 가능
+- TensorRT FP16 적용 시 325 QPS까지 확장
+
+ViT-B/16은 86.6M 파라미터에 VRAM 4GB+로 **배포 타겟에서 물리적으로 불가능**했습니다.
+
+> 📎 관련 ADR: [ADR-010](#adr-010-transfer-learning-모델로-efficientnet-b2-채택)
+
+---
+
+#### Q7. "마이크로서비스로 나눈 이유가 뭔가요? 모놀리식이면 네트워크 오버헤드가 없잖아요."
+
+E2E 프로파일링에서 Gateway 오버헤드가 ~12ms 정도 추가됩니다. 그럼에도 MSA를 선택한 이유 세 가지:
+
+1. **언어별 최적 도구 활용:** 이미지 전처리는 C++/OpenCV, AI 추론은 PyTorch/TensorRT, API 라우팅은 Node.js/Express가 각각 최적입니다. 모놀리식이면 Python에 C++ 바인딩을 붙여야 해 빌드 복잡도가 기하급수적으로 올라갑니다.
+
+2. **독립 스케일링:** C++ 전처리가 E2E의 80% 병목이므로 이것만 수평 확장 가능합니다. 모놀리식이면 AI 추론(3%)까지 함께 복제해야 합니다.
+
+3. **장애 격리:** C++ 서버가 세그폴트로 죽어도 AI 추론과 Gateway는 영향 없이 에러 응답을 반환합니다.
+
+**12ms 오버헤드 수용 근거:** 전체 E2E ~214ms 중 5.6%이며, Early Resize로 86ms를 절감한 것과 비교하면 충분히 상쇄됩니다.
+
+> 📎 관련 ADR: [ADR-001](#adr-001-마이크로서비스-아키텍처-채택-nodejs--c--python)
+
+---
+
+#### Q10. "Docker Compose로 했다고 했는데, 왜 Kubernetes를 안 썼나요?"
+
+의도적인 **오버엔지니어링 회피**입니다.
+
+현재 서비스는 4개(Nginx + C++ + Python + Node.js)이고, 단일 EC2에서 운영합니다. Kubernetes는 최소 3노드 클러스터가 필요하고, etcd/kube-proxy/CoreDNS 등 컨트롤 플레인만으로 1GB+ 메모리를 소비합니다. c5.large 4GB에서는 물리적으로 불가능합니다.
+
+Docker Compose로도 **서비스 간 네트워크 격리, 환경변수 관리, 원커맨드 배포(`docker-compose up`)**가 가능합니다. 각 서비스가 이미 독립 컨테이너이므로 ECS Fargate나 EKS로의 마이그레이션 비용도 낮습니다.
+
+> 📎 관련 ADR: [ADR-002](#adr-002-kubernetes-대신-docker-compose-선택)
+
+---
+
+#### Q11. "gRPC 대신 HTTP REST를 쓴 이유는? 마이크로서비스 간 통신에서 성능 손해 아닌가요?"
+
+gRPC의 Protocol Buffers 직렬화가 JSON보다 빠르고 HTTP/2 멀티플렉싱도 장점입니다. 그러나 두 가지 이유로 REST를 선택했습니다:
+
+1. **디버깅 용이성:** Server-Timing 헤더 기반 프로파일링 시스템이 HTTP 헤더에 의존합니다. gRPC의 바이너리 프로토콜에서는 `curl`로 직접 테스트하거나 브라우저에서 확인이 불가능합니다.
+
+2. **실측 병목이 아님:** E2E에서 네트워크 직렬화/역직렬화 오버헤드는 ~2-3ms이고, 실제 병목은 C++ 이미지 처리(~97ms)와 AI 추론(~14ms)입니다. gRPC로 1-2ms를 절감해도 전체의 1% 미만입니다.
+
+> 📎 관련 ADR: [ADR-008](#adr-008-grpc-대신-http-rest-api-사용)
+
+---
+
+### 그룹 C: 구현 기법 & 트레이드오프
+
+---
+
+#### Q4. "멀티스레딩으로 108% 향상이라고 했는데, 스레드 풀 구현에서 Race Condition은 어떻게 방지했나요?"
+
+[thread_pool.cpp](../../preprocess-server/src/infra/thread_pool.cpp)에서 **뮤텍스 + 조건변수** 패턴을 사용합니다.
+
+**핵심 설계:**
+- `std::mutex`로 태스크 큐 접근을 보호하되, **락 보유 시간 최소화** — 큐에서 태스크를 pop하는 순간만 락을 잡고, 실제 태스크 실행은 락 밖에서 수행
+- `std::condition_variable`로 워커가 유휴 시 sleep, 새 태스크 등록 시 `notify_one()`으로 깨움
+- `stop_` 플래그로 Graceful Shutdown — 소멸자에서 모든 워커를 `join()`
+
+**Race Condition이 구조적으로 없는 이유:** 이미지 처리는 **태스크 간 공유 상태가 없음** — 각 요청이 독립적인 `cv::Mat`을 처리하므로 데이터 레이스 가능성 자체가 제거됩니다. 큐 자체만 공유 자원이므로 뮤텍스 하나로 충분합니다.
+
+**워커 수 튜닝:** `min(hardware_concurrency(), 4)`로 상한을 제한, `PREPROCESS_WORKERS` 환경변수로 재컴파일 없이 조절 가능합니다.
+
+> 📎 관련 ADR: [ADR-028](#adr-028-c-동시-처리-최적화-workerpool-튜닝-및-콜드-스타트-수용)
+
+---
+
+#### Q5. "콜드 스타트가 530ms인데, 이건 SLA 위반 아닌가요? 어떻게 해결했나요?"
+
+결론부터: **의도적으로 수용**했습니다.
+
+**원인 분석:** OpenCV의 SIMD/TBB 런타임 초기화 + OS의 메모리 페이지 매핑이 첫 요청에서만 발생합니다. 2번째 요청부터 ~124ms로 안정됩니다.
+
+**시도하고 기각한 최적화:**
+- `cv::setNumThreads(1)` → 오히려 평균 32% 악화 (257ms → 340ms)
+- Warm-up 파이프라인 사전 실행 → 측정 가능한 효과 없음
+
+**수용 근거:** HFD 검사 시스템은 서버가 장시간 상주하며, 재시작은 배포/장애 시에만 발생합니다. 첫 요청 530ms는 사용자 체감에 미미하고, 2번째부터 100ms 이하 목표를 달성합니다. 이 판단을 ADR-028에 **의사결정 기록**으로 남겨 추적 가능하게 했습니다.
+
+> 📎 관련 ADR: [ADR-028](#adr-028-c-동시-처리-최적화-workerpool-튜닝-및-콜드-스타트-수용)
+
+---
+
+#### Q8. "TDD를 했다고 하셨는데, 테스트 118개가 실제로 품질을 보장하나요? 커버리지는?"
+
+테스트 수보다 **테스트 전략의 체계성**이 중요합니다. 3-Level TDD 전략을 적용했습니다:
+
+| Level | 검증 대상 | 예시 |
+|-------|----------|------|
+| L1 (데이터 구조) | 입출력 타입, shape, null 체크 | `test_output_is_numpy_tuple` |
+| L2 (변환 로직) | 비즈니스 로직 정합성 | `test_fp16_accuracy_within_tolerance` |
+| L3 (경계/제약) | 엣지 케이스, 에러 핸들링 | `test_invalid_engine_path_raises` |
+
+**실제 효과:** TensorRT 엔진 통합 시 L1 테스트에서 output shape 불일치를 즉시 포착했습니다. C++ FilterPipeline 리팩터링 시에도 91개 CTest가 회귀를 방지했습니다.
+
+커버리지 수치보다, **Red-Green-Refactor 사이클을 지키면서 기능 변경 없이는 테스트가 깨지지 않는 구조**를 유지한 것이 핵심입니다.
+
+> 📎 관련 ADR: [ADR-007](#adr-007-tdd-및-tidy-first-방법론-전면-도입)
+
+---
+
+#### Q12. "이 프로젝트에서 가장 어려웠던 기술적 문제와 해결 과정은?"
+
+**C++ 런타임 Heap Assertion 오류(`__acrt_first_block == header`)**입니다.
+
+vcpkg에서 `x64-windows-static` 트리플렛으로 OpenCV를 정적 링크했더니, `std::string`이나 `cv::Mat` 객체를 DLL 경계를 넘어 전달할 때 CRT(C Runtime) 힙 불일치로 크래시가 발생했습니다. 디버거에서 재현은 되지만 에러 메시지가 암호적이어서 원인 파악에 상당한 시간이 걸렸습니다.
+
+**해결:** vcpkg 트리플렛을 `x64-windows`(동적 링크)로 전환하고, 모든 의존성이 동일한 CRT(msvcrt.dll)를 공유하도록 통일했습니다. 이 경험을 [Week4 트러블슈팅 문서](../troubleshooting/Week4_Final_Runtime_Assertion_Fix.md)에 기록하고 CLAUDE.md의 Gotchas에 등록했습니다.
+
+**교훈:** C++에서 서드파티 라이브러리를 쓸 때는 **링크 방식(정적/동적)의 CRT 일관성**을 반드시 확인해야 합니다.
+
+---
+
+### 빠른 참조 색인
+
+| 질문 유형 | Q번호 | 핵심 키워드 | 관련 ADR |
+|----------|-------|-----------|---------|
+| C++ 전처리 성능 47% | Q1 | Early Resize, INTER_AREA, Pipeline Pattern | ADR-024 |
+| ONNX vs TensorRT 아키텍처 | Q2 | 커널 퓨전, FP16 Tensor Core, 하드웨어 프로파일링 | ADR-029 |
+| Server-Timing 측정 환경 | Q3 | Zero-Disk, 정규식 파싱, 보안 게이팅 | ADR-026 |
+| 멀티스레딩 Race Condition | Q4 | 뮤텍스+조건변수, 공유 상태 없음, PREPROCESS_WORKERS | ADR-028 |
+| 콜드 스타트 530ms | Q5 | SIMD/TBB 초기화, 실험 기각 기록, 수용 근거 | ADR-028 |
+| EfficientNet-B2 선택 | Q6 | Compound Scaling, 9.2M 파라미터, 36% 대비 4% 우위 | ADR-010 |
+| MSA vs 모놀리식 | Q7 | 언어별 최적화, 독립 스케일링, 장애 격리 | ADR-001 |
+| TDD 품질 보장 | Q8 | L1/L2/L3 전략, Red-Green-Refactor | ADR-007 |
+| FP16 정확도 검증 | Q9 | sigmoid 공간, max_diff 0.0004, 100% 이진 일치율 | ADR-029 |
+| Docker Compose vs K8s | Q10 | 1GB+ 컨트롤 플레인, 4GB RAM 제약, 오버엔지니어링 | ADR-002 |
+| gRPC vs REST | Q11 | 병목이 네트워크가 아님, Server-Timing 호환성 | ADR-008 |
+| 가장 어려웠던 문제 | Q12 | CRT Mismatch, x64-windows-static → x64-windows | — |
 
