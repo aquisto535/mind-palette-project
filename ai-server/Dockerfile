@@ -41,7 +41,8 @@ RUN pip install --upgrade pip && \
         "psutil>=5.0.0"
 
 COPY src ./src
-COPY models ./models
+# Create an empty models directory so the mount or download process won't fail
+RUN mkdir -p models
 
 EXPOSE 8082
 

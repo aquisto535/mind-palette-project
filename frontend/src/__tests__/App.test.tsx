@@ -11,9 +11,6 @@ vi.mock('../api/uploadApi', () => ({
 // Mocking globalThis.scrollTo
 globalThis.scrollTo = vi.fn() as typeof globalThis.scrollTo;
 
-// Mocking globalThis.alert
-globalThis.alert = vi.fn();
-
 describe('App Integration Test', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -95,10 +92,13 @@ describe('App Integration Test', () => {
     // Trigger upload
     fireEvent.change(fileInput, { target: { files: [file] } });
 
-    // Wait for error alert
+    // Wait for error message
     await waitFor(() => {
-      expect(globalThis.alert).toHaveBeenCalledWith(expect.stringContaining('오류가 발생했습니다'));
+      expect(screen.getByText(/예기치 못한 오류가 발생했습니다/i)).toBeInTheDocument();
     }, { timeout: 4000 });
+
+    // Click retry button
+    fireEvent.click(screen.getByText(/다시 업로드/i));
 
     // Should be back to upload screen
     await waitFor(() => {

@@ -11,7 +11,7 @@ const NAME_MIN_LENGTH = 2;
 const NAME_MAX_LENGTH = 20;
 const MIN_AGE = 5;
 const MAX_AGE = 13;
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 export function validateName(name: string): ValidationResult {
   const trimmed = name.trim();
@@ -36,7 +36,8 @@ function calcAge(birthDate: Date, today: Date): number {
 export function validateBirthDate(birthDate: string): ValidationResult {
   if (!birthDate) return fail('생년월일을 입력해주세요.');
 
-  const birth = new Date(birthDate);
+  const [year, month, day] = birthDate.split('-');
+  const birth = new Date(Number(year), Number(month) - 1, Number(day));
   if (isNaN(birth.getTime())) return fail('올바른 생년월일을 입력해주세요.');
 
   const today = new Date();
@@ -53,7 +54,7 @@ export function validateBirthDate(birthDate: string): ValidationResult {
 }
 
 export function validateImageFile(file: File): ValidationResult {
-  if (file.size > MAX_FILE_SIZE) return fail('파일 크기는 10MB 이하여야 합니다.');
+  if (file.size > MAX_FILE_SIZE) return fail('파일 크기는 5MB 이하여야 합니다.');
   return ok();
 }
 
