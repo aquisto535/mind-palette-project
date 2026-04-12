@@ -11,7 +11,7 @@ const NAME_MIN_LENGTH = 2;
 const NAME_MAX_LENGTH = 20;
 const MIN_AGE = 5;
 const MAX_AGE = 13;
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 export function validateName(name: string): ValidationResult {
   const trimmed = name.trim();
@@ -54,7 +54,7 @@ export function validateBirthDate(birthDate: string): ValidationResult {
 }
 
 export function validateImageFile(file: File): ValidationResult {
-  if (file.size > MAX_FILE_SIZE) return fail('파일 크기는 5MB 이하여야 합니다.');
+  if (file.size > MAX_FILE_SIZE) return fail('파일 크기는 10MB 이하여야 합니다.');
   return ok();
 }
 
