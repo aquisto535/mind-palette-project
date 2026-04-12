@@ -1,0 +1,115 @@
+name: mind-palette
+
+services:
+  # ──────────────────────────────────────────────────────────────────────────
+  # C++ 이미지 전처리 서버 (ADR-028: PREPROCESS_WORKERS=2, c5.large vCPU 2 기준)
+  # ──────────────────────────────────────────────────────────────────────────
+  preprocess-server:
+    build: ./preprocess-server
+    expose:
+      - "8081"
+    volumes:
+      - shared_volume:/shared_volume
+    environment:
+      PREPROCESS_WORKERS: "2"
+    networks:
+      - internal-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Python AI 추론 서버 (ADR-027: ONNX Runtime CPU, c5.large GPU 없음)
+  # ──────────────────────────────────────────────────────────────────────────
+  ai-server:
+    build: ./ai-server
+    expose:
+      - "8082"
+    volumes:
+      - shared_volume:/shared_volume
+    environment:
+      INFERENCE_BACKEND: "onnx"
+    networks:
+      - internal-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # API Gateway (Node.js/Express — 오케스트레이터)
+  # ──────────────────────────────────────────────────────────────────────────
+  api-gateway:
+    build: ./api-gateway
+    expose:
+      - "3000"
+    volumes:
+      - shared_volume:/shared_volume
+    environment:
+      NODE_ENV: "production"
+      PREPROCESS_SERVER_URL: "http://preprocess-server:8081"
+      AI_SERVER_URL: "http://ai-server:8082"
+      KEEP_IMAGES: "false"
+      CACHE_TTL_SECONDS: "${CACHE_TTL_SECONDS:-3600}"
+      CACHE_MAX_SIZE: "${CACHE_MAX_SIZE:-100}"
+      ADMIN_PROFILE_KEY: "${ADMIN_PROFILE_KEY}"
+    networks:
+      - internal-net
+      - external-net
+    depends_on:
+      preprocess-server:
+        condition: service_healthy
+      ai-server:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Frontend (React — Vite 빌드 → nginx:alpine 정적 서빙)
+  # ──────────────────────────────────────────────────────────────────────────
+  frontend:
+    build: ./frontend
+    expose:
+      - "80"
+    networks:
+      - external-net
+    restart: unless-stopped
+
+  # ──────────────────────────────────────────────────────────────────────────
+  # Nginx (외부 진입점 — HTTPS 종단, 리버스 프록시)
+  # ──────────────────────────────────────────────────────────────────────────
+  nginx:
+    build: ./nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    networks:
+      - external-net
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+      frontend:
+        condition: service_started
+    restart: unless-stopped
+
+volumes:
+  shared_volume:
+
+networks:
+  external-net:
+  internal-net:
+    internal: true

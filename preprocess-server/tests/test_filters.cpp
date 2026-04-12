@@ -3,6 +3,8 @@
 #include "filter_pipeline.h"
 #include "pipeline_factory.h"
 #include "filters/resize_filter.h"
+#include "filters/color_validation_filter.h"
+#include "core/validation_exception.h"
 #include "filters/denoise_filter.h"
 #include "filters/grayscale_filter.h"
 #include "filters/binarize_filter.h"
@@ -149,9 +151,10 @@ TEST(PipelineFactoryTest, CreatePreprocessPipeline) {
 TEST(PipelineFactoryTest, CreateHybridPipeline) {
     FilterPipeline pipeline = PipelineFactory::createHybridPipeline();
 
-    EXPECT_EQ(pipeline.size(), 3);  // Resize(1024), Denoise, HybridPreprocess
+    EXPECT_EQ(pipeline.size(), 4);  // Resize(768), ColorValidation, Denoise, HybridPreprocess
 
-    cv::Mat input = cv::Mat::ones(1000, 1000, CV_8UC3) * 128;
+    // Use a neutral gray image (R=G=B=128) to pass color validation
+    cv::Mat input(1000, 1000, CV_8UC3, cv::Scalar(128, 128, 128));
     cv::Mat result = pipeline.execute(input);
 
     EXPECT_EQ(result.rows, 512);
@@ -417,4 +420,64 @@ TEST(GetContentROITest, EmptyBinary_ReturnsFallback) {
 
     EXPECT_EQ(roi.width,  500);
     EXPECT_EQ(roi.height, 500);
+}
+
+// ==================== ColorValidationFilter Tests (ADR-033 Tier 1) ====================
+
+// 1. 1채널 그레이스케일 이미지 → 예외 없이 통과
+TEST(ColorValidationFilterTest, PassesGrayscaleImage) {
+    cv::Mat input = cv::Mat::ones(100, 100, CV_8UC1) * 128;
+    ColorValidationFilter filter;
+
+    EXPECT_NO_THROW(filter.apply(input));
+    cv::Mat result = filter.apply(input);
+    EXPECT_FALSE(result.empty());
+}
+
+// 2. 낮은 채도의 BGR 이미지 (연필 그림 시뮬레이션) → 예외 없이 통과
+TEST(ColorValidationFilterTest, PassesLowSaturationImage) {
+    // 모든 픽셀을 R=G=B=128 (무채색)로 설정
+    cv::Mat input(100, 100, CV_8UC3, cv::Scalar(128, 128, 128));
+    ColorValidationFilter filter;
+
+    EXPECT_NO_THROW(filter.apply(input));
+}
+
+// 3. 고채도 순수 빨강 이미지 → ValidationException throw
+TEST(ColorValidationFilterTest, ThrowsOnColorImage) {
+    // 순수 빨강: HSV S값이 최대(255)
+    cv::Mat input(100, 100, CV_8UC3, cv::Scalar(0, 0, 255));  // BGR: 빨강
+    ColorValidationFilter filter;
+
+    EXPECT_THROW(filter.apply(input), ValidationException);
+}
+
+// 4. 5% 이상 컬러 픽셀 혼합 이미지 → ValidationException throw
+TEST(ColorValidationFilterTest, ThrowsOnMixedColorImage) {
+    // 회색 배경에 10%를 빨간 픽셀로 채움
+    cv::Mat input(100, 100, CV_8UC3, cv::Scalar(128, 128, 128));
+    int colorRows = 10;  // 10행 = 10% 픽셀이 컬러
+    input(cv::Rect(0, 0, 100, colorRows)) = cv::Scalar(0, 0, 255);
+    ColorValidationFilter filter(30, 0.05);
+
+    EXPECT_THROW(filter.apply(input), ValidationException);
+}
+
+// 5. 5% 미만 컬러 픽셀 → 예외 없이 통과 (경계값 테스트)
+TEST(ColorValidationFilterTest, PassesBorderlineImage) {
+    // 회색 배경에 3%만 빨간 픽셀 (임계값 5% 미만)
+    cv::Mat input(100, 100, CV_8UC3, cv::Scalar(128, 128, 128));
+    int colorRows = 3;  // 3행 = 3%
+    input(cv::Rect(0, 0, 100, colorRows)) = cv::Scalar(0, 0, 255);
+    ColorValidationFilter filter(30, 0.05);
+
+    EXPECT_NO_THROW(filter.apply(input));
+}
+
+// 6. 파이프라인 통합: createHybridPipeline + 컬러 이미지 → ValidationException 전파
+TEST(ColorValidationFilterTest, PipelineThrowsForColorImage) {
+    cv::Mat input(768, 768, CV_8UC3, cv::Scalar(0, 0, 255));  // 전체 빨강
+    auto pipeline = PipelineFactory::createHybridPipeline();
+
+    EXPECT_THROW(pipeline.execute(input), ValidationException);
 }

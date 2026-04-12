@@ -1,0 +1,23 @@
+# docker-compose.dev.yml — 개발 환경 오버라이드
+#
+# 사용법:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+#
+# 변경 내용:
+#   - api-gateway: 호스트 포트 3000 노출 (Vite 프록시 http://localhost:3000 연결용)
+#   - frontend, nginx: production 프로파일로 분리 (개발 시 Vite dev server 사용)
+
+name: mind-palette
+
+services:
+  api-gateway:
+    ports:
+      - "3000:3000"    # 호스트에서 localhost:3000 접근 가능 (Vite 프록시 대상)
+    environment:
+      NODE_ENV: "development"
+
+  frontend:
+    profiles: ["production"]   # 개발 시 제외 (Vite dev server 사용)
+
+  nginx:
+    profiles: ["production"]   # 개발 시 제외 (Vite가 직접 api-gateway 프록시)

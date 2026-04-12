@@ -9,6 +9,7 @@
 #include "filters/rgb_convert_filter.h"
 #include "filters/invert_filter.h"
 #include "filters/hybrid_preprocess_filter.h"
+#include "filters/color_validation_filter.h"
 
 /**
  * @brief PipelineFactory - Factory Pattern for pre-defined pipelines

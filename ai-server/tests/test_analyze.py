@@ -3,14 +3,19 @@
 L3: 제약과 검증 — "경계에서도 안전한가?"
 - 손상된 파일, 0바이트 파일, 비이미지 파일 입력 시 400/422 반환
 - 서버 무중단(서버는 여전히 /health 200 OK 응답)
+- ADR-033 Tier 2: Confidence Score 기반 비연필 이미지 422 반환
 """
 
 import io
-from unittest.mock import patch
+import unittest.mock
+from unittest.mock import MagicMock, patch
 
+import numpy as np
 import pytest
 from httpx import ASGITransport, AsyncClient
 from PIL import Image
+
+from src.routes.analyze import _compute_mean_confidence
 
 
 # ──────────────────────────────────────────────
@@ -157,3 +162,100 @@ async def test_analyze_gpu_oom_returns_503(app):
 
     assert response.status_code == 503
     assert "리소스" in response.json()["detail"] or "GPU" in response.json()["detail"]
+
+
+# ──────────────────────────────────────────────
+# ADR-033 Tier 2: Confidence Score 기반 비연필 감지
+# ──────────────────────────────────────────────
+
+class TestComputeMeanConfidence:
+    """_compute_mean_confidence 헬퍼 함수 단위 테스트."""
+
+    # 실제 head별 항목 수: A=19, B=14, C=16, D=11 (총 60항목)
+    _SHAPES = ((1, 19), (1, 14), (1, 16), (1, 11))
+
+    def test_all_uncertain_outputs_return_zero_confidence(self):
+        """logit=0 (sigmoid=0.5) 이면 confidence=0.0 이어야 한다."""
+        outputs = tuple(np.zeros(shape, dtype=np.float32) for shape in self._SHAPES)
+        result = _compute_mean_confidence(outputs)
+        assert result == pytest.approx(0.0, abs=1e-6)
+
+    def test_all_certain_outputs_return_high_confidence(self):
+        """logit=10 (sigmoid≈1.0) 이면 confidence≈1.0 이어야 한다."""
+        outputs = tuple(np.full(shape, 10.0, dtype=np.float32) for shape in self._SHAPES)
+        result = _compute_mean_confidence(outputs)
+        assert result >= 0.9
+
+    def test_mixed_outputs_return_intermediate_confidence(self):
+        """절반은 확실(logit=10), 절반은 불확실(logit=0) 이면 confidence가 중간값이어야 한다."""
+        def mixed(shape):
+            half = shape[1] // 2
+            certain = np.full((1, half), 10.0, dtype=np.float32)
+            uncertain = np.zeros((1, shape[1] - half), dtype=np.float32)
+            return np.concatenate([certain, uncertain], axis=1)
+
+        outputs = tuple(mixed(shape) for shape in self._SHAPES)
+        result = _compute_mean_confidence(outputs)
+        assert 0.3 < result < 0.7
+
+
+class TestAnalyzeLowConfidence:
+    """Confidence Score가 낮을 때 422를 반환해야 한다 (ADR-033 Tier 2)."""
+
+    def _make_jpeg_bytes(self) -> bytes:
+        img = Image.new("RGB", (260, 260), color="white")
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG")
+        return buf.getvalue()
+
+    # 실제 head별 항목 수: A=19, B=14, C=16, D=11 (총 60항목)
+    _SHAPES = ((1, 19), (1, 14), (1, 16), (1, 11))
+
+    def _make_low_confidence_engine(self):
+        """logit=0 반환 → confidence=0 → 422 트리거."""
+        engine = MagicMock()
+        engine.run.return_value = tuple(
+            np.zeros(shape, dtype=np.float32) for shape in self._SHAPES
+        )
+        return engine
+
+    def _make_high_confidence_engine(self):
+        """logit=10 반환 → confidence≈1.0 → 200 OK."""
+        engine = MagicMock()
+        engine.run.return_value = tuple(
+            np.full(shape, 10.0, dtype=np.float32) for shape in self._SHAPES
+        )
+        return engine
+
+    @pytest.mark.asyncio
+    async def test_analyze_returns_422_on_low_confidence(self, app):
+        """모든 logit=0 (confidence=0) 인 엔진 주입 시 422를 반환해야 한다."""
+        engine = self._make_low_confidence_engine()
+        app.state.model_state.male_engine = engine
+        app.state.model_state.engine_type = "mock"
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                "/analyze",
+                files={"file": ("test.jpg", self._make_jpeg_bytes(), "image/jpeg")},
+            )
+
+        assert response.status_code == 422
+        assert "판독 불가" in response.json()["detail"]
+
+    @pytest.mark.asyncio
+    async def test_analyze_returns_200_on_high_confidence(self, app):
+        """logit=10 (confidence≈1.0) 인 엔진 주입 시 200을 반환해야 한다."""
+        engine = self._make_high_confidence_engine()
+        app.state.model_state.male_engine = engine
+        app.state.model_state.engine_type = "mock"
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post(
+                "/analyze",
+                files={"file": ("test.jpg", self._make_jpeg_bytes(), "image/jpeg")},
+            )
+
+        assert response.status_code == 200

@@ -1,6 +1,7 @@
 #pragma once
 #include "crow.h"
 #include "core/image_processor.h"
+#include "core/validation_exception.h"
 #include "infra/thread_pool.h"
 #include "infra/atomic_writer.h"
 #include "utils/Logger.h"
@@ -215,14 +216,33 @@ inline void setup_routes(crow::SimpleApp& app) {
         auto promise = std::make_shared<std::promise<std::optional<cv::Mat>>>();
         auto future = promise->get_future();
         
-        GetWorkerPool().enqueue([promise, imagePath, requestId]() 
+        GetWorkerPool().enqueue([promise, imagePath, requestId]()
         {
-            promise->set_value(ProcessImageFile(imagePath, requestId));
+            try {
+                promise->set_value(ProcessImageFile(imagePath, requestId));
+            } catch (...) {
+                promise->set_exception(std::current_exception());
+            }
         });
-        
+
         // Wait for worker thread to complete processing
-        auto processedOpt = future.get();
-        if (!processedOpt) 
+        // ValidationException propagates via promise/future → HTTP 422
+        std::optional<cv::Mat> processedOpt;
+        try {
+            processedOpt = future.get();
+        } catch (const ValidationException& e) {
+            LOG_WARN(requestId, "Color validation failed: {}", e.what());
+            crow::json::wvalue body;
+            body["error"] = "COLOR_VALIDATION_FAILED";
+            body["message"] = std::string(e.what());
+            crow::response res(422, body.dump());
+            res.add_header("Content-Type", "application/json");
+            return res;
+        } catch (...) {
+            return crow::response(500, "Processing failed");
+        }
+
+        if (!processedOpt)
         {
             return crow::response(500, "Processing failed");
         }

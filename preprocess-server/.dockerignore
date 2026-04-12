@@ -1,0 +1,16 @@
+.git
+.gitignore
+.vscode
+.vs
+build/
+build_linux/
+vcpkg_installed/
+out/
+bin/
+logs/
+test_logs/
+shared_volume/
+*.obj
+*.log
+.DS_Store
+Thumbs.db
