@@ -4,6 +4,7 @@
 #include "core/image_processor.h"
 #include <filesystem>
 #include <fstream>
+#include <stdexcept>
 
 namespace fs = std::filesystem;
 
@@ -228,11 +229,10 @@ TEST_F(ImageProcessorTest, Preprocess_OutputHasWhiteBackground) {
     EXPECT_GE(pixel[2], 240); // R
 }
 
-TEST_F(ImageProcessorTest, Preprocess_EmptyInputReturnsEmpty) {
+TEST_F(ImageProcessorTest, Preprocess_EmptyInputThrows) {
+    // ADR-033 Fail-Closed: 빈 입력은 조용히 통과시키지 않고 runtime_error를 throw해야 함
     cv::Mat empty;
-    cv::Mat result = processor.Preprocess(empty);
-    
-    EXPECT_TRUE(result.empty());
+    EXPECT_THROW(processor.Preprocess(empty), std::runtime_error);
 }
 
 TEST_F(ImageProcessorTest, Load_NonExistentFileReturnsEmpty) {
