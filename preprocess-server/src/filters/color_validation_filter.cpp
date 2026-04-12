@@ -34,8 +34,8 @@ cv::Mat ColorValidationFilter::apply(const cv::Mat& input) const {
 
     const double ratio = computeColorRatio(input);
 
-    spdlog::debug("[ColorValidationFilter] color ratio = {:.1f}% (threshold = {:.1f}%)",
-                  ratio * 100.0, colorPixelRatio_ * 100.0);
+    spdlog::info("[ColorValidationFilter] color ratio = {:.1f}% (threshold = {:.1f}%)",
+                 ratio * 100.0, colorPixelRatio_ * 100.0);
 
     if (ratio >= colorPixelRatio_) {
         std::ostringstream oss;

@@ -98,10 +98,15 @@ async function invokePreprocessServer(filePath: string, requestId: string, admin
       error.response.status = 422;
       throw error;
     }
-    logger.warn('L6 Sanitization skipped: preprocessing failed, using original image:', {
+    // ADR-033 Fail-Closed: 그 외 모든 전처리 오류는 원본 이미지 우회를 허용하지 않음
+    // preprocess-server 장애/타임아웃 시 503으로 거부 (컬러 이미지 bypass 방지)
+    logger.error('Preprocessing failed — request rejected (Fail-Closed policy):', {
       error: error instanceof Error ? error.message : String(error),
       requestId
     });
+    const serviceError = new Error('PREPROCESS_SERVICE_UNAVAILABLE');
+    serviceError.name = 'PreprocessServiceError';
+    throw serviceError;
   }
   return { processedImagePath, sanitized, serverTiming };
 }

@@ -87,6 +87,10 @@ router.post('/',
       if (axios.isAxiosError(error) && error.response?.status === 422) {
         return res.status(422).json(error.response.data);
       }
+      // ADR-033 Fail-Closed: preprocess-server 장애 시 503 반환 (원본 이미지 우회 방지)
+      if (error instanceof Error && error.name === 'PreprocessServiceError') {
+        return res.status(503).json({ error: 'PREPROCESS_SERVICE_UNAVAILABLE', message: '전처리 서버에 일시적인 문제가 발생했습니다. 잠시 후 다시 시도해주세요.' });
+      }
       res.status(500).json({ error: 'Internal Server Error' });
     }
   }

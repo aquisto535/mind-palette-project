@@ -1,5 +1,6 @@
 #include "core/image_processor.h"
 #include <iostream>
+#include <stdexcept>
 #include <algorithm> // for std::max
 #include "filters/resize_filter.h"
 #include "filters/denoise_filter.h"
@@ -24,7 +25,8 @@ cv::Mat ImageProcessor::Load(const std::string& path, const std::string& request
 }
 
 cv::Mat ImageProcessor::Preprocess(const cv::Mat& input, const std::string& requestId) {
-    if (input.empty()) return cv::Mat();
+    // ADR-033 Fail-Closed: 빈 입력은 조용히 통과시키지 않고 명시적 예외로 처리
+    if (input.empty()) throw std::runtime_error("PIPELINE_FAILED: empty input image");
 
     auto pipeline = PipelineFactory::createHybridPipeline();
     return pipeline.execute(input);

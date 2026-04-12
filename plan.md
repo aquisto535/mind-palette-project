@@ -347,19 +347,19 @@
 >
 > **전제**: 로컬 `docker compose up --build` 검증 완료 후 진행. AWS 계정 및 도메인 준비 필요.
 
-- [ ] **EC2 인스턴스 프로비저닝**:
-  - [ ] c5.large (Ubuntu 22.04 LTS, 20GB gp3) 인스턴스 생성 (ADR-027)
-  - [ ] 보안 그룹 설정: 22(SSH, 개인 IP 전용), 80(HTTP, 0.0.0.0/0), 443(HTTPS, 0.0.0.0/0)
-- [ ] **서버 초기 설정 (수동 1회)**:
-  - [ ] Docker 설치: `sudo apt install -y docker.io docker-compose-plugin`
-  - [ ] 프로젝트 클론 및 `.env` 파일 작성 (`PREPROCESS_WORKERS=2`, `CACHE_TTL_SECONDS=3600` 등)
-- [ ] **Let's Encrypt SSL 인증서 발급**:
-  - [ ] Certbot 설치 및 도메인 인증서 발급 (`certbot certonly --standalone -d <도메인>`)
-  - [ ] 인증서를 `nginx/ssl/` 경로로 복사 (`fullchain.pem`, `privkey.pem`)
-  - [ ] 월 1회 자동 갱신 cron 등록 (`certbot renew && docker compose restart nginx`)
-- [ ] **프로덕션 배포 실행**:
-  - [ ] `docker compose up -d --build` (첫 배포)
-  - [ ] 스모크 테스트: `curl https://<도메인>/api/health | jq .`
+- [x] **EC2 인스턴스 프로비저닝**:
+  - [x] c5.large (Ubuntu 22.04 LTS, 20GB gp3) 인스턴스 생성 (ADR-027)
+  - [x] 보안 그룹 설정: 22(SSH, 개인 IP 전용), 80(HTTP, 0.0.0.0/0), 443(HTTPS, 0.0.0.0/0)
+- [x] **서버 초기 설정 (수동 1회)**:
+  - [x] Docker 설치: `sudo apt install -y docker.io docker-compose-plugin`
+  - [x] 프로젝트 클론 및 `.env` 파일 작성 (`PREPROCESS_WORKERS=2`, `CACHE_TTL_SECONDS=3600` 등)
+- [x] **Let's Encrypt SSL 인증서 발급**:
+  - [x] Certbot 설치 및 도메인 인증서 발급 (`certbot certonly --standalone -d <도메인>`)
+  - [x] 인증서를 `nginx/ssl/` 경로로 복사 (`fullchain.pem`, `privkey.pem`)
+  - [x] 월 1회 자동 갱신 cron 등록 (`certbot renew && docker compose restart nginx`)
+- [x] **프로덕션 배포 실행**:
+  - [x] `docker compose up -d --build` (첫 배포)
+  - [x] 스모크 테스트: `curl https://<도메인>/api/health | jq .`
 - [ ] **캐시 성능 검증 (EC2 실환경)**:
   - [ ] 동일 이미지 2회 요청 → 2번째 응답 < 10ms 확인
   - [ ] k6 부하 테스트 EC2에서 실행: `k6 run scripts/load-test.js`

@@ -12,6 +12,7 @@
 #include <future>
 #include <memory>
 #include <cstdlib>
+#include <stdexcept>
 
 namespace fs = std::filesystem;
 
@@ -125,25 +126,28 @@ inline ValidationResult ValidatePreprocessRequest(const crow::request& req, cons
     return {true, imagePath, 200, ""};
 }
 
-// Returns processed image or nullopt on failure
+// Returns processed image or throws on failure
 // Pipeline: Preprocess → Canny → Morphology → Binarize (GrabCut excluded for performance)
+// Throws: ValidationException (color image) | std::runtime_error (load/pipeline failure)
 inline std::optional<cv::Mat> ProcessImageFile(const std::string& imagePath, const std::string& requestId) {
     LOG_INFO(requestId, "Processing file: {}", imagePath);
-    
+
     ImageProcessor processor;
     cv::Mat img = processor.Load(imagePath);
     if (img.empty()) {
         LOG_ERROR(requestId, "Failed to load image: {}", imagePath);
-        return std::nullopt;
+        // ADR-033 Fail-Closed: 파일 로드 실패도 명시적 예외로 처리 (nullopt 반환 시 500 → 우회 위험)
+        throw std::runtime_error("IMAGE_LOAD_FAILED: " + imagePath);
     }
-    
+
     // All preprocessing steps (Smart Crop, Invert, BGR Convert) are now encapsulated
+    // ValidationException (컬러 이미지)는 caller까지 전파됨
     cv::Mat result = processor.Preprocess(img);
     if (result.empty()) {
         LOG_ERROR(requestId, "Preprocessing failed for: {}", imagePath);
-        return std::nullopt;
+        throw std::runtime_error("PIPELINE_FAILED: " + imagePath);
     }
-    
+
     LOG_INFO(requestId, "Pipeline complete. Output: {}x{} (3-channel RGB)", result.cols, result.rows);
     return result;
 }
@@ -227,6 +231,7 @@ inline void setup_routes(crow::SimpleApp& app) {
 
         // Wait for worker thread to complete processing
         // ValidationException propagates via promise/future → HTTP 422
+        // std::runtime_error propagates via promise/future → HTTP 400 (IMAGE_LOAD_FAILED)
         std::optional<cv::Mat> processedOpt;
         try {
             processedOpt = future.get();
@@ -236,6 +241,14 @@ inline void setup_routes(crow::SimpleApp& app) {
             body["error"] = "COLOR_VALIDATION_FAILED";
             body["message"] = std::string(e.what());
             crow::response res(422, body.dump());
+            res.add_header("Content-Type", "application/json");
+            return res;
+        } catch (const std::runtime_error& e) {
+            LOG_ERROR(requestId, "Image processing error: {}", e.what());
+            crow::json::wvalue body;
+            body["error"] = "IMAGE_LOAD_FAILED";
+            body["message"] = std::string(e.what());
+            crow::response res(400, body.dump());
             res.add_header("Content-Type", "application/json");
             return res;
         } catch (...) {
