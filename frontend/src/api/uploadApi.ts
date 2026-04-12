@@ -18,9 +18,10 @@ const generateMockResult = (childName: string): AnalysisResult => {
 
 // 이미지 업로드 및 분석 요청 API
 export const uploadImage = async (file: File, childInfo: ChildInfo | null): Promise<AnalysisResult> => {
-  // 환경 변수로 Mock 모드 제어 (기본값: true)
-  // VITE_USE_MOCK=false 로 설정된 경우에만 실제 서버와 통신
-  const useMock = import.meta.env.VITE_USE_MOCK !== 'false';
+  // 환경 변수로 Mock 모드 제어 (기본값: false — 실제 API 사용)
+  // .dockerignore가 .env.local을 제외하므로, 빌드 기본값은 반드시 false여야 함
+  // 로컬 개발 시 Mock이 필요하면 .env.local에 VITE_USE_MOCK=true 설정
+  const useMock = import.meta.env.VITE_USE_MOCK === 'true';
 
   if (!useMock) {
     try {
