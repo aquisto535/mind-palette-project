@@ -96,7 +96,8 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - /etc/letsencrypt/live/mindpalette.kr/fullchain.pem:/etc/nginx/ssl/fullchain.pem:ro
+      - /etc/letsencrypt/live/mindpalette.kr/privkey.pem:/etc/nginx/ssl/privkey.pem:ro
     networks:
       - external-net
     depends_on:
