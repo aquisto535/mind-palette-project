@@ -1,5 +1,6 @@
 import os
-import torch
+# ADR-027: Memory optimization by using ONNX Runtime instead of PyTorch.
+# torch is imported lazily inside load_models only if needed.
 from dataclasses import dataclass
 from typing import Any, Optional
 from pathlib import Path
@@ -31,6 +32,8 @@ def load_models(config: ModelConfig) -> ModelState:
     trt_female = config.female_onnx_path.replace(".onnx", ".engine")
     
     try:
+        # ADR-027: Only attempt TensorRT if torch is present (not in default slim image)
+        import torch
         if torch.cuda.is_available():
             from src.infra.tensorrt_engine import TensorRtNativeEngine
             if os.path.exists(trt_male) and os.path.exists(trt_female):

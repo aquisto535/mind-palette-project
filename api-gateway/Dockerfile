@@ -17,6 +17,7 @@ RUN npm run build
 # Stage 2: Runtime — 프로덕션 의존성만 포함
 # ─────────────────────────────────────────────────────────────────────────────
 FROM node:20-alpine AS runtime
+RUN apk add --no-cache curl
 
 WORKDIR /app
 

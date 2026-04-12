@@ -151,9 +151,10 @@ TEST(PipelineFactoryTest, CreatePreprocessPipeline) {
 TEST(PipelineFactoryTest, CreateHybridPipeline) {
     FilterPipeline pipeline = PipelineFactory::createHybridPipeline();
 
-    EXPECT_EQ(pipeline.size(), 3);  // Resize(1024), Denoise, HybridPreprocess
+    EXPECT_EQ(pipeline.size(), 4);  // Resize(768), ColorValidation, Denoise, HybridPreprocess
 
-    cv::Mat input = cv::Mat::ones(1000, 1000, CV_8UC3) * 128;
+    // Use a neutral gray image (R=G=B=128) to pass color validation
+    cv::Mat input(1000, 1000, CV_8UC3, cv::Scalar(128, 128, 128));
     cv::Mat result = pipeline.execute(input);
 
     EXPECT_EQ(result.rows, 512);

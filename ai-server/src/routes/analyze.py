@@ -16,7 +16,6 @@ from fastapi import APIRouter, Form, HTTPException, UploadFile, Request, Respons
 from PIL import Image
 
 from src.config import ModelConfig
-from src.core.augmentation import get_val_transform
 from src.core.iq_scorer import score_to_result
 from src.core.item_mapping import HEAD_A_ITEMS, HEAD_B_ITEMS, HEAD_C_ITEMS, HEAD_D_ITEMS
 from src.infra.logger import get_logger
@@ -97,7 +96,12 @@ def _validate_image_file(file: UploadFile, content: bytes) -> None:
 # ── 추출된 헬퍼 함수들 (Extract Method 적용) ─────────────────────────────────
 
 def _preprocess_image(content: bytes, config: ModelConfig) -> np.ndarray:
-    """이미지 바이트 → ONNX 입력용 numpy 배열 변환.
+    """이미지 바이트 → ONNX 입력용 numpy 배열 변환 (torch 의존성 없음).
+
+    torchvision.transforms.Compose([Resize, ToTensor, Normalize])와 동일한 결과:
+    - Resize: BILINEAR 보간
+    - ToTensor: uint8 [0,255] → float32 [0,1], HWC → CHW
+    - Normalize: (x - mean) / std (스케치 데이터셋 기본값)
 
     Args:
         content: 업로드된 원본 이미지 바이트
@@ -107,9 +111,13 @@ def _preprocess_image(content: bytes, config: ModelConfig) -> np.ndarray:
         shape (1, 3, H, W)의 float32 numpy 배열
     """
     pil_image = Image.open(io.BytesIO(content)).convert("RGB")
-    transform = get_val_transform(config.input_size)
-    img_tensor = transform(pil_image).unsqueeze(0)  # (1, 3, H, W)
-    return img_tensor.numpy()
+    pil_image = pil_image.resize((config.input_size, config.input_size), Image.BILINEAR)
+    arr = np.array(pil_image, dtype=np.float32) / 255.0           # HWC, [0, 1]
+    mean = np.array([0.972, 0.031, 0.012], dtype=np.float32)
+    std  = np.array([0.156, 0.174, 0.074], dtype=np.float32)
+    arr = (arr - mean) / std                                        # normalize
+    arr = arr.transpose(2, 0, 1)                                    # HWC → CHW
+    return arr[np.newaxis].astype(np.float32)                       # (1, 3, H, W)
 
 
 def _run_inference(engine, img_np: np.ndarray) -> tuple[tuple, float]:

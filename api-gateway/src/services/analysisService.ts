@@ -85,6 +85,19 @@ async function invokePreprocessServer(filePath: string, requestId: string, admin
     }
     serverTiming = preprocessRes.headers['server-timing'];
   } catch (error: unknown) {
+    // ADR-033 Tier 1: 422는 Fail-Fast — 컬러/비연필 이미지 감지 시 즉시 전파
+    if (axios.isAxiosError(error) && error.response?.status === 422) {
+      throw error;
+    }
+    // 이중 안전망: Crow가 422→500으로 변환한 경우에도 body의 error 필드로 감지
+    if (
+      axios.isAxiosError(error) &&
+      (error.response?.status === 400 || error.response?.status === 500) &&
+      error.response?.data?.error === 'COLOR_VALIDATION_FAILED'
+    ) {
+      error.response.status = 422;
+      throw error;
+    }
     logger.warn('L6 Sanitization skipped: preprocessing failed, using original image:', {
       error: error instanceof Error ? error.message : String(error),
       requestId
@@ -168,11 +181,16 @@ export const processAnalysis = async (file: Express.Multer.File, requestId: stri
   }
 
   // 캐시 히트 조회 — 동일 파일 내용이면 전처리/추론 건너뜀 (< 10ms 목표)
-  const imageBuffer = await fs.readFile(file.path);
+  // CodeQL 보안 경보 방지: path.basename과 UPLOAD_DIR을 결합하여 경로 정규화 (Neutralize)
+  const fileName = path.basename(file.path);
+  const safePath = path.resolve(UPLOAD_DIR, fileName);
+  const imageBuffer = await fs.readFile(safePath);
   const imageHash = crypto.createHash('sha256').update(imageBuffer).digest('hex');
   const cached = analysisCache.get(imageHash);
   if (cached !== undefined) {
     logger.info('Cache hit:', { hash: imageHash.slice(0, 8), requestId });
+    // 캐시 히트 시에도 Multer가 생성한 임시 파일 정리는 필요함 (P1 이슈 해결)
+    await cleanupTempImages(file.path, file.path, requestId);
     return cached as AnalysisResult & { sanitized: boolean; serverTiming?: string };
   }
 

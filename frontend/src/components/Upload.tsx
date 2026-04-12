@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Upload as UploadIcon, X } from 'lucide-react';
+import { validateImageFile } from '../utils/validation';
 
 interface UploadProps {
   onUpload: (file: File) => void;
@@ -9,9 +10,21 @@ interface UploadProps {
 export const Upload: React.FC<UploadProps> = ({ onUpload }) => {
   const [preview, setPreview] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [fileError, setFileError] = useState<string | null>(null);
 
   const handleFile = useCallback((file: File) => {
-    if (!file.type.startsWith('image/')) return;
+    if (!file.type.startsWith('image/')) {
+      setFileError('이미지 파일만 업로드할 수 있습니다.');
+      return;
+    }
+
+    const validation = validateImageFile(file);
+    if (!validation.valid) {
+      setFileError(validation.message);
+      return;
+    }
+
+    setFileError(null);
 
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -65,6 +78,7 @@ export const Upload: React.FC<UploadProps> = ({ onUpload }) => {
                   onClick={(e) => {
                     e.stopPropagation();
                     setPreview(null);
+                    setFileError(null);
                   }}
                   className="p-3 bg-white rounded-full text-red-500 hover:bg-red-50"
                 >
@@ -78,7 +92,7 @@ export const Upload: React.FC<UploadProps> = ({ onUpload }) => {
                 <UploadIcon size={48} className="text-primary" />
               </div>
               <p className="text-xl font-medium text-slate-700 mb-2">여기를 클릭하거나 그림을 끌어오세요</p>
-              <p className="text-slate-400">JPG, PNG 파일 지원</p>
+              <p className="text-slate-400">JPG, PNG 등 이미지 파일 · 최대 10MB</p>
             </>
           )}
 
@@ -90,8 +104,11 @@ export const Upload: React.FC<UploadProps> = ({ onUpload }) => {
             onChange={onChange}
           />
         </label>
+
+        {fileError && (
+          <p className="mt-3 text-sm text-red-500 text-center">{fileError}</p>
+        )}
       </motion.div>
     </section>
   );
 };
-

@@ -13,8 +13,11 @@ WORKDIR /app
 # 시스템 의존성 (OpenCV headless용)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libglib2.0-0 \
-    libgl1-mesa-glx \
+    libgl1 \
+    libsm6 \
+    libxext6 \
     libgomp1 \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # 의존성 설치 — GPU 패키지(onnxruntime-gpu, tensorrt) 제외, CPU용 onnxruntime 사용

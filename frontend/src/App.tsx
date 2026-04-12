@@ -5,16 +5,19 @@ import { Guide } from './components/Guide';
 import { Upload } from './components/Upload';
 import { Loading } from './components/Loading';
 import { Result } from './components/Result';
+import { ErrorScreen } from './components/Error';
 import { ChildInfo, AnalysisResult } from './types';
+import { AnalysisError } from './types/errors';
 import { uploadImage } from './api/uploadApi';
 
-type Step = 'hero' | 'form' | 'guide' | 'upload' | 'loading' | 'result';
+type Step = 'hero' | 'form' | 'guide' | 'upload' | 'loading' | 'result' | 'error';
 
 function App() {
-  const [step, setStep] = useState<Step>('hero'); // 현재 진행 중인 단계
-  const [childInfo, setChildInfo] = useState<ChildInfo | null>(null); // 자녀 정보
-  const [file, setFile] = useState<File | null>(null); // 업로드된 파일
-  const [result, setResult] = useState<AnalysisResult | null>(null); // 분석 결과
+  const [step, setStep] = useState<Step>('hero');
+  const [childInfo, setChildInfo] = useState<ChildInfo | null>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [analysisError, setAnalysisError] = useState<AnalysisError | null>(null);
 
   // Smooth scroll to top when step changes
   useEffect(() => {
@@ -37,18 +40,22 @@ function App() {
       setResult(analysisResult);
       setStep('result');
     } catch (error) {
-      console.error('Analysis failed:', error);
-      alert('분석 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
-      setStep('upload');
+      if (error instanceof AnalysisError) {
+        setAnalysisError(error);
+      } else {
+        setAnalysisError(new AnalysisError(0, '예기치 못한 오류가 발생했습니다. 잠시 후 다시 시도해주세요.', 'retry-later'));
+      }
+      setStep('error');
       setFile(null);
     }
   };
 
   const handleReset = () => {
-    setStep('hero'); // 첫 단계로 이동
-    setChildInfo(null); // 자녀 정보 초기화
-    setFile(null); // 업로드된 파일 초기화
-    setResult(null); // 분석 결과 초기화
+    setStep('hero');
+    setChildInfo(null);
+    setFile(null);
+    setResult(null);
+    setAnalysisError(null);
   };
 
   return (
@@ -62,6 +69,14 @@ function App() {
       {step === 'upload' ? <Upload onUpload={handleUpload} /> : null}
 
       {step === 'loading' ? <Loading /> : null}
+
+      {step === 'error' && analysisError ? (
+        <ErrorScreen
+          error={analysisError}
+          onRetry={() => { setAnalysisError(null); setStep('upload'); }}
+          onGuide={() => { setAnalysisError(null); setStep('guide'); }}
+        />
+      ) : null}
 
       {step === 'result' && childInfo && result ? (
         <Result

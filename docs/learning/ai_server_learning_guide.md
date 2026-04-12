@@ -3,7 +3,7 @@ title: "AI Server 딥러닝 실전 학습 가이드"
 description: "딥러닝 강의 이론(ai_model_principle.md)을 실제 ai-server Python 코드에서 복습하고 체화하기 위한 제1원칙 기반 3단계 실전 가이드"
 ---
 
-# 🧠 AI Server 딥러닝 실전 학습 가이드 (제1원칙 기반)
+## 🧠 AI Server 딥러닝 실전 학습 가이드 (제1원칙 기반)
 
 딥러닝 강의(`ai_model_principle.md`)에서 배운 이론을 자신이 직접 구축한 `ai-server` Python 코드로 복습하고 체화하기 위한 실전 가이드입니다.
 
@@ -17,22 +17,23 @@ description: "딥러닝 강의 이론(ai_model_principle.md)을 실제 ai-server
 
 | 코드 위치 | PyTorch 구현 | 강의 이론 영역 | ai_model_principle 섹션 |
 |:---|:---|:---|:---|
-| `model.py:21` | `efficientnet_b2(weights=DEFAULT)` | 사전학습 가중치 로드 (Transfer Learning) | §11. 초기화 (Weight Init) |
-| `model.py:22` | `backbone_full.features` | Feature Extractor 분리 | §13. CNN 아키텍처 (Conv2d) |
-| `model.py:23` | `backbone_full.avgpool` | Global Average Pooling | §13. Pooling (공간 축소) |
-| `model.py:26-27` | `param.requires_grad = False` | Backbone 동결 (Transfer Learning) | §11. 전이학습 |
-| `model.py:29-33` | `nn.Linear(1408 → 19/14/16/11)` | 분류기 Head (FC Layer) | §1/§8. nn.Module / Linear |
-| `model.py:38-40` | `backbone(x) → avgpool → flatten(1)` | Feature 추출 후 1D 변환 | §13. Flatten (3D → 1D) |
-| `model.py:42-46` | `head_a/b/c/d(features)` 반환 | Multi-head Raw Logits 출력 | §2. Loss 계산 전 원시 출력 |
+| `model.py:27` | `efficientnet_b2(weights=DEFAULT)` | 사전학습 가중치 로드 (Transfer Learning) | §11. 초기화 (Weight Init) |
+| `model.py:28` | `backbone_full.features` | Feature Extractor 분리 | §13. CNN 아키텍처 (Conv2d) |
+| `model.py:29` | `backbone_full.avgpool` | Global Average Pooling | §13. Pooling (공간 축소) |
+| `model.py:32-33` | `param.requires_grad = False` | Backbone 동결 (Transfer Learning) | §11. 전이학습 |
+| `model.py:38-43` | `nn.ModuleDict({'head_a': nn.Linear(1408→19), ...})` | 분류기 Head (FC Layer, ModuleDict로 관리) | §1/§8. nn.Module / Linear |
+| `model.py:56-58` | `backbone(x) → avgpool → flatten(1)` | Feature 추출 후 1D 변환 | §13. Flatten (3D → 1D) |
+| `model.py:61-66` | `heads['head_a'/'b'/'c'/'d'](features)` 반환 | Multi-head Raw Logits 출력 | §2. Loss 계산 전 원시 출력 |
 | `preprocessing.py:15` | `transforms.Resize((260, 260))` | 입력 크기 정규화 | §1. 데이터 준비 |
 | `preprocessing.py:16` | `transforms.ToTensor()` | [0,255] uint8 → [0,1] float32 | §1. Tensor 변환 |
 | `preprocessing.py:17` | `transforms.Normalize(mean, std)` | 채널별 정규화 (평균0, 분산1) | §12. Batch/Layer Norm 원리 |
 | `config.py:9` | `input_size: int = 260` | EfficientNet-B2 원논문 입력 크기 | §4. Architecture 설계 |
 | `config.py:13` | `backbone_feature_dim: int = 1408` | EfficientNet-B2 피처 차원 | §13. CNN 출력 채널 |
-| `config.py:22-23` | `normalize_mean/std = ImageNet` | ImageNet 120만장의 채널별 통계 | §12. 정규화 파라미터 |
-| `model_loader.py:26-27` | `male_loaded / female_loaded` | 모델 상태 추적 | (실전) Graceful Degradation |
-| `model_loader.py:48-50` | `path.exists() → None` | 가중치 미존재 시 안전 처리 | (실전) L3 제약 방어 |
-| `model_loader.py:54` | `model.eval()` | 추론 모드 전환 (BN/Dropout 비활성) | §9/§12. Regularization/Norm |
+| `config.py:25-26` | `normalize_mean/std = 스케치 데이터셋 통계` | 실제 입력 도메인(아동 연필화) 기반 통계 | §12. 정규화 파라미터 |
+| `model_loader.py:18-24` | `male_loaded / female_loaded` (property) | 엔진 상태 추적 (ONNX/TensorRT) | (실전) Graceful Degradation |
+| `model_loader.py:51` | `os.path.exists() → engine=None` | 가중치 미존재 시 안전 처리 | (실전) L3 제약 방어 |
+| `model_loader.py:27` | `torch.cuda.is_available()` | TensorRT → ONNX Fallback 전략 | §9/§12. Regularization/Norm |
+
 
 ---
 
@@ -49,7 +50,7 @@ description: "딥러닝 강의 이론(ai_model_principle.md)을 실제 ai-server
 
 `tests/test_model_architecture.py`를 **한 줄씩** 읽으며 다음을 확인하세요:
 
-```
+```text
 📍 추적할 지점 (test_model_architecture.py 기준)
 ────────────────────────────────────────────────
 1. test_model_has_backbone        → backbone의 children이 몇 개인가?
@@ -65,6 +66,7 @@ description: "딥러닝 강의 이론(ai_model_principle.md)을 실제 ai-server
 ```
 
 **질문하며 읽기**:
+
 - *"`config.py:13`의 `backbone_feature_dim: int = 1408`은 강의 노트 섹션 13 CNN에서 배운 `(C,H,W) → flatten → (C×H×W)` 변환의 결과값과 어떻게 대응되는가?"*
 - *"강의 노트의 Shape 변환 패턴 `(3,32,32) → Conv+Pool → ... → Flatten → (1024) → Linear → (10)`과 `ai-server`의 `(3,260,260) → EfficientNet → avgpool → flatten → (1408) → Linear → (19)` 패턴의 공통 원리는?"*
 
@@ -78,6 +80,8 @@ description: "딥러닝 강의 이론(ai_model_principle.md)을 실제 ai-server
 | `test_pipeline_output_shape` | PIL 이미지 (512×512) | `(3, 260, 260)` 텐서 | 1단계: DataLoader 변환 |
 | `test_pipeline_output_dtype` | PIL 이미지 | `torch.float32` | 1단계: Tensor dtype |
 | `test_pipeline_output_value_range` | 랜덤 이미지 | `[-3.0, 3.0]` 범위 | 3단계: Normalization 효과 |
+
+
 
 #### 실습 1-3: 고의로 Shape 망가뜨리기
 
@@ -110,7 +114,10 @@ description: "딥러닝 강의 이론(ai_model_principle.md)을 실제 ai-server
 | `test_head_parameters_trainable` | head의 모든 param이 `requires_grad=True` | "새 도메인에 맞게 미세조정할 부분만 학습" |
 | `test_backbone_param_count_vs_head` | backbone 파라미터 > head × 10 | "전이 학습의 경제성: 거대한 지식을 동결하고, 소수만 학습" |
 
+
+
 **직접 실험**:
+
 ```python
 # model.py에서 backbone 동결을 해제해 보세요:
 # for param in self.backbone.parameters():
@@ -125,22 +132,26 @@ description: "딥러닝 강의 이론(ai_model_principle.md)을 실제 ai-server
 
 #### 실습 2-2: Normalization 파라미터의 실체 (강의 섹션 12 ↔ 코드)
 
-`config.py:22-23`의 `normalize_mean`과 `normalize_std`는 강의에서 배운 정규화의 **구체적 수치**입니다:
+`config.py:25-26`의 `normalize_mean`과 `normalize_std`는 강의에서 배운 정규화의 **구체적 수치**입니다:
 
 ```python
-# 현재: ImageNet 통계값
-normalize_mean: Tuple[float, float, float] = (0.485, 0.456, 0.406)
-normalize_std: Tuple[float, float, float] = (0.229, 0.224, 0.225)
+# 현재: 스케치 데이터셋 통계값 (ImageNet이 아님!)
+# R(Gray): ~0.97, G(Binary): ~0.03, B(Dist): ~0.01
+normalize_mean: Tuple[float, float, float] = (0.972, 0.031, 0.012)
+normalize_std: Tuple[float, float, float] = (0.156, 0.174, 0.074)
 ```
 
 **질문하며 읽기**:
-- *"강의 노트 3단계에서 `평균 0, 분산 1`로 조정한다고 배웠다. 이 `(0.485, 0.456, 0.406)`은 무엇의 평균인가?"* → ImageNet 120만 장의 RGB 채널별 평균
+
+- *"강의 노트 3단계에서 `평균 0, 분산 1`로 조정한다고 배웠다. 이 `(0.972, 0.031, 0.012)`은 무엇의 평균인가?"* → 아동 연필화 스케치를 전처리한 3채널 이미지(Gray/Binary/Distance)의 채널별 평균. R채널이 0.97에 가까운 이유는 흰 배경(Gray≈255)이 대부분이기 때문
+- *"왜 ImageNet 표준값(0.485, 0.456, 0.406)을 그대로 쓰지 않는가?"* → ImageNet은 자연 사진 기반 통계. 아동 연필화는 채널 구성 자체가 다름(Gray/Binary/Distance). 잘못된 통계로 정규화하면 모델이 학습된 분포와 괴리가 생김
 - *"`test_pipeline_uses_config_normalization_params`에서 `mean=0.5, std=0.5`로 바꾸고 흰 이미지를 넣으면 `(255/255 - 0.5) / 0.5 = 1.0`이 나옴을 검증한다. 이 테스트가 왜 중요한가?"* → 하드코딩 시 config 변경에도 파이프라인이 반영 안 되는 버그를 원천 방지
 
 **직접 실험**:
+
 ```python
-# config.py의 normalize_mean을 (0.0, 0.0, 0.0)으로 바꾸고 추론 결과가 어떻게 달라지는지 관찰
-# → 모델이 학습된 통계 분포와 입력 분포가 불일치하면, 결과가 무의미해짐
+# config.py의 normalize_mean을 ImageNet 값 (0.485, 0.456, 0.406)으로 바꾸고 추론 결과 관찰
+# → R채널 평균이 0.97인 데이터를 0.485 기준으로 정규화하면 입력 분포가 크게 왜곡됨
 # 💡 강의 노트 3단계:
 #    "레이어를 거칠 때마다 데이터 분포가 요동치면 학습이 불안정해진다"의 추론 시점 버전
 ```
@@ -190,19 +201,21 @@ normalize_std: Tuple[float, float, float] = (0.229, 0.224, 0.225)
 # test_health_server_runs_without_model: 가중치 파일이 없어도 200 OK
 # test_health_model_loaded_false_when_no_weights: models.male==False, models.female==False
 
-# 💡 강의에서 배우지 않는 것: "학습이 끝나도 .pt 파일이 있다는 보장은 없다"
+# 💡 강의에서 배우지 않는 것: "학습이 끝나도 .onnx 파일이 있다는 보장은 없다"
 # 프로덕션에서는 경로 오타, 디스크 고장, 컨테이너 볼륨 미마운트 등이 빈번
-# model_loader.py의 _try_load()가 None을 반환하는 패턴이 이 제약을 방어
+# model_loader.py의 load_models()가 os.path.exists() 확인 후 engine=None 상태를
+# 유지하는 패턴이 이 제약을 방어 (ADR-027: ONNX/TensorRT 이중 Fallback)
 ```
 
 **코드 역추적**:
-```
+
+```text
 test_health.py:app_no_models fixture
-  → ModelConfig(male_model_path="nonexistent/male.pt")
+  → ModelConfig(male_onnx_path="nonexistent/male.onnx")
     → create_app(model_config=config)
       → load_models(config)
-        → _try_load(): path.exists() == False → return None
-          → ModelState(male_model=None)
+        → os.path.exists() == False → engine 미할당
+          → ModelState(male_engine=None) → male_loaded == False
             → /health → {"models": {"male": false}} + 200 OK
 ```
 
@@ -220,18 +233,25 @@ test_health.py:app_no_models fixture
 
 #### 실습 3-3: 남녀 모델 분리 로딩의 설계 의도 (아키텍처 관점)
 
-`model_loader.py`의 `ModelState`는 데이터클래스로 남녀 모델을 독립 관리합니다:
+`model_loader.py`의 `ModelState`는 데이터클래스로 남녀 추론 엔진을 독립 관리합니다:
 
 ```python
 @dataclass
 class ModelState:
-    male_model: Optional[HFDClassifier] = None    # 남아용 모델
-    female_model: Optional[HFDClassifier] = None   # 여아용 모델
+    male_engine: Optional[Any] = None    # 남아용 엔진 (ONNX 또는 TensorRT)
+    female_engine: Optional[Any] = None  # 여아용 엔진 (ONNX 또는 TensorRT)
+    engine_type: str = "none"            # "tensorrt" | "onnx" | "none"
+
+    @property
+    def male_loaded(self) -> bool:
+        return self.male_engine is not None
 ```
 
 **질문하며 읽기**:
+
 - *"왜 모델을 하나로 합치지 않고 남녀로 분리했는가?"* → HFD 인물화 검사의 성별별 채점 기준이 다르기 때문
-- *"한쪽 모델만 로드 실패하면 다른 쪽은 정상 서비스가 가능한가?"* → `_try_load`가 독립 호출되므로 가능
+- *"한쪽 엔진만 로드 실패하면 다른 쪽은 정상 서비스가 가능한가?"* → `load_models()`에서 남녀 경로를 독립적으로 `os.path.exists()` 확인하므로 가능
+- *"`engine_type`이 `"none"`인 상태에서 추론을 요청하면 어떻게 되는가?"* → `male_loaded == False`이므로 `/analyze` 엔드포인트에서 503 또는 적절한 에러 응답
 - *"이 패턴은 강의의 어떤 원리와 대응되는가?"* → 섹션 8의 Regularization 관점에서 도메인 분리는 과적합 방지 전략의 일종
 
 ---
@@ -239,14 +259,16 @@ class ModelState:
 ## 📈 추천 학습 순서
 
 ### Week 1: L1 (데이터 구조) — "눈으로 확인하기"
-```
+
+```text
 1일차: test_model_architecture.py 전체 실행 + 각 assert문과 강의 섹션 13 아키텍처 대응
 2일차: test_preprocessing.py 실행 + 전처리 전/후 텐서 Shape 직접 print해서 관찰
 3일차: 고의 파괴 실험 (input_size를 224로 변경, 정규화 제거 등 → 에러 관찰)
 ```
 
 ### Week 2: L2 (변환 로직) — "왜 이 설계 결정인가?"
-```
+
+```text
 1일차: test_inference.py 실행 + requires_grad 동결/해제 실험 + 강의 섹션 11 복습
 2일차: Normalize 파라미터 변경 실험 + config 분리 이유 이해 + 강의 섹션 12 복습
 3일차: forward() Logits vs Sigmoid 비교 + BCEWithLogitsLoss 수치 안정성 이해 + 강의 섹션 2 복습
@@ -254,7 +276,8 @@ class ModelState:
 ```
 
 ### Week 3: L3 (제약/시스템) — "프로덕션에서 살아남기"
-```
+
+```text
 1일차: test_health.py 실행 + model_loader.py Fallback 구조 분석
 2일차: plan.md에 남은 L3 항목 중 하나 직접 TDD Red 작성 시도 (예: 비정상 입력 테스트)
 3일차: plan.md Step 2(ONNX) 리서치 → "Logits 반환 구조가 ONNX 변환에 왜 유리한가"

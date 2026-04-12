@@ -231,8 +231,13 @@ inline void setup_routes(crow::SimpleApp& app) {
         try {
             processedOpt = future.get();
         } catch (const ValidationException& e) {
-            LOG_WARN(requestId, "422 Unprocessable Entity: {}", e.what());
-            return crow::response(422, std::string(e.what()));
+            LOG_WARN(requestId, "Color validation failed: {}", e.what());
+            crow::json::wvalue body;
+            body["error"] = "COLOR_VALIDATION_FAILED";
+            body["message"] = std::string(e.what());
+            crow::response res(422, body.dump());
+            res.add_header("Content-Type", "application/json");
+            return res;
         } catch (...) {
             return crow::response(500, "Processing failed");
         }

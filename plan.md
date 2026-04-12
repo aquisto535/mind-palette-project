@@ -6,6 +6,7 @@
 ---
 
 ## 🛠️ 개발 방법론 (Methodology)
+
 - **TDD Cycle**: Always [Red] → [Green] → [Refactor]
 - **Tidy First**: 구조적 변경(Structural)과 기능적 변경(Behavioral)을 분리한다.
 - **MCP Workflow**: [MCP_WORKFLOWS.md](file:///c:/Users/user/Documents/GitHub/mind-palette-project/docs/methodology/MCP_WORKFLOWS.md)에 따라 `shrimp`, `sequential-thinking`, `context7`을 유기적으로 활용한다.
@@ -20,26 +21,28 @@
 > 테스트 깊이 분류: **L1**(데이터 구조/형태) → **L2**(변환 로직) → **L3**(제약/경계)
 
 #### L1: 데이터 구조 (What) — "형태가 올바른가?"
+
 - [x] **FastAPI 서버 구축**:
-  - [x] [TDD][L1] `/health` 응답 구조 테스트: 200 OK, `{ "status": str, "model_loaded": bool }` 필드 존재 및 타입 (Red)
+  - [x] [TDD] [L1] `/health` 응답 구조 테스트: 200 OK, `{ "status": str, "model_loaded": bool }` 필드 존재 및 타입 (Red)
   - [x] FastAPI 기본 골격 및 헬스 체크 엔드포인트 구현 (Green)
 - [x] **PyTorch 모델 구성 (EfficientNet-B2)**:
   - [x] **[MCP]** `context7`으로 EfficientNet-B2의 Feature Extractor 레이어 구조 조사
-  - [x] [TDD][L1] 모델 아키텍처 구조 테스트: 가중치(`.pt`) 로드, Backbone 레이어 존재, Head 개수 == 4 검증 (Red)
+  - [x] [TDD] [L1] 모델 아키텍처 구조 테스트: 가중치(`.pt`) 로드, Backbone 레이어 존재, Head 개수 == 4 검증 (Red)
   - [x] EfficientNet-B2 기반 Transfer Learning 모델 클래스 작성 (Green)
 - [x] **Multi-head 분류 구조 구현**:
-  - [x] [TDD][L1] 출력 텐서 Shape 테스트: 더미 입력 `(1,3,260,260)` → Head A `(1,19)`, Head B `(1,14)`, Head C `(1,16)`, Head D `(1,11)`, dtype=float32 (Red)
+  - [x] [TDD] [L1] 출력 텐서 Shape 테스트: 더미 입력 `(1,3,260,260)` → Head A `(1,19)`, Head B `(1,14)`, Head C `(1,16)`, Head D `(1,11)`, dtype=float32 (Red)
   - [x] Feature Extractor 동결 및 Multi-head Classifier(Linear Layers) 구현 (Green)
 - [x] **3-Channel 입력 이미지 구조**:
-  - [x] [TDD][L1] C++ 전처리 결과 이미지 구조 테스트: shape==(H,W,3), dtype==uint8, 채널 의미(R=gray, G=binary, B=distance) (Red)
+  - [x] [TDD] [L1] C++ 전처리 결과 이미지 구조 테스트: shape==(H,W,3), dtype==uint8, 채널 의미(R=gray, G=binary, B=distance) (Red)
 
 #### L2: 변환 로직 (How) — "변환이 정확한가?"
+
 - [x] **이미지 전처리 파이프라인**:
-  - [x] [TDD][L2] Resize→Normalize→ToTensor 변환 테스트: 출력 shape==(1,3,260,260), 값 범위 [0,1] 검증 (Red)
+  - [x] [TDD] [L2] Resize→Normalize→ToTensor 변환 테스트: 출력 shape==(1,3,260,260), 값 범위 [0,1] 검증 (Red)
 - [x] **Feature Extractor 동결 검증**:
-  - [x] [TDD][L2] backbone.parameters()의 requires_grad==False 검증 (Red)
+  - [x] [TDD] [L2] backbone.parameters()의 requires_grad==False 검증 (Red)
 - [x] **Multi-head 추론 정확성**:
-  - [x] [TDD][L2] 고정 seed 입력 → 각 head sigmoid 출력 값이 모두 [0, 1] 범위 내 검증 (Red)
+  - [x] [TDD] [L2] 고정 seed 입력 → 각 head sigmoid 출력 값이 모두 [0, 1] 범위 내 검증 (Red)
 - [x] **Multi-Channel 입력 최적화 (Ablation Study)**:
   - [x] **[Deep Dive]** `R=binary, G=gray, B=distance_transform` 3채널 입력 방식 vs 단일 이진화 입력 방식의 분류 정확도 비교
   - [x] 스케치 데이터셋 mean/std 산출 후 ImageNet 정규화 파라미터 대체 (`mean=[0.485,0.456,0.406]` → 스케치 기반 값으로 재계산)
@@ -50,67 +53,88 @@
   - [x] `multipart/form-data` 기반 실제 이미지 데이터 전송 및 최종 JSON 결과 연동 완료.
 
 #### L3: 제약과 검증 (Why) — "경계에서도 안전한가?"
+
 - [x] **비정상 입력 처리**:
-  - [x] [TDD][L3] 손상된 파일, 0바이트 파일, 비이미지 파일 입력 시 400/422 반환 및 서버 무중단 테스트 (Red)
+  - [x] [TDD] [L3] 손상된 파일, 0바이트 파일, 비이미지 파일 입력 시 400/422 반환 및 서버 무중단 테스트 (Red)
   - [x] `/analyze` 엔드포인트 구현 — 매직 바이트 + PIL.verify() 이미지 검증 (Green)
 - [x] **ADR-033: 비연필(컬러) 이미지 조기 필터링 (Two-Tier Fail-Fast)** ✅ 완료 (2026.04.05)
   - [x] **Tier 1 — C++ Preprocess Server (HSV 채도 분석, 결정적 필터링)**:
     - [x] `ValidationException` 예외 클래스 신규 작성 (`src/core/validation_exception.h`)
-    - [x] [TDD][L3] `ColorValidationFilter` — 그레이스케일 통과, 저채도 통과, 고채도 컬러 이미지 422, 경계값 테스트 (6개 케이스)
+    - [x] [TDD] [L3] `ColorValidationFilter` — 그레이스케일 통과, 저채도 통과, 고채도 컬러 이미지 422, 경계값 테스트 (6개 케이스)
     - [x] `ColorValidationFilter` 구현: HSV S채널 > 30(임계값), 컬러 픽셀 비율 ≥ 5% → `ValidationException` throw
     - [x] `FilterPipeline`에 `ColorValidationFilter` 삽입 (ResizeFilter 직후)
     - [x] `server.h` 라우트에서 `ValidationException` catch → HTTP 422 반환
     - [x] CMakeLists.txt에 `color_validation_filter.cpp` 추가
   - [x] **Tier 2 — Python AI Server (Confidence Score 기반, 확률적 검증)**:
-    - [x] [TDD][L3] `_compute_mean_confidence` 단위 테스트: logit=0 → confidence=0.0, logit=10 → confidence≈1.0, 혼합 → 중간값 (3개 케이스)
-    - [x] [TDD][L3] 낮은 confidence(logit=0 엔진) 주입 시 422, 높은 confidence(logit=10 엔진) 주입 시 200 (2개 케이스)
+    - [x] [TDD] [L3] `_compute_mean_confidence` 단위 테스트: logit=0 → confidence=0.0, logit=10 → confidence≈1.0, 혼합 → 중간값 (3개 케이스)
+    - [x] [TDD] [L3] 낮은 confidence(logit=0 엔진) 주입 시 422, 높은 confidence(logit=10 엔진) 주입 시 200 (2개 케이스)
     - [x] `_compute_mean_confidence()` 구현: `mean(|sigmoid(logit) - 0.5| * 2)`, 순수 numpy 벡터화
     - [x] `/analyze` 추론 직후 confidence < 0.3 시 HTTP 422 반환
   - [x] **리팩터링 및 코드 리뷰 수정** (Tidy First):
     - [x] `ColorValidationFilter` — 매직 넘버 → named constant (`kDefaultSatThreshold=30`, `kDefaultColorPixelRatio=0.05`), `computeColorRatio()` Extract Method
     - [x] `color_validation_filter.cpp` — 중복 include `"utils/Logger.h"` 제거, 정수 오버플로우 수정 (`rows * cols` → `(double)rows * cols`)
     - [x] `analyze.py` — `Tuple` import 제거, `_run_inference` 반환 타입 `tuple[tuple, float]` 통일, `raise e` → `raise` (예외 체인 보존)
+  - [x] **프론트엔드 에러 처리 화면** ✅ 완료 (2026.04.12):
+    - [x] `frontend/src/types/errors.ts` — `AnalysisError` 클래스 신규 작성 (status, message, actionType)
+    - [x] `frontend/src/api/client.ts` — `ERROR_MAP` + 인터셉터 완성 (400/422/429/503 → `AnalysisError`)
+    - [x] `frontend/src/components/ErrorScreen.tsx` — 에러 전용 화면 신규 작성 (422: 안내 보기 + 다시 업로드, 기타: 다시 업로드)
+    - [x] `frontend/src/App.tsx` — `'error'` step 추가, `alert()` 제거, `analysisError` 상태 관리
+  - [x] **프론트엔드 입력 유효성 검사** ✅ 완료 (2026.04.12):
+    - [x] `frontend/src/utils/validation.ts` — `validateName` (2~20자, 한글/영문/공백), `validateBirthDate` (만 5~13세), `validateImageFile` (10MB 이하), `getBirthDateRange` 신규 작성
+    - [x] `frontend/src/utils/__tests__/validation.test.ts` — 유닛 테스트 22개 신규 작성 (이름 6개, 생년월일 7개, 이미지 3개)
+    - [x] `frontend/src/components/InfoForm.tsx` — `errors` 상태 추가, 인라인 에러 메시지 표시, 생년월일 `min`/`max` picker 범위 제한, `noValidate` 적용
+    - [x] `frontend/src/components/Upload.tsx` — 10MB 초과 시 에러 메시지 표시
+    - [x] `frontend/src/components/__tests__/InfoForm.test.tsx` — 유효성 검사 테스트 6개 추가 (총 8개)
+    - [x] **리팩터링 (Tidy First)**: `ok()`/`fail()` 헬퍼 추출, 매직 넘버 → named constant (`NAME_MIN_LENGTH`, `NAME_MAX_LENGTH`, `MIN_AGE`, `MAX_AGE`, `MAX_FILE_SIZE`), 에러 메시지 동적화
 - [x] **모델 미로드 상태**:
-  - [x] [TDD][L3] 모델 파일 경로 오류 시 /health에서 model_loaded==false, 서버 기동 유지 테스트 (Red)
+  - [x] [TDD] [L3] 모델 파일 경로 오류 시 /health에서 model_loaded==false, 서버 기동 유지 테스트 (Red)
 - [ ] **GPU 메모리 고갈**:
-  - [ ] [TDD][L3] OOM 시뮬레이션 시 503 Service Unavailable 반환 및 로그 기록 테스트 (Red)
+  - [ ] [TDD] [L3] OOM 시뮬레이션 시 503 Service Unavailable 반환 및 로그 기록 테스트 (Red)
 - [x] **정규화 파라미터 불변식**:
-  - [x] [TDD][L3] mean/std 값이 config에서 로드되는지 검증, 하드코딩 방지 테스트 (Red)
+  - [x] [TDD] [L3] mean/std 값이 config에서 로드되는지 검증, 하드코딩 방지 테스트 (Red)
 
 ### Step 2: Universal Optimization (ONNX + Deep Dive)
 
-#### L1: 데이터 구조 (What)
+#### L1: 데이터 구조 (What) (ONNX)
+
 - [x] **[MCP]** `context7`으로 PyTorch 모델의 ONNX 변환 시 지원되는 최신 Ops 및 호환성 리서치
   - 결론: opset=17(A+), dynamo=False(최안정), do_constant_folding=True(BN folding ~15% 속도 향상), 현재 설정 최적
 - [x] **ONNX 모델 파일 구조**:
-  - [x] [TDD][L1] 변환된 .onnx 파일의 입력 노드 shape==(1,3,260,260), 출력 노드 개수==4 검증 (Red)
+  - [x] [TDD] [L1] 변환된 .onnx 파일의 입력 노드 shape==(1,3,260,260), 출력 노드 개수==4 검증 (Red)
   - [x] OnnxConverter (`src/core/onnx_converter.py`) 구현 (Green)
 - [x] **ONNX Runtime 세션**:
-  - [x] [TDD][L1] InferenceSession 객체 생성 성공 및 provider 확인 테스트 (Red)
+  - [x] [TDD] [L1] InferenceSession 객체 생성 성공 및 provider 확인 테스트 (Red)
   - [x] OnnxInferenceEngine (`src/infra/onnx_inference.py`) 구현 (Green)
 
-#### L2: 변환 로직 (How)
+#### L2: 변환 로직 (How) (ONNX)
+
 - [x] **ONNX 변환 동등성**:
-  - [x] [TDD][L2] 동일 입력에 대해 PyTorch vs ONNX Runtime 추론 결과 차이(max abs err) < 1e-4 검증 (Red)
+  - [x] [TDD] [L2] 동일 입력에 대해 PyTorch vs ONNX Runtime 추론 결과 차이(max abs err) < 1e-4 검증 (Red)
   - [x] 모델 변환 및 ONNX Runtime 추론 엔진 구현 (Green)
 - [x] **[Deep Dive] Latency Analysis**: PyTorch P95=39.9ms vs ONNX P95=19.6ms — ONNX가 ~2x 빠름 (CPU 기준).
 - [x] **ONNX Runtime 교체**: OnnxInferenceEngine 구현 완료, 속도 향상 검증.
+- [x] **[ADR-027] AI Server Refactoring (PyTorch-Free)**:
+  - [x] `model_loader.py` — 최상단 `torch` 임포트 제거 및 lazy import/exception handling 적용 (CPU 전용 환경 최적화) [완료: 2026.04.05]
+  - [/] `augmentation.py` — `torchvision` 의존성 제거 및 `numpy/Pillow` 기반 전처리 로직으로 대체 (진행 중)
 
-#### L3: 제약과 검증 (Why)
+#### L3: 제약과 검증 (Why) (ONNX)
+
 - [x] **추론 지연시간 회귀**:
-  - [x] [TDD][L3] P95 latency가 PyTorch 대비 2배 이하인지 벤치마크 — ONNX P95 19.6ms (통과)
+  - [x] [TDD] [L3] P95 latency가 PyTorch 대비 2배 이하인지 벤치마크 — ONNX P95 19.6ms (통과)
 
 ### Step 3: 학습 파이프라인 구축 (Training Pipeline) ✅ 완료 (2026.03.17)
 
 > HFD 60문항 Multi-label 분류 모델을 실제 데이터로 학습하고 ONNX로 내보내는 엔드투엔드 파이프라인 구축
 
 #### Step 0: 데이터 준비 (수동 작업)
+
 - [x] 스코어 시트 이미지(`data/raw/_score_s0XX.png`) 검토 및 `build_annotations.py` 데이터 수정
   - [x] 20개 샘플 `sum(items.values()) == raw_score` 검증 → 15개 불일치 발견
   - [x] `build_annotations.py` RAW_DATA 수정 (raw_score를 items 합계 기준으로 정정)
   - [x] `python scripts/build_annotations.py` 실행 → `annotations.json` 재생성 (20/20 검증 통과)
 
 #### Step 1~4: 핵심 모듈 TDD 구현 (이전 세션 완료)
+
 - [x] `src/core/item_mapping.py` — items(60항목) → head_labels(4개 head) 매핑
 - [x] `src/core/dataset.py` — HFDDataset (실제/합성), 3-Channel 전처리, DataLoader
 - [x] `src/core/augmentation.py` — 스케치 특화 증강 (회전/플립/노이즈/지우개)
@@ -119,21 +143,25 @@
 - [x] **TDD 검증**: 51/51 테스트 통과
 
 #### Step 5: 합성 데이터 생성
+
 - [x] `scripts/generate_synthetic_data.py` 실행 → 500개 합성 막대인간 스케치 생성
   - 경로: `data/synthetic_sketches/images/`
 
 #### Step 6~7: 2단계 학습
+
 - [x] `scripts/train.py` 버그 수정 (`data_root` 경로 오류: `Path().parent.parent` → 직접 사용)
 - [x] **Phase A (사전학습)**: 합성 500장, 50 epoch, loss 0.749 → 0.627
 - [x] **Phase B (미세조정)**: 실제 20장 LOOCV, 87 epoch(early stop), best_loss=4.84
 - [x] 모델 저장: `models/mind_palette_male.pt`
 
 #### Step 8~9: ONNX 내보내기 및 통합 테스트
+
 - [x] `scripts/export_model.py` 실행 → `models/mind_palette_male.onnx` 생성
 - [x] 전체 통합 테스트: **106/108 통과** (2건 pre-existing 실패 확인)
   - 잔여 실패: `test_real_image_preprocessing`, `test_pipeline_output_value_range` (정규화 경계값 — 기존 버그)
 
 #### Step 10: 후속 통합 작업 ✅ 완료 (2026.03.17)
+
 - [x] **`model_loader.py`**: 이미 올바르게 구현됨 (중복 stub 없음, load_state_dict 활성화 상태)
 - [x] **`/analyze` 엔드포인트 연동**: 실제 ONNX 추론 + IQ 계산 결과 반환 구현 완료
 - [x] **Female 모델 학습**: `mind_palette_female.pt` 생성 (Phase A 50 epoch, Phase B 23 epoch early stop)
@@ -146,26 +174,31 @@
 
 ### Step 4: Extreme Optimization (TensorRT + Deep Dive) ✅ 완료 (2026.03.18)
 
-#### L1: 데이터 구조 (What)
+#### L1: 데이터 구조 (What) (TensorRT)
+
 - [x] **[Deep Dive]** TensorRT FP16 양자화 분석: RTX 3050 Ti Ampere FP16 HW 지원 확인. I/O 바인딩은 float32 유지, 내부 레이어만 FP16 연산 (NaN 방지). Optimization Profile 필수 (dynamic_axes 사용 시).
 - [x] **TensorRT 엔진 파일**:
-  - [x] [TDD][L1] .engine 파일 로드 성공 및 GPU 메모리 할당 확인 테스트 (5/5 통과)
+  - [x] [TDD] [L1] .engine 파일 로드 성공 및 GPU 메모리 할당 확인 테스트 (5/5 통과)
 
-#### L2: 변환 로직 (How)
+#### L2: 변환 로직 (How) (TensorRT)
+
 - [x] **FP16 양자화 정확도**:
-  - [x] [TDD][L2] FP16 TRT vs FP32 ONNX 정확도 검증 (3/3 통과)
+  - [x] [TDD] [L2] FP16 TRT vs FP32 ONNX 정확도 검증 (3/3 통과)
     - 실측: max_diff=**0.0004** (허용 0.20), 이진 일치율=**100%** (허용 ≥70%)
   - [x] ONNX → TensorRT 변환 및 FP16 적용 (`build_tensorrt_engine()`, Optimization Profile 포함) (Green)
 
-#### L3: 제약과 검증 (Why)
+#### L3: 제약과 검증 (Why) (TensorRT)
+
 - [x] **3-Engine 최종 벤치마크**:
-  - [x] [TDD][L3] PyTorch vs ONNX vs TensorRT: Latency, Throughput, Memory 3축 비교 리포트 자동 생성 (2/2 통과)
+  - [x] [TDD] [L3] PyTorch vs ONNX vs TensorRT: Latency, Throughput, Memory 3축 비교 리포트 자동 생성 (2/2 통과)
     - **결과 (RTX 3050 Ti, CUDA 12.6, input 1×3×260×260)**:
+
       | Engine | P95 Latency | Throughput | GPU Memory |
-      |--------|------------|------------|------------|
+      | :--- | :--- | :--- | :--- |
       | PyTorch GPU | 29.9ms | 67 QPS | 53 MB |
       | ONNX CPU | 24.4ms | 48 QPS | — |
       | **TensorRT FP16 GPU** | **14.1ms** | **325 QPS** | **40 MB** |
+
     - TensorRT: ONNX CPU 대비 **1.7x 빠름**, **6.8x 높은 처리량**
   - [x] **전체 테스트**: 10/10 통과 (기존 108개 포함 **118/118** 전체 통과)
 
@@ -174,8 +207,9 @@
 ## 🏆 Phase 4 완료 요약 (2026.03.17 ~ 03.20)
 
 ### 핵심 성과
+
 | 카테고리 | 항목 | 상태 |
-|---------|------|------|
+| :--- | :--- | :--- |
 | **C++ 필터** | CLAHE, NlMeansDenoising, OtsuCanny, ResizeFilter 최적화 | ✅ 6개 완료 |
 | **C++ 분석** | PressureAnalyzer, TremorAnalyzer, QualityMetrics | ✅ 3개 완료 |
 | **Python 모듈** | ChannelDropout, HybridCombiner | ✅ 2개 완료 |
@@ -183,8 +217,9 @@
 | **테스트** | 59 C++ + 147 Python = **206 총 테스트** | ✅ 전부 통과 |
 
 ### 벤치마크 결과 (남자사람_8_남_06463.jpg, 512×512)
+
 | 필터 | 파라미터 | 선택값 | SSIM |
-|------|---------|--------|------|
+| :--- | :--- | :--- | :--- |
 | BinarizeFilter | blockSize | 7 | 0.9382 |
 | BinarizeFilter | C | 3 | 0.9375 |
 | DenoiseFilter | gaussianSize | 3 | 0.9883 |
@@ -201,6 +236,7 @@
 > 배경 반전·Multi-Object Crop은 즉시 적용 가능. 나머지는 Phase 4 완성 이후 ROI 최적.
 
 ### 🔥 [확정] Production-Level Preprocessing (우선순위 최상)
+
 - [x] **Advanced Pipeline 리팩터링**: `ImageProcessor::Preprocess`를 `FilterPipeline` 패턴으로 전면 교체 (OCP 준수) [완료: 2026.03.21]
   - [x] **Step 1 (Denoise)**: `GaussianBlur(5x5)`로 종이 질감 제거 및 필압 보존 Grayscale 생성
   - [x] **Step 2 (Adaptive Binary)**: `AdaptiveThreshold(11, 2)` + `Morphology(Close)`로 선 연결성 강화
@@ -218,6 +254,7 @@
   - [x] **Domain Adaptation**: 최종 결과물을 **White Background**로 통일하여 ImageNet Pretrained 모델 친화적 데이터 생성
 
 ### Phase 4 이후 실행 (ROI 순) ✅ 완료 (2026.03.20)
+
 - [x] **파라미터 근거 문서화**: 각 필터 파라미터를 최소 3가지 값으로 비교 실험하고, 선택 근거를 주석/ADR에 기록
   - [x] `benchmark_filters.py` 스크립트 작성 (실제 이미지로 PSNR/SSIM 측정)
   - [x] ADR-parameter-rationale.md 업데이트 (BinarizeFilter/DenoiseFilter/ClaheFilter/NlMeansDenoiseFilter/OtsuCannyFilter 실측값)
@@ -232,6 +269,7 @@
   - [x] NlMeansDenoiseFilter 구현 (h=5 최적값)
 
 ### Phase 4 연계 항목 (AI 서버와 함께) ✅ 완료 (2026.03.20)
+
 - [x] **필압 분석(히스토그램)**: R채널(Gray)의 픽셀 분포를 분석하여 AI Feature와 별도로 필압 점수 산출
   - [x] PressureAnalyzer C++ 구현 (POST /analyze-pressure 엔드포인트)
 - [x] **Hybrid Input Normalization**:
@@ -253,6 +291,7 @@
 ### 배경: Train-Inference Mismatch 해결 (성능 최적화)
 
 현재 상태:
+
 - **학습 시**: 원본 스캔 크롭 이미지 (RGB)로 학습
 - **추론 시**: C++ HybridPipeline 출력 (3채널: R=Gray, G=InvBinary, B=Dist)로 추론
 - **영향도**: 현재 모델은 안정적으로 작동 중이며, 이 항목은 추가 성능 개선 목적
@@ -267,7 +306,7 @@
 ### 우선순위
 
 | 우선순위 | 항목 | 타이밍 |
-|---------|------|--------|
+| :--- | :--- | :--- |
 | 🔴 **1순위** | Phase 5 배포 전략 (Hash Caching, Docker, Nginx) | 즉시 |
 | 🟡 **2순위** | 추가 데이터 수집 (50개+ 확보 필요) | Phase 5 진행 중 병행 |
 | 🟢 **3순위** | 모델 재학습 (데이터 확보 후) | Phase 5 후반 (여유 시간) |
@@ -286,6 +325,7 @@
 ## 🌐 Phase 5: 통합 및 고도화 (배포 전략)
 
 ### 성능 최적화 (Performance Optimization)
+
 - [x] **Hash-based Caching (지연 시간 해결 - ADR-020 대응)**:
   - [x] [TDD] 동일 이미지 업로드 시 보안 검증 및 분석 단계를 건너뛰고 결과 즉시 반환 테스트 (Red) — `api-gateway/tests/cacheService.test.ts`
   - [x] SHA-256 해시 기반 "Security-Verified Cache" 레이어 구현 (Green) — `cacheService.ts` (LRU+TTL), `analysisService.ts` 통합
@@ -293,12 +333,18 @@
 - [ ] **Inference Optimization**: Python AI 서버의 추론 엔진 최종 ONNX/TensorRT 통합 및 회귀 테스트.
 
 ### 배포 아키텍처 및 보안 (Architecture & Security)
+
 - [x] **Nginx Reverse Proxy 도입**: AWS EC2 앞단에 Nginx를 배치하여 SSL 인증서(Let's Encrypt) 관리 및 HTTPS 트래픽 처리. — `nginx/nginx.conf`, `nginx/Dockerfile`
 - [x] **Mixed Content 방지**: Frontend(HTTPS) ↔ API Gateway(HTTPS) 간 보안 통신 구현. — Nginx SSL 종단, HTTP→HTTPS 리다이렉트 구현
 - [x] **Internal Private Network**: API Gateway ↔ C++ ↔ Python 구간은 내부망 HTTP 통신(Plain Text) 유지하여 성능 최적화 (SSL 오버헤드 제거). — `docker-compose.yml` `internal-net` 적용
 - [x] **Docker Compose 프로덕션 설정**: `restart: unless-stopped`, healthcheck 체인(interval/timeout/retries), shared_volume, `docker-compose.override.yml`(로컬 개발용) 작성 완료.
+- [x] **[Fix] Docker Build Optimization**:
+  - [x] **.dockerignore 도입**: 로컬 빌드 결과물(`vcpkg_installed`, `node_modules` 등) 격리로 빌드 컨텍스트 전송량 최적화 (6GB → 1MB) [완료: 2026.04.05]
+  - [x] **vcpkg Manifest Fix**: `preprocess-server/Dockerfile`에서 매니페스트 모드용 라이브러리 복사 경로 수정 [완료: 2026.04.05]
+  - [x] **AI Server Slim Image**: `ai-server/Dockerfile` 라이브러리(libgl1 등) 보완 및 불필요한 torch 레이어 제거 [완료: 2026.04.05]
 
 ### EC2 c5.large 실배포
+>
 > **전제**: 로컬 `docker compose up --build` 검증 완료 후 진행. AWS 계정 및 도메인 준비 필요.
 
 - [ ] **EC2 인스턴스 프로비저닝**:
@@ -324,31 +370,38 @@
 ## 📊 Cross-Cutting Concerns
 
 ### 🪵 Logging System
+>
 > 목표: 모든 서비스에 구조화된 로깅(Structured Logging)을 도입하여, 장애 추적 및 성능 분석을 가능하게 한다.
 
 #### Node.js (API Gateway) - Winston ✅ 완료
+
 - [x] **Winston 도입**: JSON 포맷, 파일/콘솔 동시 출력, 로그 레벨(DEBUG/INFO/WARN/ERROR) 설정.
 - [x] **요청/응답 로깅**: 모든 API 요청의 메타데이터(타임스탬프, 파일명, 크기)를 INFO 레벨로 기록.
 - [x] **에러 스택 추적**: 예외 발생 시 전체 스택 트레이스를 ERROR 레벨로 기록.
 
 #### C++ (Preprocess Server) - spdlog ✅ 완료
+
 - [x] **spdlog 도입**: vcpkg로 설치하고, 멀티스레드 안전(thread-safe) 로깅.
 - [x] **성능 로깅**: 전처리 소요 시간을 밀리초(ms) 단위로 측정하여 기록.
 - [x] **파일 회전(Rotation)**: 로그 파일이 10MB를 초과하면 자동으로 새 파일로 교체.
 
 #### Python (AI Server) - structlog ✅ 완료
+
 - [x] **structlog 도입**: JSON 포맷, `request_id` 바인딩 및 파일 로깅(`logs/`) 연동 완료. (지원: AI Pipeline Architect)
 - [x] **추론 추적**: 모델 입력 정보 및 가공된 분석 결과 기록 로직 구현.
 - [x] **컨텍스트 바인딩**: `X-Request-ID`를 로그에 자동 추가하여 전 구간 추적 가능.
 
 #### 통합 (Cross-Service Integration) ✅ 완료
+
 - [x] **Request ID 전파**: Node.js에서 생성한 UUID가 C++, Python 서버 로그에 일관되게 전파 및 기록됨을 검증 완료. (지원: AI Pipeline Architect)
 - [ ] **에러 알림 시스템(선택)**: CRITICAL 레벨 로그 발생 시 Slack/Email 알림 메커니즘 구축.
 
 ### 🏥 System Reliability
+>
 > 목표: 시스템이 24/7 안정적으로 동작하고, 장애 발생 시 즉시 감지할 수 있는 기반을 구축한다.
 
 #### Health Checks - Tier 1: 필수
+
 - [x] **C++**: `/health` 엔드포인트 구현 완료.
 - [x] **Node.js**: `/health` 엔드포인트 구현 완료.
 - [x] **Python**:
@@ -359,15 +412,18 @@
   - [x] `docker-compose.yml` 내 healthcheck (interval, timeout) 설정 (Green) — 전 서비스 적용 완료
 
 #### API Documentation - Tier 2: 권장
+
 - [x] **[MCP]** `context7`으로 OpenAPI 3.0 스펙의 가독성 좋은 문서화 패턴 리서치
 - [x] **Node.js API 명세**:
   - [x] [TDD] API 명세 파일이 실제 엔드포인트 구조와 일치하는지 자동 검증 테스트 (Red)
   - [x] OpenAPI 3.0/Swagger Spec 작성 및 저장 (Green)
 
 ### 🔐 Security
+>
 > 목표: 입력/저장/전송/의존성 전 구간에서 최소한의 보안 기준을 충족한다.
 
 #### 입력 검증 (Input Validation) - Tier 1: 필수
+
 - [x] **[MCP]** `context7`으로 이미지 파일 매직 바이트를 활용한 완벽한 확장자 위조 탐지 기법 리서치 — 결론: 6-Layer 검증 모델(확장자→매직바이트→MIME→라이브러리파싱→크기/해상도→재인코딩) 권장. Node.js(빠른 1차 필터)+Python(PIL.verify 심층검증) 책임 분리 아키텍처는 L4·L6 기준 충족. PNG 시그니처는 4바이트(현재)→8바이트 강화 권장
 - [x] **파일 업로드 검증**:
   - [x] [TDD] .txt 파일을 .jpg로 속여 업로드 시 차단되는지 테스트 (Red)
@@ -380,6 +436,7 @@
   - [x] 입력 경로 정규화 및 화이트리스트 디렉토리 체크 구현 (Green) — `fileStorage.ts::isSafeFilename()` (null byte, 절대경로, `..` 차단)
 
 #### 저장/무결성 (Storage & Integrity) - Tier 1: 필수
+
 - [x] **Atomic Write & Atomic Delete**:
   - [x] [TDD] 저장/삭제 중 예상치 못한 중단 시 데이터 불일치 여부 테스트 (Red)
   - [x] `.tmp` → `rename` 패턴 및 원자적 삭제 로직 보완 (Green) — `AtomicFileWriter::atomicDelete()` (rename→.del→remove 패턴)
@@ -391,21 +448,26 @@
   - [x] `analysisService.ts`의 `finally` 절을 이용한 원본 및 C++ 전처리 이미지 원자적 자동 삭제 로직 적용
 
 #### 전송 보안 (Transport Security) - Tier 2: 권장
+
 - [x] **외부 HTTPS**: Frontend ↔ API Gateway는 HTTPS를 사용해야 한다. _(Phase 5 배포 시 Nginx TLS 설정으로 처리 — 애플리케이션 코드 변경 없음)_ — `nginx/nginx.conf` SSL 종단 구현 완료
 - [x] **내부망 격리**: API Gateway ↔ C++ ↔ Python 통신은 내부망 HTTP로 제한해야 한다.
 
 #### 로깅 보안 (Logging Hygiene) - Tier 2: 권장
+
 - [x] **PII 마스킹**: 이름/생년월일 등 개인정보는 로그에 남기지 않거나 마스킹해야 한다.
 - [x] **에러 메시지 최소화**: 내부 경로/스택 노출을 최소화해야 한다.
 
 #### 의존성/공급망 보안 (Dependency Security) - Managed by TDD Quality Guardian
+
 - [x] **정기 점검**: `npm audit`와 CodeQL을 주기에 맞춰 실행하고 결과를 분석한다. (TDD Quality Guardian 전담)
 - [x] **버전 고정**: vcpkg baseline pinning을 유지하여 빌드 재현성을 확보해야 한다.
 
 ### 🧪 Traffic & Load Testing
+>
 > 목표: 서비스의 안정성을 검증하고, 대량의 로그를 생성하여 시스템의 한계를 테스트한다.
 
 #### Traffic Generation - Phase 3~4 (검증용)
+
 - [x] **[MCP]** `sequential-thinking`을 사용한 대량 로그 발생 시 파일 I/O 병목 및 시스템 영향도 분석
   > **분석 결과 요약** (2026-03-29):
   > - **디스크 쓰기 경로 3개**: `logs/` (Winston), `shared_volume/uploads/` (multer 임시), `shared_volume/results/` (분석 결과 JSON)
@@ -421,6 +483,7 @@
   - [x] TrafficBot에 `profileKey` 지원 및 서비스별 평균 응답시간 집계 구현 (Green)
 
 #### Load Testing - Phase 5 (최종 성능)
+
 - [x] **k6 부하 테스트**:
   - [x] [TDD] 동시 접속자 100명 달성 시 응답 지연(P95) 기준 미달 시 실패 처리 (Red) — `scripts/load-test.js` thresholds: `p(95)<500` 설정
   - [x] k6 시나리오 작성 및 결과 벤치마크 리포트 생성 (Green) — smoke/load(100VU)/stress(200VU) 3개 시나리오 완료
@@ -428,9 +491,11 @@
 ---
 
 ## 🎓 Phase 6: System Reliability & Chaos Engineering
+>
 > **Goal**: 개별 모듈의 Deep Dive(Phase 3,4)가 끝난 후, 전체 시스템 차원의 안정성과 복구 능력을 검증합니다.
 
 ### 🛡️ Reliability & Resilience (복구 탄력성)
+
 - [ ] **[MCP]** `sequential-thinking`을 사용하여 특정 서비스 지연이 전체 시스템의 '연쇄적 중단(Cascading Failure)'을 일으키는지 분석
 - [ ] **장애 복구(Failover) 시나리오**:
   - [ ] [TDD] C++ 서버 가용 불능 시 Node.js Gateway의 Circuit Breaker 오픈 및 대체 메시지 반환 테스트 (Red)
@@ -446,6 +511,7 @@
 ### 🎨 Phase 1: Frontend (React) 통합
 
 #### 업로드 컴포넌트 연동
+
 - [x] `handleUpload` 함수가 실제 API 엔드포인트로 `FormData`를 전송해야 한다 (Mocking).
 - [x] API 응답 성공 시 결과 페이지(`setStep('result')`)로 전환되어야 한다.
 - [x] API 응답 실패 시 에러 메시지를 처리해야 한다.
@@ -453,35 +519,42 @@
 ### 🚀 Phase 2: API Gateway (Node.js) 개발
 
 #### 기본 서버 설정 및 상태 확인
+
 - [x] `GET /` 요청 시 200 OK와 함께 서버 상태 메시지를 반환해야 한다.
 
 #### 이미지 분석 API (`POST /analyze`)
+
 - [x] 이미지 파일 없이 요청 시 400 Bad Request 에러를 반환해야 한다.
 - [x] 유효한 이미지 파일 업로드 시 200 OK와 분석 결과 JSON을 반환해야 한다.
 - [x] 업로드된 이미지가 `shared_volume/uploads` 폴더에 실제로 저장되어야 한다.
 - [x] 분석 결과가 `shared_volume/results` 폴더에 JSON 파일로 저장되어야 한다.
 
 #### 리팩터링 (Refactoring)
+
 - [x] (Refactor) `server.js`의 비즈니스 로직을 별도 모듈로 분리해야 한다.
 
 ### 🛡️ 품질 및 보안 보증 (QA)
 
 #### CI/CD 파이프라인 및 보안 분석
+
 - [x] GitHub Actions 워크플로우(`.github/workflows/main.yml`)가 정상적으로 동작해야 한다.
 - [x] Backend 및 Frontend 단위 테스트가 CI에서 자동 실행되어야 한다.
 - [x] 통합 테스트(Integration Test)가 CI에서 자동 실행되어야 한다.
 - [x] **CodeQL (Security Analysis)**: JavaScript/TypeScript 및 C++ 코드의 보안 취약점 분석이 CI에 포함되어야 한다.
 
 ### ⚙️ Phase 3: C++ Preprocessing Server (완료)
+>
 > 목표(계획서 기준): **Crow + OpenCV** 기반 전처리 마이크로서비스를 구축하고, **전처리 속도 < 100ms**를 목표로 멀티스레딩 최적화 및 **정적 분석/테스트(QA)** 를 적용한다.
 
 #### Week 1: REST API 기본 골격 (Crow)
+
 - [x] `GET /` 요청 시 200 OK와 함께 서버 상태 메시지를 반환해야 한다.
 - [x] `GET /health` 요청 시 200 OK와 "OK"를 반환해야 한다.
 - [x] **통신 계약(초기, 파일 경로 공유)**: `Node.js ↔ C++`는 `{ "imagePath": "/shared/uploads/img.jpg" }` → `{ "processedPath": "/shared/processed/img_clean.jpg" }` JSON으로 주고받아야 한다.
 - [x] **Node.js ↔ C++ 통신 테스트**: API Gateway가 C++ 전처리 엔드포인트를 호출해 `processedPath`를 받을 수 있어야 한다.
 
 #### Week 2: OpenCV 전처리(기본) + API
+
 - [x] **OpenCV 도입(vcpkg + CMake)**: 전처리 모듈을 빌드에 포함해야 한다.
 - [x] `POST /preprocess` 요청 시 `imagePath`가 없거나 빈 값이면 400 Bad Request를 반환해야 한다.
 - [x] `POST /preprocess` 요청 시 존재하지 않는 파일 경로면 404 Not Found를 반환해야 한다.
@@ -491,6 +564,7 @@
 - [x] **그레이스케일 변환**: 후속 에지 검출을 위한 grayscale 이미지가 생성되어야 한다.
 
 #### Week 3: 에지/배경 제거 고도화 (Advanced OpenCV + Deep Dive) ✅
+
 - [x] **[MCP]** `sequential-thinking`을 사용하여 GrabCut vs DL 기반 배경 제거의 효율성 분석 (제1원칙)
 - [x] **GrabCut 배경 제거 & 실험**:
   - [x] [TDD] `image_processor_test.cpp`: GrabCut 초기 마스크 생성 및 유효성 검증 테스트 (Red)
@@ -507,6 +581,7 @@
 - [x] **ADR-011 작성**: C++ 전처리 파이프라인 결과물 명세 문서화
 
 #### Week 3.5: 디자인 패턴 적용 및 아키텍처 리팩터링 (Architecture & Scalability)
+
 - [x] **[MCP]** `context7`으로 Modern C++(C++17)에서의 Strategy Pattern 및 Factory Pattern 최적 구현 사례 리서치
 - [x] **Strategy Pattern (Filter System)**:
   - [x] [Refactor] 기존 `if-else` 기반 필터 로직을 `IFilter` 인터페이스 및 구체 클래스(`BlurFilter`, `CannyFilter`)로 분리.
@@ -518,6 +593,7 @@
   - [x] Week 4 멀티스레딩을 위한 `TaskQueue` 인터페이스 설계 및 단일 스레드 기반 모의 구현.
 
 #### Week 4: 멀티스레딩/성능/품질 (Concurrency Deep Dive)
+
 - [x] **Thread Pool 구현 (std::thread)**:
   - [x] [TDD] 스레드 풀 작업 큐의 동기화 및 데드락 방지 단위 테스트 (Red)
   - [x] `std::thread`/`mutex`/`condition_variable` 기반 표준 스레드 풀 구현 (Green)
@@ -534,7 +610,8 @@
 ---
 
 ### 📌 핵심 원칙 (Kent Beck)
-```
+
+```text
 "Make it work → Make it right → Make it fast"
 
 현재 위치: "Make it work" ✅ (Phase 1-3 완료)
@@ -545,6 +622,7 @@
 ```
 
 ### ❌ DON'T (하지 말아야 할 것)
+
 - **진행 중단하고 복습** → 모멘텀 상실 위험
 - **완벽주의 추구** → 무한 학습의 함정
 - **파라미터 하나하나 논문 찾기** → 시간 대비 효과 낮음

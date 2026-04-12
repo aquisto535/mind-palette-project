@@ -1,6 +1,7 @@
 import express, { Request, Response, NextFunction } from 'express';
 import multer from 'multer';
 import rateLimit from 'express-rate-limit';
+import axios from 'axios';
 import { upload, CustomRequest } from '../utils/fileStorage';
 import { processAnalysis } from '../services/analysisService';
 import { ImageValidator } from '../services/imageValidator';
@@ -82,6 +83,10 @@ router.post('/',
       res.json(responseData);
     } catch (error: unknown) {
       logger.error('Analysis Error:', { error: error instanceof Error ? error.message : String(error) });
+      // ADR-033: 하위 서비스(preprocess/ai)의 422는 클라이언트에 그대로 전달
+      if (axios.isAxiosError(error) && error.response?.status === 422) {
+        return res.status(422).json(error.response.data);
+      }
       res.status(500).json({ error: 'Internal Server Error' });
     }
   }
