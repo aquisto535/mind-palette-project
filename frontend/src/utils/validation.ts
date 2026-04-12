@@ -38,7 +38,7 @@ export function validateBirthDate(birthDate: string): ValidationResult {
 
   const [year, month, day] = birthDate.split('-');
   const birth = new Date(Number(year), Number(month) - 1, Number(day));
-  if (isNaN(birth.getTime())) return fail('올바른 생년월일을 입력해주세요.');
+  if (Number.isNaN(birth.getTime())) return fail('올바른 생년월일을 입력해주세요.');
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
