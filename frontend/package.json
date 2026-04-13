@@ -6,6 +6,7 @@
   "scripts": {
     "predev": "kill-port 5173 || true",
     "dev": "vite",
+    "prebuild": "node scripts/verify-env.mjs",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "test": "vitest"

@@ -9,6 +9,16 @@ COPY package*.json ./
 RUN npm ci
 
 COPY . .
+
+# Vite 빌드 타임 환경 변수 (build arg → ENV → Vite 인라인)
+# .dockerignore가 .env.local을 제외하므로 이 ARG가 유일한 주입 경로입니다.
+# 기본값은 반드시 프로덕션 안전값(false)으로 유지하세요.
+ARG VITE_USE_MOCK=false
+ENV VITE_USE_MOCK=$VITE_USE_MOCK
+
+ARG VITE_API_URL=/api
+ENV VITE_API_URL=$VITE_API_URL
+
 RUN npm run build
 
 # ─────────────────────────────────────────────────────────────────────────────

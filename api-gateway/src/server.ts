@@ -8,6 +8,45 @@ import { UPLOAD_DIR, RESULT_DIR } from './utils/fileStorage';
 import { randomUUID } from 'node:crypto';
 import logger from './utils/logger';
 
+// ────────────────────────────────────────────────────────────────────────────
+// 시작 시 환경 변수 검증 (Fail-Fast)
+// 프로덕션에서 필수 설정이 누락된 채로 조용히 기동되는 것을 방지한다.
+// ────────────────────────────────────────────────────────────────────────────
+function validateEnv(): void {
+  const isProduction = process.env.NODE_ENV === 'production';
+  const warnings: string[] = [];
+
+  if (isProduction) {
+    // ADMIN_PROFILE_KEY 미설정 경고 (에러는 아니지만 운영자 인지 필요)
+    if (!process.env.ADMIN_PROFILE_KEY) {
+      warnings.push('ADMIN_PROFILE_KEY is not set — profiling endpoints will be disabled');
+    }
+
+    // PREPROCESS_SERVER_URL이 localhost를 가리키면 Docker 환경에서 동작 불가
+    const preprocessUrl = process.env.PREPROCESS_SERVER_URL || '';
+    if (preprocessUrl.includes('127.0.0.1') || preprocessUrl.includes('localhost')) {
+      warnings.push(`PREPROCESS_SERVER_URL="${preprocessUrl}" points to localhost — Docker networking will fail`);
+    }
+
+    // AI_SERVER_URL 동일 검사
+    const aiUrl = process.env.AI_SERVER_URL || '';
+    if (aiUrl.includes('127.0.0.1') || aiUrl.includes('localhost')) {
+      warnings.push(`AI_SERVER_URL="${aiUrl}" points to localhost — Docker networking will fail`);
+    }
+
+    // KEEP_IMAGES=true 프로덕션 경고
+    if (process.env.KEEP_IMAGES === 'true') {
+      warnings.push('KEEP_IMAGES=true in production — processed images will NOT be deleted (disk leak risk)');
+    }
+  }
+
+  if (warnings.length > 0) {
+    warnings.forEach(w => console.warn(`[env-check] ⚠️  ${w}`));
+  }
+}
+
+validateEnv();
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 

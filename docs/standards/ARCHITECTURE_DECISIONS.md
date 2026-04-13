@@ -49,6 +49,7 @@
 | ADR-032 | 부하 테스트 및 성능 검증 도구로 오픈소스 k6 채택 | 2026-04 | ✅ Accepted |
 | ADR-033 | 비연필(컬러) 이미지 조기 필터링 및 예외 처리 전략 | 2026-04 | ✅ Accepted |
 | ADR-034 | AI 코딩 도구 통합 컨텍스트 자동 모니터링 시스템 구축 (Antigravity + Claude Code) | 2026-04 | ✅ Accepted |
+| ADR-035 | 설정 관리 시스템화 — 환경 변수 인벤토리·검증·CI 감사 도입 | 2026-04 | ✅ Accepted |
 
 ---
 
@@ -2712,5 +2713,59 @@ Claude Code는 대화가 길어질수록 컨텍스트 창(Context Window)에 이
 - ✅ **유연성**: `THRESHOLD` 상수 하나로 임계값 조정 가능. 세션 타임아웃도 `SESSION_TIMEOUT_MS`로 제어.
 - ⚠️ **Node.js 의존**: 시스템에 Node.js가 설치되어 있어야 동작. (이미 `api-gateway` 개발 환경에 포함되어 있음)
 - ⚠️ **전역 설정**: `~/.claude/settings.json`은 모든 프로젝트에 적용되는 전역 설정임. 특정 프로젝트에서만 비활성화하려면 별도 처리 필요.
+
+---
+
+## ADR-035: 설정 관리 시스템화 — 환경 변수 인벤토리·검증·CI 감사 도입
+
+- **날짜**: 2026-04-13
+- **상태**: ✅ Accepted
+- **결정자**: 개발팀
+
+### 배경 (Context)
+
+ADR-033 구현 과정에서 발생한 컬러 이미지 필터 우회 버그의 근본 원인 중 하나는 **환경 변수 관리 부재**였다.
+
+- `VITE_USE_MOCK=true`가 `.dockerignore`에 의해 Docker 빌드에서 제외되지만, 이 사실을 문서화하지 않아 개발자가 인지하지 못함
+- `KEEP_IMAGES=false`가 프로덕션 기본값이어야 하지만 `.env.example`이 없어 신규 기여자가 안전값을 파악하기 어려움
+- 서비스별 환경 변수가 어디에도 목록화되어 있지 않아 배포 후 무음(silent) 오동작이 발생
+
+### 결정 (Decision)
+
+4개 서비스 전체에 걸쳐 **설정 관리를 시스템화**한다:
+
+1. **인벤토리**: `docs/project-guides/CONFIG_INVENTORY.md` — 모든 환경 변수를 중요도·위험 수준과 함께 목록화
+2. **단일 진실 원천**: 서비스별 `.env.example` — `frontend/`, `api-gateway/`, `ai-server/` 각각 보유
+3. **Fail-Fast 검증**: 빌드/시작 시 위험 설정을 조기 감지하여 프로세스 종료
+   - Frontend: `prebuild` 훅 → `scripts/verify-env.mjs`
+   - API Gateway: 앱 시작 시 `validateEnv()` 함수 실행
+   - AI Server: `config.py` 모듈 로드 시 `INFERENCE_BACKEND` 유효값 검증
+4. **Docker 명시적 주입**: `frontend/Dockerfile`에 `ARG VITE_USE_MOCK=false` + `ENV VITE_USE_MOCK=$VITE_USE_MOCK` 추가 → 빌드 타임 변수 주입 경로를 코드로 문서화
+5. **CI 자동 감사**: `.github/workflows/main.yml`의 `config-audit` 잡 → PR마다 키 누락·Mock 잔재 자동 검출
+6. **배포 후 가시성**: `GET /health` 응답에 `mode` 필드 추가 → 실제 런타임 설정을 즉시 확인 가능
+
+### ADR-035 근거 (Rationale)
+
+**Fail-Safe Defaults 원칙**: 기본값은 항상 "프로덕션에서 안전한 값"이어야 한다. `VITE_USE_MOCK`의 기본값이 `false`인 것처럼, 모든 개발/디버그 설정은 명시적으로 `true`를 설정해야만 활성화되어야 한다.
+
+**Single Source of Truth per Service**: 서비스마다 `.env.example`을 두어 해당 서비스가 필요로 하는 모든 환경 변수를 한 파일에서 파악할 수 있어야 한다.
+
+**Shift-Left**: 잘못된 설정을 런타임(배포 후)이 아니라 빌드 시점(CI)에 발견하면 수정 비용이 훨씬 낮다.
+
+### ADR-035 대안 검토 (Alternatives)
+
+| 대안 | 거부 이유 |
+| ---- | --------- |
+| envalid/zod 기반 런타임 스키마 검증 | 의존성 추가 필요. 현재 규모에서는 `validateEnv()` 직접 구현으로 충분 |
+| dotenv-vault 같은 시크릿 관리 서비스 | 클라우드 추가 비용·복잡도 증가. 현재 EC2+GitHub Secrets 조합으로 충분 |
+| 검증 없이 .env.example만 추가 | 문서가 코드와 멀어질 경우 형식적 파일로 전락 — CI 감사 없이는 신뢰 불가 |
+
+### ADR-035 결과 (Consequences)
+
+- ✅ 신규 기여자가 `.env.example`만 보면 서비스 구동에 필요한 모든 설정을 파악 가능
+- ✅ `VITE_USE_MOCK=true`가 프로덕션 빌드에 포함되면 CI에서 자동 차단
+- ✅ 배포 후 `curl /health` 한 번으로 실제 운영 모드 즉시 확인 가능
+- ✅ 환경 변수 위험 등급(필수/권장/개발전용/시크릿)이 명시화되어 온보딩 속도 향상
+- ⚠️ `.env.example` 파일을 코드 변경과 함께 유지보수해야 하는 규율 필요 (CI 감사가 보조)
 
 ---

@@ -80,7 +80,13 @@ services:
   # Frontend (React — Vite 빌드 → nginx:alpine 정적 서빙)
   # ──────────────────────────────────────────────────────────────────────────
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      args:
+        # 프로덕션 빌드 기본값: false (실제 API 사용)
+        # 변경이 필요하면 docker-compose.override.yml에서 재정의하세요.
+        VITE_USE_MOCK: "false"
+        VITE_API_URL: "/api"
     expose:
       - "80"
     networks:

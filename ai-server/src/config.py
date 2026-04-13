@@ -1,5 +1,23 @@
+import os
 from pydantic_settings import BaseSettings
 from typing import Tuple
+
+# ─── 시작 시 환경 변수 검증 (Fail-Fast) ─────────────────────────────────────
+# ai-server가 잘못된 설정으로 조용히 기동되는 것을 방지한다.
+_VALID_BACKENDS = {"pytorch", "onnx", "tensorrt_native", "tensorrt_ort"}
+_backend = os.environ.get("INFERENCE_BACKEND", "pytorch")
+if _backend not in _VALID_BACKENDS:
+    raise ValueError(
+        f"[env-check] INFERENCE_BACKEND='{_backend}' is invalid. "
+        f"Must be one of: {sorted(_VALID_BACKENDS)}"
+    )
+if _backend == "pytorch" and os.environ.get("PRODUCTION") == "true":
+    import warnings
+    warnings.warn(
+        "[env-check] INFERENCE_BACKEND=pytorch in production — "
+        "consider 'onnx' for better CPU performance",
+        stacklevel=1,
+    )
 
 
 class ModelConfig(BaseSettings):

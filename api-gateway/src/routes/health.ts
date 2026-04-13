@@ -61,6 +61,11 @@ router.get('/', healthRateLimiter, (req: Request, res: Response) => {
       diskAvailableGB = 'N/A';
     }
 
+    // 런타임 모드 정보 — 배포 후 실제 동작 모드를 즉시 확인할 수 있도록 노출
+    const nodeEnv = process.env.NODE_ENV ?? 'development';
+    const adminProfileKeySet = Boolean(process.env.ADMIN_PROFILE_KEY);
+    const keepImages = process.env.KEEP_IMAGES === 'true';
+
     res.json({
       status: 'healthy',
       timestamp: new Date().toISOString(),
@@ -71,6 +76,14 @@ router.get('/', healthRateLimiter, (req: Request, res: Response) => {
       },
       disk: {
         available: diskAvailableGB
+      },
+      // 운영 모드 정보 (배포 검증용)
+      mode: {
+        env: nodeEnv,
+        admin_profiling_enabled: adminProfileKeySet,
+        keep_images: keepImages,
+        preprocess_url: process.env.PREPROCESS_SERVER_URL ?? 'http://127.0.0.1:8081',
+        ai_url: process.env.AI_SERVER_URL ?? 'http://127.0.0.1:8082',
       }
     });
   } catch (error: unknown) {
