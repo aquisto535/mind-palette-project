@@ -454,11 +454,11 @@ TEST(ColorValidationFilterTest, ThrowsOnColorImage) {
 
 // 4. 5% 이상 컬러 픽셀 혼합 이미지 → ValidationException throw
 TEST(ColorValidationFilterTest, ThrowsOnMixedColorImage) {
-    // 회색 배경에 10%를 빨간 픽셀로 채움
+    // 회색 전경(V=128)에 10%를 빨간 픽셀로 채움
     cv::Mat input(100, 100, CV_8UC3, cv::Scalar(128, 128, 128));
     int colorRows = 10;  // 10행 = 10% 픽셀이 컬러
     input(cv::Rect(0, 0, 100, colorRows)) = cv::Scalar(0, 0, 255);
-    ColorValidationFilter filter(30, 0.05);
+    ColorValidationFilter filter;  // 기본값: S>=50, V<=220, 5%
 
     EXPECT_THROW(filter.apply(input), ValidationException);
 }
@@ -469,7 +469,50 @@ TEST(ColorValidationFilterTest, PassesBorderlineImage) {
     cv::Mat input(100, 100, CV_8UC3, cv::Scalar(128, 128, 128));
     int colorRows = 3;  // 3행 = 3%
     input(cv::Rect(0, 0, 100, colorRows)) = cv::Scalar(0, 0, 255);
-    ColorValidationFilter filter(30, 0.05);
+    ColorValidationFilter filter;
+
+    EXPECT_NO_THROW(filter.apply(input));
+}
+
+// 7. [ADR-033] 흰 종이(V=255) 전체 이미지 → 배경 제외, 통과
+TEST(ColorValidationFilterTest, PassesWhitePaperOnly) {
+    // 흰 종이만 있는 이미지 — 모두 V=255로 배경 처리, 결정적 픽셀 0 → 통과
+    cv::Mat input(100, 100, CV_8UC3, cv::Scalar(255, 255, 255));
+    ColorValidationFilter filter;
+
+    EXPECT_NO_THROW(filter.apply(input));
+}
+
+// 8. [ADR-033] 흰 종이 위 연필 스트로크(V 낮음, S 낮음) → 통과
+TEST(ColorValidationFilterTest, PassesPencilStrokeOnWhitePaper) {
+    // 전체 흰 종이(V=255) 배경에 15%의 검정 스트로크(V=50, S=0) — 전형적인 연필 그림.
+    // 결정적 픽셀 = 스트로크 15%, 컬러 픽셀 = 0 → ratio=0% → 통과
+    cv::Mat input(100, 100, CV_8UC3, cv::Scalar(255, 255, 255));
+    input(cv::Rect(0, 0, 100, 15)) = cv::Scalar(50, 50, 50);
+    ColorValidationFilter filter;
+
+    EXPECT_NO_THROW(filter.apply(input));
+}
+
+// 9. [ADR-033] 흰 종이 위 크레파스 컬러 스트로크 → ValidationException throw
+TEST(ColorValidationFilterTest, ThrowsOnCrayonStrokeOnWhitePaper) {
+    // 전체 흰 종이 배경(90%)에 10% 고채도 파랑 스트로크 — 컬러 드로잉.
+    // 결정적 픽셀 = 파랑 10%, 컬러 픽셀 = 100% of foreground → 100% ≥ 5% → throw
+    cv::Mat input(100, 100, CV_8UC3, cv::Scalar(255, 255, 255));
+    input(cv::Rect(0, 0, 100, 10)) = cv::Scalar(255, 0, 0); // BGR: 파랑
+    ColorValidationFilter filter;
+
+    EXPECT_THROW(filter.apply(input), ValidationException);
+}
+
+// 10. [ADR-033] 낮은 채도 노이즈(S<50)는 무시 → 흑연 난반사 허용
+TEST(ColorValidationFilterTest, IgnoresLowSaturationNoise) {
+    // 회색 배경에 S=40 수준의 약한 색상 노이즈가 30% — 연필 그림의 황변/반사 시뮬.
+    // satThreshold_=50이므로 S=40은 컬러로 판정되지 않음 → 통과
+    cv::Mat input(100, 100, CV_8UC3, cv::Scalar(128, 128, 128));
+    // BGR (108, 128, 128) → HSV 계산 시 S ≈ 40 (약한 청록 틴트)
+    input(cv::Rect(0, 0, 100, 30)) = cv::Scalar(108, 128, 128);
+    ColorValidationFilter filter;
 
     EXPECT_NO_THROW(filter.apply(input));
 }

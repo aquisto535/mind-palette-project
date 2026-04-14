@@ -20,8 +20,11 @@ FilterPipeline PipelineFactory::createHybridPipeline() {
     pipeline.add(std::make_unique<ResizeFilter>(768, false));
 
     // Step 2: [ADR-033 Tier 1] Color Validation — 컬러 이미지 조기 거부
-    // 채도(S) > 30인 픽셀이 전체의 5% 이상이면 ValidationException throw → HTTP 422
-    pipeline.add(std::make_unique<ColorValidationFilter>(30, 0.05));
+    // Two-Step: (1) V>220 배경(흰 종이) 마스킹, (2) 결정적 픽셀 중 S>=50 비율 ≥5% → 422.
+    pipeline.add(std::make_unique<ColorValidationFilter>(
+        ColorValidationFilter::kDefaultSatThreshold,
+        ColorValidationFilter::kDefaultColorPixelRatio,
+        ColorValidationFilter::kDefaultValueThreshold));
 
     // Step 3: Denoise (Gaussian Only)
     // Gaussian: 5x5, Median: 0 (Disabled)

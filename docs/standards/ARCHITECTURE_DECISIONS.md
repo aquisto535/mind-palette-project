@@ -2604,9 +2604,10 @@ Mind Palette 프로젝트는 **연필로 그린 아동화(HFD)**를 분석 대�
 #### 1. [Tier 1] C++ Preprocess Server: 결정적 필터링 (Deterministic Filtering)
 
 - **위치**: `FilterPipeline`의 `ResizeFilter` 직후.
-- **로직**: `ColorValidationFilter` 도입.
-  - 이미지를 HSV 색공간으로 변환하여 **채도(Saturation)** 값을 분석.
-  - 특정 채도 임계값(Threshold)을 넘는 픽셀의 비율이 전체의 일정 수준(예: 5%) 이상이면 즉시 중단.
+- **로직**: `ColorValidationFilter` 도입 기반 HSV 공간(H=0~179, S=0~255, V=0~255) 임계값 분석.
+  - **명도(V) 배경 마스킹**: V > 220 인 픽셀은 흰 종이나 밝은 조명 반사 영역으로 간주하여 검사에서 제외.
+  - **유의미한 색상(S) 탐지**: 흑연의 난반사에 의한 노이즈(S < 50)를 허용하고, S >= 50 인 경우만 실질적인 컬러 픽셀로 판별.
+  - **드랍 비율(Ratio) 판단**: 배경(V > 220)을 제외한 '결정적 픽셀' 모수 중에서 컬러 픽셀(S >= 50) 비율이 **5%** 이상일 경우 비정상 이미지로 판정.
 - **응답**: 파이프라인에서 `ValidationException`을 발생시키고, Crow 서버는 이를 캐치하여 **HTTP 422 (Unprocessable Entity)**를 반환.
 
 #### 2. [Tier 2] Python AI Server: 확률적 검증 (Semantic Validation)
@@ -2617,7 +2618,10 @@ Mind Palette 프로젝트는 **연필로 그린 아동화(HFD)**를 분석 대�
 
 ### 근거 (Rationale)
 
-1. **물리적 특성 활용 (Color vs Monochrome)**: 연필 그림은 근본적으로 무채색(R≈G≈B)입니다. HSV 공간에서의 S(채도) 값은 조명 변화에 강건하게 색상 존재 여부를 판단할 수 있는 가장 효율적인 지표입니다.
+1. **조명 왜곡과 OpenCV 생태계 최적해 (Color vs Monochrome)**: 
+   - 기존에는 "연필 그림의 전체 S(채도) 평균이 낮다"는 가정으로 접근했으나, 실생활의 스마트폰이나 형광등/황변 종이에 의해 배경 픽셀의 채도가 튀는 상황에서 오탐지(False Positive)가 빈번했습니다. 
+   - "배경은 선형 객체보다 항상 무조건 밝다"는 제1원칙을 적용하여, **명도(Value) 기반의 마스킹 기법**을 선행함으로써 오직 그려진 획(Stroke) 부분의 특정 HSV 조건(V <= 220, S >= 50)만 집중 검사하도록 복합 필터 구조로 재설계했습니다.
+   - **출처 (Context7 검증)**: [OpenCV 4.x Official Tutorial: Thresholding Operations using inRange](https://docs.opencv.org/4.x/da/d97/tutorial_threshold_inRange.html). 공식 레퍼런스의 `cv::cvtColor(frame, frame_HSV, cv::COLOR_BGR2HSV)` 및 `cv::inRange()`를 활용한 객체 추적 원리를 차용하여, Pencil Sketch(무채색)와 Background(고명도) 영역을 분리하는 임계값(V=220, S=50)을 도출했습니다.
 2. **비용 효율성 (Fail-Fast)**: C++ OpenCV 연산은 Python 딥러닝 추론보다 수십 배 빠르고 가볍습니다. 1차 관문에서 조기 드랍함으로써 전체 시스템의 Throughput을 최적화합니다.
 3. **사용자 경험 (UX) 개선**: 단순히 "서버 에러(500)"가 아닌 "처리할 수 없는 데이터(422)"와 구체적인 메시지를 반환하여 사용자가 올바른 행동을 하도록 유도합니다.
 

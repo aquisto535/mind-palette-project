@@ -1,5 +1,5 @@
 {
-  "tests": 98,
+  "tests": 102,
   "name": "AllTests",
   "testsuites": [
     {
@@ -355,7 +355,7 @@
     },
     {
       "name": "ColorValidationFilterTest",
-      "tests": 6,
+      "tests": 10,
       "testsuite": [
         {
           "name": "PassesGrayscaleImage",
@@ -383,9 +383,29 @@
           "line": 467
         },
         {
-          "name": "PipelineThrowsForColorImage",
+          "name": "PassesWhitePaperOnly",
           "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
           "line": 478
+        },
+        {
+          "name": "PassesPencilStrokeOnWhitePaper",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
+          "line": 487
+        },
+        {
+          "name": "ThrowsOnCrayonStrokeOnWhitePaper",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
+          "line": 498
+        },
+        {
+          "name": "IgnoresLowSaturationNoise",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
+          "line": 509
+        },
+        {
+          "name": "PipelineThrowsForColorImage",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
+          "line": 521
         }
       ]
     },

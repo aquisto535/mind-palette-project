@@ -93,35 +93,14 @@ def _validate_image_file(file: UploadFile, content: bytes) -> None:
         )
 
 
-# ── ADR-033 상수 (Tier 2 색상 검사) ─────────────────────────────────────────
-_COLOR_SAT_THRESHOLD = 30     # HSV S 채널 임계값 (0~255) — C++ Tier 1과 동일
-_COLOR_PIXEL_RATIO   = 0.05   # 컬러 픽셀 비율 임계값 5% — C++ Tier 1과 동일
+def _validate_grayscale_input(_content: bytes) -> None:
+    """[ADR-033 Tier 2] 색상 검사 — 현재 비활성화됨.
 
-
-def _validate_grayscale_input(content: bytes) -> None:
-    """[ADR-033 Tier 2] 입력 이미지의 채도(Saturation)를 검사해 컬러 이미지를 거부한다.
-
-    C++ Tier 1과 동일한 임계값(S>30, 비율>=5%)을 적용하여 독립적인 방어선을 구성한다.
-    Tier 1이 어떤 이유로든 건너뛰어졌을 때의 최종 안전망.
-
-    Raises:
-        HTTPException 422: 색상이 검출된 경우
+    preprocess-server(Tier 1)의 출력이 다채널 특징 맵(R=그레이, G=이진화, B=거리변환)이므로
+    RGB 채도 기반 색상 검사를 적용하면 정상 연필화도 오탐지된다.
+    api-gateway의 Fail-Closed 정책(ADR-033 Fix 1)이 Tier 1 실패 시 503을 반환하므로
+    Tier 2까지 컬러 이미지가 도달하는 경로 자체가 차단되어 있다.
     """
-    pil_image = Image.open(io.BytesIO(content)).convert("HSV")
-    arr = np.array(pil_image, dtype=np.float32)   # H×W×3, S 채널은 index 1
-    saturation = arr[:, :, 1]                      # S 채널 (0~255)
-    color_pixels = np.sum(saturation > _COLOR_SAT_THRESHOLD)
-    total_pixels = saturation.size
-    ratio = color_pixels / total_pixels if total_pixels > 0 else 0.0
-
-    if ratio >= _COLOR_PIXEL_RATIO:
-        raise HTTPException(
-            status_code=422,
-            detail=(
-                f"컬러 이미지가 감지되었습니다. 연필로 그린 흑백 그림만 처리할 수 있습니다. "
-                f"(color_ratio={ratio:.1%}, threshold={_COLOR_PIXEL_RATIO:.1%})"
-            ),
-        )
 
 
 # ── 추출된 헬퍼 함수들 (Extract Method 적용) ─────────────────────────────────
