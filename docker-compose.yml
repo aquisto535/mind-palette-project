@@ -56,6 +56,7 @@ services:
       NODE_ENV: "production"
       PREPROCESS_SERVER_URL: "http://preprocess-server:8081"
       AI_SERVER_URL: "http://ai-server:8082"
+      SHARED_VOLUME_PATH: "/shared_volume"
       KEEP_IMAGES: "false"
       CACHE_TTL_SECONDS: "${CACHE_TTL_SECONDS:-3600}"
       CACHE_MAX_SIZE: "${CACHE_MAX_SIZE:-100}"

@@ -9,8 +9,15 @@ export interface CustomRequest extends Request {
   fileValidationError?: string;
 }
 
-// 저장소 경로 설정 (프로젝트 루트의 shared_volume 사용)
-const SHARED_ROOT = path.join(__dirname, '../../../shared_volume');
+// 저장소 경로 설정
+// - SHARED_VOLUME_PATH 환경변수 우선 적용 (Docker 명시 설정)
+// - production 환경: Docker 볼륨 마운트 기본 경로 /shared_volume
+// - 그 외 (로컬 개발): 소스 상대 경로 (기존 동작 유지)
+const SHARED_ROOT =
+  process.env.SHARED_VOLUME_PATH ??
+  (process.env.NODE_ENV === 'production'
+    ? '/shared_volume'
+    : path.join(__dirname, '../../../shared_volume'));
 export const UPLOAD_DIR = path.join(SHARED_ROOT, 'uploads');
 export const PROCESSED_DIR = path.join(SHARED_ROOT, 'processed');
 export const RESULT_DIR = path.join(SHARED_ROOT, 'results');

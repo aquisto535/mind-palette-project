@@ -82,7 +82,15 @@ router.post('/',
       const { sanitized: _sanitized, serverTiming: _serverTiming, ...responseData } = result;
       res.json(responseData);
     } catch (error: unknown) {
-      logger.error('Analysis Error:', { error: error instanceof Error ? error.message : String(error) });
+      logger.error('Analysis Error:', {
+        name: error instanceof Error ? error.name : 'Unknown',
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        code: (error as any)?.code,
+        upstreamStatus: (error as any)?.response?.status,
+        upstreamData: (error as any)?.response?.data,
+        requestId: (req as any).requestId,
+      });
       // 하위 서비스 오류를 상태 코드별로 정규화해 클라이언트에 전달
       const upstreamStatus = (
         (axios.isAxiosError(error) ? error.response?.status : undefined) ??
@@ -115,7 +123,8 @@ router.post('/',
       if (error instanceof Error && error.name === 'PreprocessServiceError') {
         return res.status(503).json({ error: 'PREPROCESS_SERVICE_UNAVAILABLE', message: '전처리 서버에 일시적인 문제가 발생했습니다. 잠시 후 다시 시도해주세요.' });
       }
-      res.status(500).json({ error: 'Internal Server Error' });
+      const errorCode = error instanceof Error && error.name !== 'Error' ? error.name : 'UNKNOWN_ERROR';
+      res.status(500).json({ error: 'Internal Server Error', errorCode });
     }
   }
 );
