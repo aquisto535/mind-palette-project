@@ -318,12 +318,12 @@ npm test
 
 위 검증 리포트를 다음 경로에 자동 저장하세요:
 
-- **저장 경로**: `docs/project-status/REFACTOR_VALIDATION/YYYY-MM-DD_refactor_validation.md`
-- **디렉토리 생성**: `docs/project-status/REFACTOR_VALIDATION/` 디렉토리가 없으면 생성
+- **저장 경로**: `docs/status/REFACTOR_VALIDATION/YYYY-MM-DD_refactor_validation.md`
+- **디렉토리 생성**: `docs/status/REFACTOR_VALIDATION/` 디렉토리가 없으면 생성
 - **파일명 규칙**: `YYYY-MM-DD_refactor_validation.md` (예: `2026-02-21_refactor_validation.md`)
 
 저장 후 다음 메시지 출력:
 ```
-✅ 리팩터링 검증 리포트가 저장되었습니다: docs/project-status/REFACTOR_VALIDATION/YYYY-MM-DD_refactor_validation.md
+✅ 리팩터링 검증 리포트가 저장되었습니다: docs/status/REFACTOR_VALIDATION/YYYY-MM-DD_refactor_validation.md
 ```
 ```

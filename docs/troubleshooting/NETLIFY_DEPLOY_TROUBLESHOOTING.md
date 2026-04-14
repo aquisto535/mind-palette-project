@@ -69,4 +69,4 @@ UI 설정 대신 프로젝트 루트에 `netlify.toml` 파일을 생성하여 �
 
 Netlify는 GitHub에 merge/push가 되면 자동으로 배포합니다. 따라서 **`main` 브랜치에 CI 통과를 “게이트”로 두면** 배포도 자연스럽게 CI 통과 커밋만 나갑니다.
 
-- 자세한 설정 절차는 `docs/troubleshooting/CI_CD_INTEGRATION_GUIDE.md`의 **2.3 (Branch Protection)** 를 참고하세요.
+- 자세한 설정 절차는 `docs/guides/CI_CD_INTEGRATION_GUIDE.md`의 **2.3 (Branch Protection)** 를 참고하세요.

@@ -88,7 +88,11 @@ describe('API Gateway Tests', () => {
 
       const res = await request(app)
         .post('/analyze')
-        .attach('image', DUMMY_IMAGE_PATH);
+        .attach(
+          'image',
+          Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, Date.now() % 255]),
+          'downstream-error.png'
+        );
 
       // 3. 응답 검증
       expect(res.statusCode).toEqual(200);
@@ -116,5 +120,6 @@ describe('API Gateway Tests', () => {
       const finalResults = fs.readdirSync(TEST_RESULT_DIR);
       expect(finalResults.length).toBeGreaterThan(initialResults.length);
     });
+
   });
 });

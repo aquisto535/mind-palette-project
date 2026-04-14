@@ -107,7 +107,7 @@ undefined === 'true'  →  false  →  실제 API 사용  (안전)
 
 ## 7. 참고 문서
 
-- [ADR-033: Color Filter Bypass Fix](../troubleshooting/ADR033_ColorFilter_Bypass_Fix.md) — Fail-Open 패턴이 초래한 우회 경로 사례
-- [ADR-035: Config Management System](../standards/ARCHITECTURE_DECISIONS.md) — 이 인벤토리를 만들게 된 아키텍처 결정 (Step 7에서 작성)
+- [ADR-033: Color Filter Bypass Fix](../architecture/ADR033_ColorFilter_Bypass_Fix.md) — Fail-Open 패턴이 초래한 우회 경로 사례
+- [ADR-035: Config Management System](../architecture/ARCHITECTURE_DECISIONS.md) — 이 인벤토리를 만들게 된 아키텍처 결정 (Step 7에서 작성)
 - [Deployment Checklist](DEPLOYMENT_CHECKLIST.md) — 배포 전 체크리스트 (Step 7에서 작성)
 - [git-workflow-guide.md](git-workflow-guide.md) — 커밋 전 Self-Review 체크리스트

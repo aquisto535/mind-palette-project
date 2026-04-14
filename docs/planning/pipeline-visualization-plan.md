@@ -110,7 +110,7 @@ C++ 출력(512x512x3 PNG)을 입력받아 AI 서버 내부 전처리 단계를 �
 | ![original](images/preprocess/00-original.png) | ![resize](images/preprocess/01-resize-768.png) |
 
 **Why**: 이후 모든 연산을 768×768 고정 해상도에서 수행해 레이턴시 47% 감소 (183ms→97ms)
-**파라미터 근거**: `docs/standards/ADR-parameter-rationale.md` 참조
+**파라미터 근거**: `docs/architecture/ADR-parameter-rationale.md` 참조
 **코드**: `preprocess-server/src/filters/resize_filter.cpp`
 
 ## Stage 3: DenoiseFilter

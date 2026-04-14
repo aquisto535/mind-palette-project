@@ -92,7 +92,7 @@
 
 4. **[ ] 파라미터 근거 문서화** (Phase 3 잔여)
    - `GaussianBlur(5x5)`, `AdaptiveThreshold(11, 2)` 등 최소 3가지 값 비교
-   - ADR 또는 `docs/tech-references/` 에 기록
+   - ADR 또는 `docs/reference/` 에 기록
    - 우선도: 면접 대비 ROI 높음
 
 5. **[ ] Docker Healthcheck 설정** (Cross-Cutting Reliability)

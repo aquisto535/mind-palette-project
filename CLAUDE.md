@@ -9,7 +9,7 @@ Antigravity와 역할을 분담하고 있으며, 아래 규칙을 따르세요.
 - **TDD Red-Green 사이클**: 테스트 작성 → 실행 → 실패 확인 → 구현 → 통과의 빠른 반복
 - **C++ preprocess-server 작업**: CMake 빌드 → CTest 실행 사이클
 - **Git 커밋 관리**: 구조적/기능적 변경 분리 커밋 실행
-  - 📖 **반드시 참고**: `docs/project-guides/git-workflow-guide.md`
+  - 📖 **반드시 참고**: `docs/guides/git-workflow-guide.md`
   - Feature Branch + Pull Request 방식 준수
   - Conventional Commits 규칙 준수 (feat:, fix:, refactor: 등)
   - 커밋 전 Self-Review 체크리스트 확인
@@ -34,12 +34,12 @@ Mind Palette — 아동 인물화(HFD) 지능측정을 위한 AI 이미지 전�
 마이크로서비스 아키텍처: C++ Preprocess Server → Python AI Server → API Gateway (Node.js/Express) → Frontend (React)
 
 ## 공통 코딩 표준
-**TDD, C++17, 커밋 규율, 코드 품질 등의 상세 규칙은 `docs/CODING_STANDARDS.md`를 참조하세요.**
+**TDD, C++17, 커밋 규율, 코드 품질 등의 상세 규칙은 `docs/standards/CODING_STANDARDS.md`를 참조하세요.**
 
 ## 워크플로우
 - `plan.md`의 미완료 항목을 순서대로 진행. "시작(go)" 명령 시 다음 항목을 실행.
 - 응답 언어: 항상 **한국어**
-- **세부 실행 계획**: `docs/WORKFLOW_EXECUTION_PLAN.md`를 참조하여 작업을 수행하세요.
+- **세부 실행 계획**: `docs/planning/WORKFLOW_EXECUTION_PLAN.md`를 참조하여 작업을 수행하세요.
   - Explore → Plan → Implement → Commit 사이클
   - 역할별(TDD/C++/Git/디버깅/리팩터링) 실행 방법
   - 스킬/서브에이전트 활용 맵
@@ -64,7 +64,7 @@ Mind Palette — 아동 인물화(HFD) 지능측정을 위한 AI 이미지 전�
 
 ## 💎 Git 커밋 규칙
 
-**모든 커밋 전에 `docs/project-guides/git-workflow-guide.md`를 참조하세요.**
+**모든 커밋 전에 `docs/guides/git-workflow-guide.md`를 참조하세요.**
 
 ### Conventional Commits 형식
 ```

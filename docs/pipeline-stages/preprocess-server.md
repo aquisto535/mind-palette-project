@@ -54,7 +54,7 @@
 레이턴시를 **47% 감소** (183ms → 97ms). 768은 이후 512×512 letterbox 품질과 속도의 균형점.
 
 **코드**: `preprocess-server/src/filters/resize_filter.cpp`  
-**ADR**: `docs/standards/ADR-parameter-rationale.md`
+**ADR**: `docs/architecture/ADR-parameter-rationale.md`
 
 ---
 
@@ -201,7 +201,7 @@ Letterbox는 비율을 보존하면서 빈 공간만 흰색으로 채운다.
 각 채널에 **보완적인 정보**를 담으면 모델이 더 다양한 특징을 학습할 수 있다.
 
 **코드**: `preprocess-server/src/filters/hybrid_preprocess_filter.cpp` — `ConstructChannels()`  
-**ADR**: `docs/reference/tech-references/AI/hybrid_3channel_rationale.md`
+**ADR**: `docs/reference/AI/hybrid_3channel_rationale.md`
 
 ---
 

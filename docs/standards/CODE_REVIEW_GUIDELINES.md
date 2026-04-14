@@ -55,4 +55,4 @@
 ---
 
 ## 3. 리뷰 이력 관리
-모든 코드 리뷰 결과는 [CODE_REVIEW_HISTORY.md](../project-status/CODE_REVIEW_HISTORY.md)에 기록하여 중복 리뷰를 방지하고 품질 이력을 추적합니다.
+모든 코드 리뷰 결과는 [CODE_REVIEW_HISTORY](../status/CODE_REVIEW_HISTORY/)에 기록하여 중복 리뷰를 방지하고 품질 이력을 추적합니다.

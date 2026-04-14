@@ -30,7 +30,7 @@ git diff
 
 ## 3. 커밋 메시지 생성
 
-`docs/project-guides/git-workflow-guide.md`의 Conventional Commits 규칙에 따라 커밋 메시지를 제안합니다:
+`docs/guides/git-workflow-guide.md`의 Conventional Commits 규칙에 따라 커밋 메시지를 제안합니다:
 
 ```
 <타입>(<범위>): <제목>

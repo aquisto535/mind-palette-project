@@ -43,7 +43,7 @@ Mind Palette 프로젝트는 4가지 워크플로우 자동화 에이전트를 �
 ```
 
 #### 출력 위치
-- **저장 경로**: `docs/project-status/PROGRESS/YYYY-MM-DD_daily_progress.md`
+- **저장 경로**: `docs/status/PROGRESS/YYYY-MM-DD_daily_progress.md`
 - **자동 저장**: 예
 - **파일명 예시**: `2026-02-21_daily_progress.md`
 
@@ -90,7 +90,7 @@ git add .
 ```
 
 #### 출력 위치
-- **저장 경로**: `docs/project-status/REFACTOR_VALIDATION/YYYY-MM-DD_refactor_validation.md`
+- **저장 경로**: `docs/status/REFACTOR_VALIDATION/YYYY-MM-DD_refactor_validation.md`
 - **자동 저장**: 예
 - **파일명 예시**: `2026-02-21_refactor_validation.md`
 
@@ -181,7 +181,7 @@ cd preprocess-server/build
 ```
 
 #### 출력 위치
-- **저장 경로**: `docs/project-status/BENCHMARKS/YYYY-MM-DD_<benchmark_name>.md`
+- **저장 경로**: `docs/status/BENCHMARKS/YYYY-MM-DD_<benchmark_name>.md`
 - **자동 저장**: 예
 - **파일명 예시**: `2026-02-21_canny_parameter_tuning.md`
 
@@ -321,7 +321,7 @@ cd preprocess-server/build
 ### 리포트 저장 위치
 ```
 docs/
-└── project-status/
+└── status/
     ├── PROGRESS/
     │   └── 2026-02-21_daily_progress.md
     ├── REFACTOR_VALIDATION/
@@ -340,7 +340,7 @@ docs/
 3. **YAML 포맷 확인**: frontmatter가 올바른지 확인
 
 ### 자동 저장이 안 될 때
-1. **디렉토리 존재 확인**: `docs/project-status/PROGRESS/` 등 생성 확인
+1. **디렉토리 존재 확인**: `docs/status/PROGRESS/` 등 생성 확인
 2. **권한 확인**: 쓰기 권한 확인
 3. **경로 오류 확인**: 스킬 출력 마지막의 저장 메시지 확인
 
@@ -355,13 +355,13 @@ docs/
 
 ### 프로젝트 방법론
 - [CLAUDE.md](../CLAUDE.md) - TDD, Tidy First, First Principles 원칙
-- [docs/methodology/CODE_REVIEW_GUIDELINES.md](methodology/CODE_REVIEW_GUIDELINES.md) - 코드 리뷰 가이드라인
-- [docs/refactoring_strategy.md](refactoring_strategy.md) - Tidy First 리팩터링 전략
+- [docs/standards/CODE_REVIEW_GUIDELINES.md](../standards/CODE_REVIEW_GUIDELINES.md) - 코드 리뷰 가이드라인
+- [docs/guides/refactoring_strategy.md](refactoring_strategy.md) - Tidy First 리팩터링 전략
 
 ### 관련 문서
 - [plan.md](../plan.md) - 130개 TDD 체크리스트
-- [docs/methodology/PYTHON_FOR_CPP_DEVELOPERS.md](methodology/PYTHON_FOR_CPP_DEVELOPERS.md) - C++ 개발자를 위한 Python 가이드
-- [docs/tech-references/AI/ai_model_recommendation.md](tech-references/AI/ai_model_recommendation.md) - EfficientNet-B2 추천 근거
+- [docs/learning/PYTHON_FOR_CPP_DEVELOPERS.md](../learning/PYTHON_FOR_CPP_DEVELOPERS.md) - C++ 개발자를 위한 Python 가이드
+- [docs/reference/AI/ai_model_recommendation.md](../reference/AI/ai_model_recommendation.md) - EfficientNet-B2 추천 근거
 
 ---
 

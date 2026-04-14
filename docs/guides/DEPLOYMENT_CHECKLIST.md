@@ -1,7 +1,7 @@
 # Mind Palette — 배포 전 체크리스트
 
 > **사용 시점**: EC2 배포 전, 핫픽스 배포 전, 신규 기여자 첫 배포 전
-> **관련 문서**: [CONFIG_INVENTORY.md](CONFIG_INVENTORY.md) | [ADR-035](../standards/ARCHITECTURE_DECISIONS.md#adr-035)
+> **관련 문서**: [CONFIG_INVENTORY.md](CONFIG_INVENTORY.md) | [ADR-035](../architecture/ARCHITECTURE_DECISIONS.md#adr-035)
 
 ---
 
@@ -117,7 +117,7 @@ docker-compose logs ai-server --tail=20
 | ---- | ---- | ---- |
 | `/health` 응답의 `keep_images: true` | `KEEP_IMAGES=true` 설정 오류 | `.env`에서 제거 후 재시작 |
 | `/health` 응답의 `admin_profiling_enabled: false` | `ADMIN_PROFILE_KEY` 미설정 | `.env`에 키 추가 후 재시작 |
-| 컬러 이미지가 422 대신 분석 결과 반환 | Color Filter 우회 (ADR-033 참고) | [ADR033_ColorFilter_Bypass_Fix.md](../troubleshooting/ADR033_ColorFilter_Bypass_Fix.md) 참조 |
+| 컬러 이미지가 422 대신 분석 결과 반환 | Color Filter 우회 (ADR-033 참고) | [ADR033_ColorFilter_Bypass_Fix.md](../architecture/ADR033_ColorFilter_Bypass_Fix.md) 참조 |
 | Frontend가 Mock 데이터 반환 | `VITE_USE_MOCK=true`로 빌드됨 | `docker-compose build --no-cache frontend` 후 재배포 |
 
 ---
@@ -125,6 +125,6 @@ docker-compose logs ai-server --tail=20
 ## 참고 문서
 
 - [CONFIG_INVENTORY.md](CONFIG_INVENTORY.md) — 전체 환경 변수 목록 및 위험 등급
-- [ADR-033: Color Filter Bypass Fix](../troubleshooting/ADR033_ColorFilter_Bypass_Fix.md)
-- [ADR-035: Config Management System](../standards/ARCHITECTURE_DECISIONS.md#adr-035)
+- [ADR-033: Color Filter Bypass Fix](../architecture/ADR033_ColorFilter_Bypass_Fix.md)
+- [ADR-035: Config Management System](../architecture/ARCHITECTURE_DECISIONS.md#adr-035)
 - [git-workflow-guide.md](git-workflow-guide.md) — 배포 브랜치 전략

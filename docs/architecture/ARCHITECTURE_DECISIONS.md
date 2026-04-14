@@ -1095,7 +1095,7 @@ for param in model.features[-3:].parameters():
   - ImageNet 사전학습 → 스케치 도메인과 약간의 갭 존재 (데이터 증강으로 완화).
   - ConvNeXt 대비 1~2% 낮은 정확도 (하지만 속도/효율성으로 보완).
 - **학습 자료**:
-  - [상세 분석 문서](tech-references/AI/ai_model_recommendation.md)
+  - [상세 분석 문서](../reference/AI/ai_model_recommendation.md)
   - [PyTorch EfficientNet 공식 문서](https://pytorch.org/vision/stable/models/efficientnet.html)
 
 > 📌 **관련 압박 질문**: Q6 (EfficientNet-B2 선택 — ResNet-50보다 추론이 느린데 왜 채택했나?) → [면접 압박 질문 & 답변](#-면접-압박-질문--답변-pressure-interview-qa)
@@ -1597,8 +1597,8 @@ git branch -d feature/filter-strategy-pattern
 
 ### 관련 문서
 
-- [Git Workflow 가이드](project-guides/git-workflow-guide.md)
-- [Git Workflow 실습 가이드](project-guides/git-workflow-integration.md)
+- [Git Workflow 가이드](../guides/git-workflow-guide.md)
+- [Git Workflow 실습 가이드](../guides/git-workflow-integration.md)
 
 ---
 
@@ -2738,7 +2738,7 @@ ADR-033 구현 과정에서 발생한 컬러 이미지 필터 우회 버그의 �
 
 4개 서비스 전체에 걸쳐 **설정 관리를 시스템화**한다:
 
-1. **인벤토리**: `docs/project-guides/CONFIG_INVENTORY.md` — 모든 환경 변수를 중요도·위험 수준과 함께 목록화
+1. **인벤토리**: `docs/guides/CONFIG_INVENTORY.md` — 모든 환경 변수를 중요도·위험 수준과 함께 목록화
 2. **단일 진실 원천**: 서비스별 `.env.example` — `frontend/`, `api-gateway/`, `ai-server/` 각각 보유
 3. **Fail-Fast 검증**: 빌드/시작 시 위험 설정을 조기 감지하여 프로세스 종료
    - Frontend: `prebuild` 훅 → `scripts/verify-env.mjs`

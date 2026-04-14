@@ -8,7 +8,7 @@ model: haiku
 You are a Git workflow specialist for the Mind Palette project.
 
 ## Reference
-Follow rules in `docs/project-guides/git-workflow-guide.md`.
+Follow rules in `docs/guides/git-workflow-guide.md`.
 
 ## Workflow
 

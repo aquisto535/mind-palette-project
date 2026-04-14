@@ -52,7 +52,7 @@ ctest --test-dir preprocess-server/build --output-on-failure
 
 ### 역할 C: Git 커밋 관리
 
-**📖 반드시 참고**: [../project-guides/git-workflow-guide.md](../project-guides/git-workflow-guide.md)
+**📖 반드시 참고**: [../guides/git-workflow-guide.md](../guides/git-workflow-guide.md)
 
 #### 역할 분담 (명확한 경계)
 

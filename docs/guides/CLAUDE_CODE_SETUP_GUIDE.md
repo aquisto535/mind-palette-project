@@ -61,7 +61,7 @@ mind-palette-project/
 |------|------|
 | 코딩 표준 | `docs/CODING_STANDARDS.md` |
 | 워크플로우 실행 계획 | `docs/WORKFLOW_EXECUTION_PLAN.md` |
-| Git 워크플로우 가이드 | `docs/project-guides/git-workflow-guide.md` |
+| Git 워크플로우 가이드 | `docs/guides/git-workflow-guide.md` |
 
 ---
 

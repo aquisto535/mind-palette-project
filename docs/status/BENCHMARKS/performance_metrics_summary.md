@@ -24,7 +24,7 @@
 
 > 환경: NVIDIA GeForce RTX 3050 Ti Laptop GPU, CUDA 12.6, TensorRT 10.15.1.29, Python 3.13.5
 > 측정: N_WARMUP=5, N_RUNS=30, 입력 shape=(1, 3, 260, 260)
-> 출처: `docs/project-status/BENCHMARKS/phase4_step4_tensorrt_benchmark.md`
+> 출처: `docs/status/BENCHMARKS/phase4_step4_tensorrt_benchmark.md`
 
 | Engine | P50 | P95 | Mean | Throughput | GPU Memory |
 |--------|-----|-----|------|-----------|-----------|
@@ -191,9 +191,9 @@
 
 | 문서 | 내용 |
 |------|------|
-| `docs/project-status/BENCHMARKS/phase4_step4_tensorrt_benchmark.md` | TensorRT 3-Engine 상세 벤치마크 |
-| `docs/standards/ARCHITECTURE_DECISIONS.md` (ADR-024) | FilterPipeline + Early Resize 최적화 근거 |
-| `docs/standards/ARCHITECTURE_DECISIONS.md` (ADR-027) | EC2 인스턴스 선택 근거 및 메모리 분석 |
-| `docs/standards/ARCHITECTURE_DECISIONS.md` (ADR-028) | C++ WorkerPool 튜닝 + 콜드 스타트 실험 기록 |
-| `docs/standards/ARCHITECTURE_DECISIONS.md` (ADR-029) | TensorRT FP16 채택 근거 |
-| `docs/project-status/development_progress.md` | 단계별 개발 이력 및 성능 수치 |
+| `docs/status/BENCHMARKS/phase4_step4_tensorrt_benchmark.md` | TensorRT 3-Engine 상세 벤치마크 |
+| `docs/architecture/ARCHITECTURE_DECISIONS.md` (ADR-024) | FilterPipeline + Early Resize 최적화 근거 |
+| `docs/architecture/ARCHITECTURE_DECISIONS.md` (ADR-027) | EC2 인스턴스 선택 근거 및 메모리 분석 |
+| `docs/architecture/ARCHITECTURE_DECISIONS.md` (ADR-028) | C++ WorkerPool 튜닝 + 콜드 스타트 실험 기록 |
+| `docs/architecture/ARCHITECTURE_DECISIONS.md` (ADR-029) | TensorRT FP16 채택 근거 |
+| `docs/status/development_progress.md` | 단계별 개발 이력 및 성능 수치 |

@@ -99,7 +99,7 @@ $ARGUMENTS
 
 ## 출력 형식
 
-리뷰 결과를 **반드시** 다음 포맷으로 작성하여 `docs/project-status/CODE_REVIEW_HISTORY/` 디렉토리에 오늘 날짜로 저장하세요.
+리뷰 결과를 **반드시** 다음 포맷으로 작성하여 `docs/status/CODE_REVIEW_HISTORY/` 디렉토리에 오늘 날짜로 저장하세요.
 
 파일명: `YYYY-MM-DD_code_review_session.md` (오늘 날짜)
 
@@ -179,8 +179,8 @@ $ARGUMENTS
 
 리뷰 시 다음 문서를 반드시 참조하세요:
 - `CLAUDE.md` — 프로젝트 방법론 (TDD, Tidy First, First Principles)
-- `docs/methodology/CODE_REVIEW_GUIDELINES.md` — 언어별 체크리스트 원본
-- `docs/project-status/CODE_REVIEW_HISTORY/` 내 기존 리뷰 — 출력 포맷 레퍼런스
+- `docs/standards/CODE_REVIEW_GUIDELINES.md` — 언어별 체크리스트 원본
+- `docs/status/CODE_REVIEW_HISTORY/` 내 기존 리뷰 — 출력 포맷 레퍼런스
 
 ---
 

@@ -270,13 +270,13 @@ balanced = argmin(time_ms where 5 <= edge_percent <= 10)
 
 위 벤치마크 리포트를 다음 경로에 자동 저장하세요:
 
-- **저장 경로**: `docs/project-status/BENCHMARKS/YYYY-MM-DD_<benchmark_name>.md`
-- **디렉토리 생성**: `docs/project-status/BENCHMARKS/` 디렉토리가 없으면 생성
+- **저장 경로**: `docs/status/BENCHMARKS/YYYY-MM-DD_<benchmark_name>.md`
+- **디렉토리 생성**: `docs/status/BENCHMARKS/` 디렉토리가 없으면 생성
 - **파일명 규칙**: `YYYY-MM-DD_<benchmark_name>.md` (예: `2026-02-21_canny_parameter_tuning.md`)
 - **benchmark_name 추출**: 입력 데이터의 `benchmark_name` 필드 또는 인자에서 추출
 
 저장 후 다음 메시지 출력:
 ```
-✅ 벤치마크 리포트가 저장되었습니다: docs/project-status/BENCHMARKS/YYYY-MM-DD_<benchmark_name>.md
+✅ 벤치마크 리포트가 저장되었습니다: docs/status/BENCHMARKS/YYYY-MM-DD_<benchmark_name>.md
 ```
 ```

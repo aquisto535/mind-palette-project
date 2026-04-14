@@ -254,4 +254,4 @@ Phase 4 (Python AI):
 ## 참고 자료
 - 테스트 프로그램: [test_week3.cpp](file:///c:/Users/user/Documents/GitHub/mind-palette-project/preprocess-server/src/test_week3.cpp)
 - 결과 파일: `shared_volume/processed/human_*.jpg`
-- GrabCut vs DL 분석: [GrabCut_vs_DeepLearning_Analysis.md](file:///c:/Users/user/Documents/GitHub/mind-palette-project/docs/tech-references/OpenCV/GrabCut_vs_DeepLearning_Analysis.md)
+- GrabCut vs DL 분석: GrabCut_vs_DeepLearning_Analysis.md (미작성)

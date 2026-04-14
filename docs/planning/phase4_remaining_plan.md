@@ -205,7 +205,7 @@ plan.md의 "Phase 4 이후 실행 (ROI 순)" 6개 + "Phase 4 연계 항목 (AI �
 
 ### A1: 파라미터 근거 문서화
 
-**새 파일**: `docs/standards/ADR-parameter-rationale.md`
+**새 파일**: `docs/architecture/ADR-parameter-rationale.md`
 
 **내용**: WU3의 QualityMetrics + 기존 벤치마크 인프라로 각 파라미터 3가지 값 비교 실험 결과 기록.
 

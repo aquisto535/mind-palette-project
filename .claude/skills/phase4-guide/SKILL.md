@@ -434,8 +434,8 @@ pytest tests/ -v
 - [structlog Documentation](https://www.structlog.org/)
 
 **프로젝트 내부 문서**:
-- `docs/methodology/PYTHON_FOR_CPP_DEVELOPERS.md` - C++ 개발자를 위한 Python 가이드
-- `docs/tech-references/AI/ai_model_recommendation.md` - EfficientNet-B2 추천 근거
+- `docs/learning/PYTHON_FOR_CPP_DEVELOPERS.md` - C++ 개발자를 위한 Python 가이드
+- `docs/reference/AI/ai_model_recommendation.md` - EfficientNet-B2 추천 근거
 - `CLAUDE.md` - TDD, Tidy First, First Principles 방법론
 
 ---

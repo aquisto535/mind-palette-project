@@ -83,10 +83,34 @@ router.post('/',
       res.json(responseData);
     } catch (error: unknown) {
       logger.error('Analysis Error:', { error: error instanceof Error ? error.message : String(error) });
-      // ADR-033: 하위 서비스(preprocess/ai)의 422는 클라이언트에 그대로 전달
-      if (axios.isAxiosError(error) && error.response?.status === 422) {
-        return res.status(422).json(error.response.data);
+      // 하위 서비스 오류를 상태 코드별로 정규화해 클라이언트에 전달
+      const upstreamStatus = (
+        (axios.isAxiosError(error) ? error.response?.status : undefined) ??
+        ((error as any)?.response?.status as number | undefined)
+      );
+      const upstreamData = (
+        (axios.isAxiosError(error) ? error.response?.data : undefined) ??
+        (error as any)?.response?.data
+      );
+
+      if (upstreamStatus === 422) {
+        return res.status(422).json(upstreamData);
       }
+
+      // 클라이언트 입력/요청량 오류는 그대로 전달
+      if (upstreamStatus === 400 || upstreamStatus === 429) {
+        return res.status(upstreamStatus).json(upstreamData ?? { error: 'UPSTREAM_REQUEST_ERROR' });
+      }
+
+      // 하위 서비스 장애(5xx)는 게이트웨이 500으로 뭉개지 않고 503으로 승격
+      if (typeof upstreamStatus === 'number' && upstreamStatus >= 500) {
+        return res.status(503).json({
+          error: 'ANALYSIS_SERVICE_UNAVAILABLE',
+          message: '분석 서비스에 일시적인 문제가 발생했습니다. 잠시 후 다시 시도해주세요.',
+        });
+      }
+
+      // ADR-033: 하위 서비스(preprocess/ai)의 422는 클라이언트에 그대로 전달
       // ADR-033 Fail-Closed: preprocess-server 장애 시 503 반환 (원본 이미지 우회 방지)
       if (error instanceof Error && error.name === 'PreprocessServiceError') {
         return res.status(503).json({ error: 'PREPROCESS_SERVICE_UNAVAILABLE', message: '전처리 서버에 일시적인 문제가 발생했습니다. 잠시 후 다시 시도해주세요.' });

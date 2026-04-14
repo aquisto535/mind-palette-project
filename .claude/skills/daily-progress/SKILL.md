@@ -155,7 +155,7 @@ Git log에서 추출한 커밋 정보를 다음 포맷의 마크다운 테이블
 2. **[ ] EfficientNet-B2 아키텍처 조사**
    - MCP context7 활용
    - 우선도: 최우선
-   - 참고: `docs/tech-references/AI/ai_model_recommendation.md`
+   - 참고: `docs/reference/AI/ai_model_recommendation.md`
 
 3. **[ ] PyTorch 환경 설정 및 Hello World**
    - 더미 텐서 추론 성공
@@ -214,12 +214,12 @@ Track 2 (복습 20%): C++ 디테일 보강
 
 위 리포트 내용을 다음 경로에 자동 저장하세요:
 
-- **저장 경로**: `docs/project-status/PROGRESS/YYYY-MM-DD_daily_progress.md`
-- **디렉토리 생성**: `docs/project-status/PROGRESS/` 디렉토리가 없으면 생성
+- **저장 경로**: `docs/status/PROGRESS/YYYY-MM-DD_daily_progress.md`
+- **디렉토리 생성**: `docs/status/PROGRESS/` 디렉토리가 없으면 생성
 - **파일명 규칙**: `YYYY-MM-DD_daily_progress.md` (예: `2026-02-21_daily_progress.md`)
 
 저장 후 다음 메시지 출력:
 ```
-✅ 진행도 리포트가 저장되었습니다: docs/project-status/PROGRESS/YYYY-MM-DD_daily_progress.md
+✅ 진행도 리포트가 저장되었습니다: docs/status/PROGRESS/YYYY-MM-DD_daily_progress.md
 ```
 ```

@@ -288,7 +288,7 @@ Use wiki-qa skill: preprocess-server에서 이미지 전처리 파이프라인�
 이 스킬들은 프로젝트 전용 스킬인 `.claude/skills/code-review`와 **상호 보완** 관계입니다:
 
 - **개발 중**: `tdd-workflow` 계열 → 구현
-- **검토 시**: `code-review` → 품질 기록 (`docs/project-status/CODE_REVIEW_HISTORY/` 저장)
+- **검토 시**: `code-review` → 품질 기록 (`docs/status/CODE_REVIEW_HISTORY/` 저장)
 - **문제 발생 시**: `systematic-debugging` 또는 `debugger` → `tdd-workflows-tdd-red`로 재진입
 
 ---
