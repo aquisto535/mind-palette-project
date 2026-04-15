@@ -26,17 +26,7 @@ double ColorValidationFilter::computeColorRatio(const cv::Mat& input) const {
     const cv::Mat& saturation = channels[1]; // S (0~255)
     const cv::Mat& value      = channels[2]; // V (0~255)
 
-    // Step 1. 실제 스트로크에 가까운 어두운 픽셀만 모수로 사용한다.
-    // 배경 종이의 황변/조명 편차/JPEG 색번짐이 모수에 들어오면 정상 연필화가 오탐될 수 있다.
-    cv::Mat strokeMask;      // V <= valueThreshold_
-    cv::threshold(value, strokeMask, valueThreshold_, 255, cv::THRESH_BINARY_INV);
-    const double strokeCount = static_cast<double>(cv::countNonZero(strokeMask));
-
-    if (strokeCount <= 0.0) {
-        return 0.0;
-    }
-
-    // Step 2. HSV 채도 + RGB 채널 간 편차(chroma)를 함께 사용해 실제 채색 흔적만 카운트한다.
+    // Step 1. HSV 채도 + RGB 채널 간 편차(chroma)를 함께 사용해 실제 채색 흔적 후보를 찾는다.
     cv::Mat saturatedMask;   // S >= satThreshold_
     cv::threshold(saturation, saturatedMask, satThreshold_ - 1, 255, cv::THRESH_BINARY);
     std::vector<cv::Mat> bgrChannels;
@@ -51,14 +41,33 @@ double ColorValidationFilter::computeColorRatio(const cv::Mat& input) const {
     cv::Mat chromaMask;      // max-min >= chromaThreshold_
     cv::threshold(chroma, chromaMask, chromaThreshold_ - 1, 255, cv::THRESH_BINARY);
 
-    cv::Mat candidateMask;
-    cv::bitwise_and(saturatedMask, chromaMask, candidateMask);
+    cv::Mat colorCandidateMask;
+    cv::bitwise_and(saturatedMask, chromaMask, colorCandidateMask);
+
+    // Step 2. "밝고 비채색" 픽셀만 종이 배경으로 제외한다.
+    // 기존의 V-only 마스킹은 밝은 빨강/파랑 스트로크까지 배경으로 버려서 회귀를 만들었다.
+    cv::Mat brightMask; // V > valueThreshold_
+    cv::threshold(value, brightMask, valueThreshold_, 255, cv::THRESH_BINARY);
+
+    cv::Mat nonColorMask;
+    cv::bitwise_not(colorCandidateMask, nonColorMask);
+
+    cv::Mat paperMask;
+    cv::bitwise_and(brightMask, nonColorMask, paperMask);
+
+    cv::Mat foregroundMask;
+    cv::bitwise_not(paperMask, foregroundMask);
+    const double foregroundCount = static_cast<double>(cv::countNonZero(foregroundMask));
+
+    if (foregroundCount <= 0.0) {
+        return 0.0;
+    }
 
     cv::Mat colorMask;
-    cv::bitwise_and(candidateMask, strokeMask, colorMask);
+    cv::bitwise_and(colorCandidateMask, foregroundMask, colorMask);
     const double colorPixelCount = static_cast<double>(cv::countNonZero(colorMask));
 
-    return colorPixelCount / strokeCount;
+    return colorPixelCount / foregroundCount;
 }
 
 cv::Mat ColorValidationFilter::apply(const cv::Mat& input) const {
@@ -80,7 +89,8 @@ cv::Mat ColorValidationFilter::apply(const cv::Mat& input) const {
             << "Color stroke detected: "
             << (ratio * 100.0) << "% colored pixels (S>=" << satThreshold_
             << ", chroma>=" << chromaThreshold_
-            << ") among stroke pixels (V<=" << valueThreshold_
+            << ") among non-paper pixels (paper: V>" << valueThreshold_
+            << " and not color candidate"
             << ") exceed threshold of " << (colorPixelRatio_ * 100.0) << "%";
         throw ValidationException(oss.str());
     }

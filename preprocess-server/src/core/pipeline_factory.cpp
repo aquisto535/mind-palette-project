@@ -20,7 +20,8 @@ FilterPipeline PipelineFactory::createHybridPipeline() {
     pipeline.add(std::make_unique<ResizeFilter>(768, false));
 
     // Step 2: [ADR-033 Tier 1] Color Validation — 컬러 이미지 조기 거부
-    // Two-Step: (1) V>220 배경(흰 종이) 마스킹, (2) 결정적 픽셀 중 S>=50 비율 ≥5% → 422.
+    // Two-Step: (1) V>220 이고 비채색인 픽셀만 종이 배경으로 제외,
+    //           (2) 비배경 픽셀 중 S>=50 && chroma>=26 비율 ≥5% → 422.
     pipeline.add(std::make_unique<ColorValidationFilter>(
         ColorValidationFilter::kDefaultSatThreshold,
         ColorValidationFilter::kDefaultColorPixelRatio,
