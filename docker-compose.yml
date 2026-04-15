@@ -31,13 +31,20 @@ services:
       - "8082"
     volumes:
       - shared_volume:/shared_volume
+      - ${AI_MODEL_DIR:-./ai-server/models}:/app/models:ro
     environment:
       INFERENCE_BACKEND: "onnx"
     networks:
       - internal-net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8082/health"]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import json, sys, urllib.request; data = json.load(urllib.request.urlopen('http://localhost:8082/health')); sys.exit(0 if data.get('models', {}).get('male') and data.get('models', {}).get('female') else 1)",
+        ]
       interval: 10s
       timeout: 5s
       retries: 3

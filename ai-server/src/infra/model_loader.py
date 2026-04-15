@@ -30,6 +30,13 @@ def load_models(config: ModelConfig) -> ModelState:
     # Use exact same model base names as config.male_onnx_path
     trt_male = config.male_onnx_path.replace(".onnx", ".engine")
     trt_female = config.female_onnx_path.replace(".onnx", ".engine")
+    missing_onnx_paths = [
+        path
+        for path in (config.male_onnx_path, config.female_onnx_path)
+        if not Path(path).exists()
+    ]
+    if missing_onnx_paths:
+        logger.error("ONNX model files are missing.", missing_paths=missing_onnx_paths)
     
     try:
         # ADR-027: Only attempt TensorRT if torch is present (not in default slim image)

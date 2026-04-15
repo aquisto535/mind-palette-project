@@ -1,3 +1,51 @@
+# 2026-04-15 ai-server 모델 미로드 503 진단 메모
+
+## 증상
+
+- 배포 후 `남자사람_8_남_06463.jpg` 업로드 시 `api-gateway`에서 `503` 발생
+- `api-gateway` 로그의 upstream body:
+  - `{"detail":"모델이 로드되지 않았습니다."}`
+- `ai-server`는 `/analyze` 진입까지는 성공했지만, 추론 직전 `model_state.engine_type == "none"`으로 중단
+
+## 원인
+
+- `ai-server/src/routes/analyze.py`는 앱 시작 시 적재된 `app.state.model_state`를 사용한다.
+- `ai-server/src/infra/model_loader.py`는 `models/mind_palette_male.onnx`, `models/mind_palette_female.onnx`가 둘 다 있어야 ONNX 엔진을 로드한다.
+- 그런데 현재 배포 구성의 `docker-compose.yml`은 `shared_volume`만 마운트하고, 모델 디렉터리(`/app/models`)는 컨테이너에 공급하지 않는다.
+- 동시에 저장소의 `.gitignore`에 `ai-server/models/`가 포함되어 있어, 서버에서 Git clone/pull 기반으로 배포하면 모델 파일이 작업트리에 존재하지 않을 가능성이 높다.
+- 결과적으로 컨테이너는 기동되지만 `RUN mkdir -p models`로 생성된 빈 디렉터리만 가진 채 올라오고, 첫 분석 요청에서 `503`을 반환한다.
+
+## 이번 수정
+
+파일:
+
+- `docker-compose.yml`
+- `ai-server/src/infra/model_loader.py`
+
+변경 내용:
+
+- `ai-server` 서비스에 `${AI_MODEL_DIR:-./ai-server/models}:/app/models:ro` 바인드 마운트 추가
+- `ai-server` healthcheck가 단순 `200 OK`가 아니라 `models.male == true && models.female == true`일 때만 healthy 판정하도록 강화
+- 모델 파일이 없으면 `model_loader`가 누락 경로를 에러 로그로 남기도록 보강
+
+## 배포 시 즉시 할 일
+
+1. 배포 서버에 실제 모델 파일 4개를 준비
+   - `mind_palette_male.onnx`
+   - `mind_palette_male.onnx.data`
+   - `mind_palette_female.onnx`
+   - `mind_palette_female.onnx.data`
+2. 서버 `.env` 또는 쉘 환경에 모델 경로 지정
+   - 예: `AI_MODEL_DIR=/opt/mind-palette/models`
+3. 해당 경로에 위 파일들을 배치
+4. `docker compose up -d --build ai-server api-gateway`
+5. `curl http://localhost:8082/health`에서 `models.male`, `models.female`가 모두 `true`인지 확인
+
+## 재발 방지 포인트
+
+- 현재 `health` API는 200을 주더라도 모델 미로드일 수 있으므로, readiness는 응답 body까지 확인해야 한다.
+- 모델 아티팩트가 Git에 포함되지 않는 운영 방식이라면, 장기적으로는 S3/아티팩트 스토어에서 내려받는 init step 또는 별도 배포 문서가 필요하다.
+
 # 2026-04-15 업로드 예외처리 안정화 메모
 
 ## 이번 수정의 목적
