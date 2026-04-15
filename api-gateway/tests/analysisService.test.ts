@@ -3,6 +3,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import * as analysisService from '../src/services/analysisService';
 import { UPLOAD_DIR, PROCESSED_DIR } from '../src/utils/fileStorage';
+import { analysisCache } from '../src/services/cacheService';
 
 describe('Analysis Service', () => {
   const dummyFilename = 'dummy.jpg';
@@ -16,10 +17,11 @@ describe('Analysis Service', () => {
   const AI_SERVER_URL = 'http://127.0.0.1:8082';
 
   beforeEach(() => {
+    analysisCache.clear();
     if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
     if (!fs.existsSync(PROCESSED_DIR)) fs.mkdirSync(PROCESSED_DIR, { recursive: true });
-    // 실제 파일 읽기 로직이 있으므로 파일이 존재해야 함
-    fs.writeFileSync(mockFile.path, Buffer.from('fake-image-data'));
+    // 테스트 간 캐시 키 충돌을 피하기 위해 파일 내용을 매번 다르게 쓴다.
+    fs.writeFileSync(mockFile.path, Buffer.from(`fake-image-data-${Date.now()}-${Math.random()}`));
     fs.writeFileSync(path.join(PROCESSED_DIR, dummyProcessedFilename), Buffer.from('fake-processed-data'));
   });
 
@@ -30,6 +32,7 @@ describe('Analysis Service', () => {
   });
 
   afterEach(() => {
+    analysisCache.clear();
     nock.cleanAll();
   });
 
