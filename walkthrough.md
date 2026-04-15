@@ -46,6 +46,24 @@
 - 현재 `health` API는 200을 주더라도 모델 미로드일 수 있으므로, readiness는 응답 body까지 확인해야 한다.
 - 모델 아티팩트가 Git에 포함되지 않는 운영 방식이라면, 장기적으로는 S3/아티팩트 스토어에서 내려받는 init step 또는 별도 배포 문서가 필요하다.
 
+## 운영 로그 추가 해석
+
+- `.env`에 `AI_MODEL_DIR=/opt/mind-palette/models`가 있어도, 그 값은 현재 `docker-compose.yml`에서 **볼륨 source 경로 치환용**으로만 사용된다.
+- 따라서 `docker compose exec ai-server python -c "import os; print(os.environ.get('AI_MODEL_DIR'))"`가 `None`인 것은 이상 현상이 아니다. 컨테이너 환경변수로는 주입하지 않았기 때문이다.
+- 진짜 핵심은 `docker compose exec ai-server ls -la /app/models` 결과가 비어 있다는 점이다.
+- 이 상태는 보통 두 경우 중 하나다.
+  - 호스트의 `/opt/mind-palette/models`가 비어 있음
+  - 호스트의 `/opt/mind-palette/models`가 아예 없어서 Docker가 빈 디렉터리를 자동 생성함
+- `/health` 응답의 `"models":{"male":false,"female":false},"engine_type":"none"`는 위 해석과 정확히 일치한다.
+
+## 2026-04-16 운영 확인 결과
+
+- `sudo ls -la /opt/mind-palette/models` 결과가 빈 디렉터리였다.
+- `docker compose config`에서도 `source: /opt/mind-palette/models -> target: /app/models` 바인드 마운트가 정상적으로 잡혔다.
+- 따라서 이번 장애의 결론은 **compose 설정 불량이 아니라 호스트 모델 아티팩트 부재**다.
+- 추가로 `docker compose config`에 `NODE_ENV: development`, `KEEP_IMAGES: "true"`, `8082/3000/5173` 직접 포트 노출이 보이므로 `docker-compose.override.yml`도 함께 적용된 상태다.
+- 이 override 적용은 현재 503의 직접 원인은 아니지만, 운영 배포라면 의도 여부를 다시 확인하는 편이 좋다.
+
 # 2026-04-15 업로드 예외처리 안정화 메모
 
 ## 이번 수정의 목적
