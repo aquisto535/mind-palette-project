@@ -21,6 +21,7 @@ public:
     static constexpr int    kDefaultSatThreshold    = 50;   // S >= 50 → 컬러 픽셀
     static constexpr int    kDefaultValueThreshold  = 220;  // V > 220 → 배경(제외)
     static constexpr double kDefaultColorPixelRatio = 0.05; // 5% 이상 → reject
+    static constexpr int    kDefaultChromaThreshold = 26;   // max(R,G,B)-min(R,G,B) >= 26 → 실제 색 번짐/채색 후보
 
     /**
      * @param satThreshold    HSV S채널 임계값 (0~255). 이 값 이상이 컬러 픽셀.
@@ -30,7 +31,8 @@ public:
     explicit ColorValidationFilter(
         int satThreshold       = kDefaultSatThreshold,
         double colorPixelRatio = kDefaultColorPixelRatio,
-        int valueThreshold     = kDefaultValueThreshold
+        int valueThreshold     = kDefaultValueThreshold,
+        int chromaThreshold    = kDefaultChromaThreshold
     );
 
     cv::Mat apply(const cv::Mat& input) const override;
@@ -40,6 +42,7 @@ private:
     int    satThreshold_;
     double colorPixelRatio_;
     int    valueThreshold_;
+    int    chromaThreshold_;
 
     /**
      * @brief BGR 이미지에서 배경을 제외한 결정적 픽셀 중 컬러 픽셀 비율을 계산한다.

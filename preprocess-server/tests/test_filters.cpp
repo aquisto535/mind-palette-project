@@ -517,6 +517,25 @@ TEST(ColorValidationFilterTest, IgnoresLowSaturationNoise) {
     EXPECT_NO_THROW(filter.apply(input));
 }
 
+// 11. JPEG 틴트/스캔 편차처럼 채도는 있지만 RGB 편차가 작은 연필 스트로크 → 통과
+TEST(ColorValidationFilterTest, PassesWarmTintedPencilStroke) {
+    cv::Mat input(100, 100, CV_8UC3, cv::Scalar(255, 255, 255));
+    // 약간 따뜻한 회색 스트로크: 채도는 약간 생길 수 있지만 채널 편차는 작다.
+    input(cv::Rect(0, 0, 100, 20)) = cv::Scalar(68, 74, 84);
+    ColorValidationFilter filter;
+
+    EXPECT_NO_THROW(filter.apply(input));
+}
+
+// 12. 실제 컬러 스트로크는 채도와 채널 편차가 모두 높으므로 거부
+TEST(ColorValidationFilterTest, ThrowsOnHighChromaStroke) {
+    cv::Mat input(100, 100, CV_8UC3, cv::Scalar(255, 255, 255));
+    input(cv::Rect(0, 0, 100, 20)) = cv::Scalar(20, 60, 220);
+    ColorValidationFilter filter;
+
+    EXPECT_THROW(filter.apply(input), ValidationException);
+}
+
 // 6. 파이프라인 통합: createHybridPipeline + 컬러 이미지 → ValidationException 전파
 TEST(ColorValidationFilterTest, PipelineThrowsForColorImage) {
     cv::Mat input(768, 768, CV_8UC3, cv::Scalar(0, 0, 255));  // 전체 빨강

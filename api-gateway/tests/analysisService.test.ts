@@ -60,17 +60,26 @@ describe('Analysis Service', () => {
       .post('/preprocess')
       .reply(500, { error: 'Internal Server Error' });
 
-    nock(AI_SERVER_URL)
-      .post('/analyze')
-      .reply(200, {
-        iq: 80,
-        percentile: 50,
-        raw_score: 5,
-        head_scores: { head_a: 5, head_b: 5, head_c: 5 },
-        date: '2026. 3. 27.'
-      });
+    await expect(
+      analysisService.processAnalysis(mockFile, 'test-request-id')
+    ).rejects.toMatchObject({
+      name: 'PreprocessServiceError',
+      message: 'PREPROCESS_SERVICE_UNAVAILABLE',
+    });
+  });
 
-    const result = await analysisService.processAnalysis(mockFile, 'test-request-id');
-    expect(result).toHaveProperty('score');
+  test('should propagate preprocess 422 without falling back to original image', async () => {
+    nock(PREPROCESS_SERVER_URL)
+      .post('/preprocess')
+      .reply(422, { error: 'COLOR_VALIDATION_FAILED' });
+
+    await expect(
+      analysisService.processAnalysis(mockFile, 'test-request-id')
+    ).rejects.toMatchObject({
+      response: {
+        status: 422,
+        data: { error: 'COLOR_VALIDATION_FAILED' },
+      },
+    });
   });
 });
