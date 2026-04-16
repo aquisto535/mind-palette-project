@@ -50,6 +50,7 @@
 | ADR-033 | 비연필(컬러) 이미지 조기 필터링 및 예외 처리 전략 | 2026-04 | ✅ Accepted |
 | ADR-034 | AI 코딩 도구 통합 컨텍스트 자동 모니터링 시스템 구축 (Antigravity + Claude Code) | 2026-04 | ✅ Accepted |
 | ADR-035 | 설정 관리 시스템화 — 환경 변수 인벤토리·검증·CI 감사 도입 | 2026-04 | ✅ Accepted |
+| ADR-036 | AI 모듈 내부 아키텍처: 3-Layer 분리 및 Protocol 기반 엔진 교환 설계 | 2026-04 | ✅ Accepted |
 
 ---
 
@@ -2771,5 +2772,144 @@ ADR-033 구현 과정에서 발생한 컬러 이미지 필터 우회 버그의 �
 - ✅ 배포 후 `curl /health` 한 번으로 실제 운영 모드 즉시 확인 가능
 - ✅ 환경 변수 위험 등급(필수/권장/개발전용/시크릿)이 명시화되어 온보딩 속도 향상
 - ⚠️ `.env.example` 파일을 코드 변경과 함께 유지보수해야 하는 규율 필요 (CI 감사가 보조)
+
+---
+
+## ADR-036: AI 모듈 내부 아키텍처: 3-Layer 분리 및 Protocol 기반 엔진 교환 설계
+
+### ADR-036 상태
+
+✅ **Accepted** (2026-04)
+
+### ADR-036 컨텍스트 (Context)
+
+`ai-server`는 아동 인물화(HFD) 60문항 채점, IQ 산출, 백분위 변환, 그리고 C++ 전처리 서버의 기하 분석 결과와의 결합까지 수행하는 핵심 서비스입니다. 기존 ADR들은 개별 기술 선택(ADR-009 PyTorch, ADR-010 EfficientNet-B2, ADR-018 4-Head 구조, ADR-029 TensorRT)을 다루지만, 이들을 **하나의 모듈로 조립하는 내부 아키텍처** — 레이어 분리 원칙, 추론 엔진 교환 메커니즘, 데이터 흐름 파이프라인 — 에 대한 설계 근거가 문서화되어 있지 않았습니다.
+
+이 ADR은 "왜 이 코드 구조를 선택했는가"에 대한 근거를 기록합니다.
+
+### ADR-036 의사결정 (Decision)
+
+#### 1️⃣ 3-Layer 패키지 분리 (`core` / `infra` / `routes`)
+
+```text
+ai-server/src/
+├── core/           # 도메인 로직 (순수 Python, 프레임워크 비의존)
+│   ├── model.py          # HFDClassifier: EfficientNet-B2 + 4-Head
+│   ├── item_mapping.py   # 60문항 ↔ 4-Head 매핑 규칙
+│   ├── iq_scorer.py      # 원점수 → IQ(표준점수) → 백분위 변환
+│   ├── dataset.py         # HFDDataset: 학습/검증 데이터셋
+│   ├── augmentation.py   # 스케치 특화 데이터 증강
+│   ├── evaluate.py       # Head별 Accuracy, F1, LOOCV
+│   ├── preprocessing.py  # C++ 출력 → 모델 입력 텐서 변환
+│   ├── onnx_converter.py # PyTorch → ONNX 변환
+│   └── hybrid_combiner.py # AI + C++ 기하 분석 결합
+├── infra/          # 인프라 어댑터 (외부 런타임 의존)
+│   ├── engine_protocol.py     # InferenceEngine Protocol (공통 인터페이스)
+│   ├── onnx_inference.py      # ONNX Runtime 엔진
+│   ├── tensorrt_engine.py     # TensorRT Native API 엔진
+│   ├── tensorrt_ort_engine.py # ORT TensorrtExecutionProvider 엔진
+│   ├── model_loader.py        # Fallback 체인 로더
+│   └── logger.py              # structlog 기반 구조화 로깅
+├── routes/         # HTTP 엔드포인트 (FastAPI 의존)
+│   ├── health.py   # GET /health
+│   └── analyze.py  # POST /analyze
+├── config.py       # Pydantic BaseSettings 중앙 설정
+└── main.py         # App Factory (create_app)
+```
+
+**원칙**: 의존성 방향은 `routes → core/infra → config` 단방향입니다. `core`는 FastAPI, ONNX Runtime, TensorRT 등 외부 프레임워크에 의존하지 않으며, `infra`가 외부 런타임과의 어댑터 역할을 담당합니다.
+
+#### 2️⃣ Protocol 기반 추론 엔진 교환 (Duck Typing)
+
+```python
+# infra/engine_protocol.py
+@runtime_checkable
+class InferenceEngine(Protocol):
+    def run(self, image: np.ndarray) -> Tuple[np.ndarray, ...]: ...
+    @property
+    def output_names(self) -> list[str]: ...
+```
+
+3개의 추론 엔진(`OnnxInferenceEngine`, `TensorRtNativeEngine`, `TensorRtOrtEngine`)이 **명시적 상속 없이** 동일한 `run()` / `output_names` 인터페이스를 구현합니다. ABC 상속 대신 Python Protocol을 사용하여, 각 엔진이 자기 런타임 의존성(onnxruntime, tensorrt, torch)만 임포트하면서도 호출부에서는 동일하게 취급됩니다.
+
+#### 3️⃣ Graceful Degradation Fallback 체인
+
+```text
+model_loader.load_models() 실행 순서:
+  1. torch.cuda.is_available() → TensorRT Native Engine 시도
+  2. 실패 시 → ONNX Runtime Engine으로 Fallback
+  3. 모두 실패 시 → ModelState(engine_type="none") 반환, /health에서 감지
+```
+
+GPU 환경에서는 TensorRT의 극한 성능(14ms)을 활용하고, CPU 전용 클라우드(ADR-027 c5.large)에서는 ONNX Runtime(24ms)으로 자동 전환합니다. PyTorch 자체를 lazy import하여 GPU가 없는 슬림 이미지에서는 torch 의존성 없이 ONNX만으로 구동됩니다.
+
+#### 4️⃣ End-to-End 데이터 흐름 파이프라인
+
+```text
+[C++ preprocess-server]
+     │  512x512 3-Channel Hybrid (R=Gray, G=Binary, B=DistanceTransform)
+     ▼
+[POST /analyze]  이미지 업로드 수신
+     │
+     ├─ _validate_image_file()     매직바이트 + PIL verify
+     ├─ _preprocess_image()        Resize(260x260) → Normalize → CHW → numpy
+     ├─ engine.run(img_np)         ONNX/TensorRT 추론 → 4-Head 로짓
+     ├─ _compute_mean_confidence() OOD 감지 (ADR-033 Tier 2)
+     ├─ _logits_to_item_results()  Sigmoid → 60문항 0/1 판정
+     ├─ score_to_result()          원점수 → IQ → 백분위 (전국 규준)
+     └─ HybridCombiner.combine()   AI 결과 + C++ 기하 분석 결합
+```
+
+각 단계가 독립 함수로 추출(Extract Method)되어 있어 단위 테스트와 디버깅이 용이합니다.
+
+#### 5️⃣ 설정 중앙화 (Pydantic BaseSettings)
+
+`config.py`에서 `ModelConfig`, `ServerConfig`, `TrainingConfig`를 분리하여 모든 하이퍼파라미터(입력 크기, Head 크기, 정규화 통계, 모델 경로, TensorRT 옵션 등)를 중앙 관리합니다. 환경 변수 오버라이드가 가능하며, 시작 시 Fail-Fast 검증(`INFERENCE_BACKEND` 유효값 체크)을 수행합니다.
+
+#### 6️⃣ App Factory 패턴
+
+`create_app(model_config=None)` 팩토리 함수로 FastAPI 앱을 생성합니다. 테스트에서는 `ModelConfig`를 주입하여 모델 로드 없이 격리된 앱 인스턴스를 만들 수 있으며, 프로덕션에서는 `app = create_app()`으로 기본 설정을 사용합니다.
+
+### ADR-036 근거 (Rationale)
+
+#### 왜 3-Layer인가 — Hexagonal Architecture의 경량 적용
+
+| 계층 | 책임 | 교체 시나리오 |
+| ---- | ---- | ------------ |
+| `core` | 도메인 규칙 (HFD 60문항, IQ 공식, 4-Head 매핑) | 채점 규칙 변경 시 core만 수정, infra/routes 무변경 |
+| `infra` | 런타임 어댑터 (ONNX, TensorRT, 로깅) | 새 추론 엔진 추가 시 infra에 엔진 클래스 1개 추가 + Protocol 준수 |
+| `routes` | HTTP 인터페이스 | API 스펙 변경 시 routes만 수정, 도메인 로직 무변경 |
+
+Full Hexagonal이나 DDD를 도입하면 이 규모(20여 개 파일)에서는 오버엔지니어링입니다. 3-Layer는 "충분한 분리"를 제공하면서 파일 탐색 비용을 최소화합니다.
+
+#### 왜 Protocol인가 — ABC 상속보다 나은 이유
+
+- 각 엔진이 서로 다른 C 라이브러리(onnxruntime, tensorrt)에 의존하며, 이들의 **임포트 자체가 환경에 따라 실패**합니다. ABC 상속은 모든 엔진 클래스를 동시에 임포트해야 하지만, Protocol은 호출부에서만 타입 검증을 수행하므로 lazy import와 양립합니다.
+- `@runtime_checkable`을 통해 `isinstance(engine, InferenceEngine)` 런타임 검증도 가능합니다.
+
+#### 왜 Lazy Import인가 — 메모리 최적화
+
+`model_loader.py`에서 `torch`, `TensorRtNativeEngine`, `OnnxInferenceEngine`을 함수 내부에서 임포트합니다. CPU 전용 배포 환경에서 PyTorch(~2GB)를 임포트하지 않아 컨테이너 메모리를 절약하고, 불필요한 ImportError를 방지합니다.
+
+#### 왜 Extract Method인가 — analyze.py의 함수 분리
+
+`POST /analyze` 핸들러가 검증→전처리→추론→OOD감지→채점→IQ산출→결합까지 수행하므로, 단일 함수로 두면 300줄 이상의 God Function이 됩니다. 각 단계를 `_preprocess_image()`, `_run_inference()`, `_logits_to_item_results()`, `_build_analysis_result()` 등으로 추출하여 단위 테스트 가능성과 가독성을 확보했습니다.
+
+### ADR-036 대안 검토 (Alternatives)
+
+| 대안 | 거부 이유 |
+| ---- | -------- |
+| 단일 `model.py`에 모든 로직 집중 | 추론 엔진 교체, 채점 로직 수정, API 변경이 모두 같은 파일을 건드리게 됨 (변경 이유의 혼재) |
+| ABC 상속 기반 엔진 인터페이스 | TensorRT/ONNX의 조건부 임포트와 충돌. GPU 없는 환경에서 임포트 에러 발생 |
+| Full Hexagonal / Clean Architecture | 20개 파일 규모에서 Port, Adapter, UseCase 분리는 복잡도만 증가. 3-Layer로 충분 |
+| Django/Flask 대신 FastAPI | ADR-004에서 결정 완료. 비동기 + 자동 OpenAPI + Pydantic 검증의 조합이 AI 서빙에 최적 |
+
+### ADR-036 결론 (Consequences)
+
+- ✅ **엔진 교환 용이**: TensorRT, ONNX, 향후 OpenVINO 등 새 엔진 추가 시 `infra/`에 Protocol 구현체 1개만 추가하면 됨
+- ✅ **테스트 격리**: `core/` 도메인 로직은 외부 런타임 없이 순수 Python/PyTorch로 단위 테스트 가능
+- ✅ **배포 유연성**: CPU 전용 환경에서 PyTorch 없이 ONNX만으로 구동, GPU 환경에서 자동 TensorRT 전환
+- ✅ **온보딩 효율**: 패키지 구조만으로 "어디를 고쳐야 하는가"가 명확 (채점 규칙 → core, 엔진 추가 → infra, API 변경 → routes)
+- ⚠️ **Protocol 제약**: `mypy`의 Protocol 검증은 정적 분석에만 유효하며, 런타임에서는 메서드 시그니처까지 검증하지 않으므로 통합 테스트가 필수
 
 ---
