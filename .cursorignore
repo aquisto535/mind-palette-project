@@ -1,0 +1,42 @@
+# AI / Agent Ignore List
+# These directories will be completely ignored by AI search and indexing tools to prevent latency.
+
+# Dependencies
+node_modules/
+.venv/
+__pycache__/
+vcpkg_installed/
+
+# Build Artifacts
+**/dist/
+**/build/
+**/out/
+*.exe
+*.dll
+*.pdb
+*.obj
+*.o
+
+# Project Data & Logs
+shared_volume/
+data/synthetic_sketches/
+logs/
+*.log
+test_logs/
+benchmark_output/
+roi_comparison_output/
+
+# Large Media
+*.pdf
+*.jpg
+*.jpeg
+*.png
+*.mp4
+
+# IDE / Metadata
+.git/
+.vs/
+.history/
+.gemini/
+.agent/
+.claude/

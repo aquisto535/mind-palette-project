@@ -1,0 +1,13 @@
+# Same as .cursorignore, for compatibility with various agent tools
+node_modules/
+.venv/
+shared_volume/
+data/synthetic_sketches/
+**/dist/
+**/build/
+logs/
+*.log
+*.pdf
+*.jpg
+*.jpeg
+*.png

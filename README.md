@@ -25,36 +25,47 @@ HFD(Human Figure Drawing) 검사는 아동의 손 그림을 통해 발달 지능
 
 **핵심 특징**
 
-- 고성능 C++ 이미지 전처리 → GPU 가속 AI 추론 파이프라인
+- 고성능 C++ 이미지 전처리 → ONNX/TensorRT 가속 AI 추론 파이프라인
 - 3채널 하이브리드 입력 (Grayscale + Binary + Distance Transform)
-- 연령·성별별 표준화 IQ/백분위 산출
-- TDD 기반 개발, 33개 이상의 테스트 수트
+- 연령·성별별 표준화 IQ/백분위 산출 (EfficientNet-B2 + 4-Head 분류)
+- 2-Tier Fail-Fast 입력 검증 (C++ HSV 채도 분석 + Python Confidence Score)
+- SHA-256 해시 기반 결과 캐싱 (동일 이미지 재요청 시 30~40ms 응답)
+- Docker Compose + Nginx SSL 종단 기반 프로덕션 배포 (AWS EC2 c5.large)
+- TDD 기반 개발, 통합 테스트 206개 (C++ 59 + Python 147)
 
 ---
 
 ## 시스템 아키텍처
 
 ```
-┌─────────────────────────────────────────────────────┐
-│              React Frontend  (Port 5173)             │
-│   Hero → InfoForm → Guide → Upload → Result         │
+               ┌──────────────────────────────────┐
+               │  Nginx Reverse Proxy (443/HTTPS) │
+               │  · Let's Encrypt SSL 종단        │
+               │  · HTTP → HTTPS 리다이렉트       │
+               └──────────────┬───────────────────┘
+                              │ (Public TLS)
+┌─────────────────────────────▼───────────────────────┐
+│              React Frontend  (Port 5173 / Netlify)   │
+│   Hero → InfoForm → Guide → Upload → Result / Error │
 └────────────────────┬────────────────────────────────┘
                      │ POST multipart/form-data
                      ▼
 ┌─────────────────────────────────────────────────────┐
 │           Node.js API Gateway  (Port 3000)           │
-│   Rate Limit · File Validation · Orchestration      │
+│   Rate Limit · Magic Byte 검증 · SHA-256 Cache      │
+│   · Path Traversal 차단 · Orchestration             │
 └────────┬───────────────────────────┬────────────────┘
          │ POST /preprocess           │ POST /analyze
-         ▼                           ▼
+         ▼ (internal-net HTTP)        ▼ (internal-net HTTP)
 ┌─────────────────┐       ┌──────────────────────────┐
 │  C++ Preprocess │       │    Python AI Server       │
 │  Server         │       │    (Port 8082)            │
 │  (Port 8081)    │       │                          │
-│  ∙ Resize       │       │  EfficientNet-B2          │
-│  ∙ Grayscale    │       │  + 4 Multi-head           │
-│  ∙ Binarize     │       │  + ONNX / TensorRT        │
-│  ∙ Edge Detect  │       │  → IQ / Percentile        │
+│  ∙ Color Valid. │       │  EfficientNet-B2          │
+│  ∙ Resize       │       │  + 4 Multi-head (60문항)  │
+│  ∙ Hybrid 3ch   │       │  + ONNX / TensorRT        │
+│  ∙ Pressure     │       │  + Confidence Guard       │
+│  ∙ Tremor       │       │  → IQ / Percentile        │
 │  ∙ ...11 filters│       │                          │
 └─────────────────┘       └──────────────────────────┘
 ```
@@ -62,11 +73,14 @@ HFD(Human Figure Drawing) 검사는 아동의 손 그림을 통해 발달 지능
 **포트 맵**
 
 | 서비스 | 포트 | 언어/프레임워크 |
-|--------|------|----------------|
-| Frontend | 5173 | React + Vite |
-| API Gateway | 3000 | Node.js / Express |
-| Preprocess Server | 8081 | C++17 / Crow |
-| AI Server | 8082 | Python / FastAPI |
+| --- | --- | --- |
+| Nginx (SSL 종단) | 80, 443 | Nginx + Let's Encrypt |
+| Frontend | 5173 (로컬) / Netlify (프로덕션) | React 18 + Vite |
+| API Gateway | 3000 (내부망) | Node.js / Express |
+| Preprocess Server | 8081 (내부망) | C++17 / Crow |
+| AI Server | 8082 (내부망) | Python / FastAPI |
+
+> **배포 토폴로지**: 외부 트래픽은 Nginx(HTTPS)만 수신하고, 백엔드 서비스는 Docker `internal-net` 격리망에서 HTTP로 통신하여 SSL 오버헤드를 제거합니다.
 
 ---
 
@@ -90,22 +104,33 @@ C++17로 구현한 고성능 이미지 전처리 서버입니다.
 **구현된 필터 (Strategy Pattern)**
 
 | 필터 | 역할 |
-|------|------|
-| `resize_filter` | 260×260 리사이징 |
+| --- | --- |
+| `color_validation_filter` | **ADR-034** HSV 채도 분석으로 컬러 이미지 조기 차단 (HTTP 422) |
+| `resize_filter` | 512×512 Letterbox 리사이징 (INTER_AREA/INTER_CUBIC 자동 선택) |
 | `grayscale_filter` | RGB → Grayscale |
-| `binarize_filter` | Otsu 자동 임계값 이진화 |
-| `morphology_filter` | 침식/팽창 (노이즈 제거) |
-| `denoise_filter` | 가우시안 필터 |
-| `nlmeans_denoise_filter` | NL-Means 노이즈 제거 |
-| `clahe_filter` | CLAHE 명암비 향상 |
-| `otsu_canny_filter` | Canny 엣지 감지 |
-| `invert_filter` | 이미지 반전 |
+| `binarize_filter` | Adaptive Threshold (blockSize=7, C=3) |
+| `morphology_filter` | 침식/팽창 (선 연결성 강화) |
+| `denoise_filter` | 가우시안 필터 (5×5) |
+| `nlmeans_denoise_filter` | NL-Means 엣지 보존 노이즈 제거 (h=5) |
+| `clahe_filter` | CLAHE 명암비 향상 (clipLimit=1.0) |
+| `otsu_canny_filter` | Otsu 기반 자동 Threshold Canny 엣지 감지 (sigma=0.5) |
+| `invert_filter` | 이미지 반전 (White Background 보정) |
 | `rgb_convert_filter` | RGB 채널 변환 |
-| `hybrid_preprocess_filter` | 3채널 종합 전처리 출력 |
+| `hybrid_preprocess_filter` | 3채널 종합 전처리 출력 (R=Gray, G=InvBinary, B=Distance) |
+
+**분석 모듈 (AI 보조 기하 특징)**
+
+| 모듈 | 엔드포인트 | 역할 |
+| --- | --- | --- |
+| `pressure_analyzer` | `POST /analyze-pressure` | Grayscale 픽셀 분포 히스토그램 기반 필압 점수 |
+| `tremor_analyzer` | `POST /analyze-tremor` | Hu Moments 기반 선 떨림(Tremor) 스코어 |
 
 **인프라**
-- `ThreadPool`: CPU 바운드 작업용 워커 스레드 풀 (기본 4개, `PREPROCESS_WORKERS` 환경변수로 조정)
-- `AtomicWriter`: 동시 요청 시 파일 쓰기 경합 방지
+
+- `ThreadPool`: CPU 바운드 작업용 워커 스레드 풀 (기본 4개, `PREPROCESS_WORKERS` 환경변수로 조정 — 프로덕션 EC2 c5.large: 2)
+- `AtomicWriter`: `.tmp` → `rename` 패턴으로 저장/삭제 원자성 보장 (동시 요청 시 파일 쓰기 경합 방지)
+- `FilterPipeline`: Composite 패턴으로 필터 체인 구성, OCP 준수 (신규 필터 무수정 확장)
+- **Early Resize 최적화**: 이진화·컨투어 추출 전 768px로 선제 축소 (Latency 183ms → 97ms)
 
 ---
 
@@ -125,7 +150,7 @@ EfficientNet-B2 기반 HFD 분류 추론 서버입니다.
 | 로깅 | structlog |
 | 테스트 | pytest |
 
-**모델 아키텍처 (ADR-018)**
+**모델 아키텍처 (ADR-019)**
 
 ```
 Input: (1, 3, 260, 260)   ← 3채널 이미지
@@ -176,25 +201,33 @@ TensorRT Native (~10ms) → ONNX Runtime (~20ms) → PyTorch (~40ms)
 **처리 파이프라인**
 
 ```
-1. 클라이언트 요청 수신
-2. Rate Limiting (1분/10회)
-3. 매직 바이트 검증 (JPEG/PNG/BMP/WebP)
-4. shared_volume/uploads/ 에 파일 저장
-5. → Preprocess Server 호출 (C++)
-6. → AI Server 호출 (Python) + processed 이미지 전달
-7. AiServerResponse → AnalysisResult 매핑
-8. SHA256 무결성 해시 포함 결과 저장
-9. 임시 파일 정리
-10. 클라이언트 응답 반환
+1. 클라이언트 요청 수신 (X-Request-ID 생성/전파)
+2. Rate Limiting (전역 15분/100회, /analyze 1분/10회)
+3. 매직 바이트 검증 (JPEG/PNG/BMP/WebP) + 경로 트래버설 차단
+4. SHA-256 해시 산출 → Cache Hit 시 즉시 반환 (~30ms)
+5. shared_volume/uploads/ 에 파일 저장
+6. → Preprocess Server 호출 (C++) — ValidationException(422) 전파 지원
+7. → AI Server 호출 (Python) + processed 이미지 전달
+8. AiServerResponse → AnalysisResult 매핑
+9. SHA-256 무결성 해시 포함 결과 저장 (results/)
+10. 임시 파일 정리 (KEEP_IMAGES=false 시 uploads/processed 자동 삭제)
+11. 클라이언트 응답 반환 (Server-Timing 헤더 포함)
 ```
 
 **보안**
 
 - Rate Limiting: 전역 (15분/100회), `/analyze` (1분/10회)
-- 매직 바이트 기반 파일 형식 검증
-- 경로 트래버설 방지 (CodeQL 대응)
-- 로그 PII 마스킹 (파일 경로 숨김)
-- SHA256 결과 무결성 검증
+- 매직 바이트 기반 파일 형식 검증 (6-Layer Defense)
+- 경로 트래버설 방지 (CodeQL 대응, null byte/절대경로/`..` 차단)
+- 로그 PII 마스킹 (파일 경로·이름·생년월일 숨김)
+- SHA-256 결과 무결성 검증 + Atomic Delete
+
+**성능/관측성**
+
+- **Hash-based Caching (ADR-032)**: LRU + TTL 기반 결과 캐시, 동일 이미지 재요청 시 30~40ms 응답
+- **Winston 구조화 로깅**: JSON 포맷, DailyRotateFile (10MB, 7일 보관, gzip)
+- **Server-Timing 헤더**: `gateway`, `preprocess`, `ai_inference` 구간별 지연시간 계측
+- **OpenAPI 3.0 스펙**: `/api-docs` 경로에서 Swagger UI 제공
 
 ---
 
@@ -213,20 +246,29 @@ TensorRT Native (~10ms) → ONNX Runtime (~20ms) → PyTorch (~40ms)
 | PDF | html2canvas + jsPDF |
 | 테스트 | Vitest |
 
-**6단계 사용자 흐름**
+**7단계 사용자 흐름**
 
 ```
 Hero → InfoForm → Guide → Upload → Loading → Result
+                                          └──→ Error (422/429/503)
 ```
 
 | 단계 | 내용 |
-|------|------|
+| --- | --- |
 | Hero | 시작 화면 |
-| InfoForm | 자녀 이름·성별·생년월일 입력 |
+| InfoForm | 자녀 이름·성별·생년월일 입력 (인라인 유효성 검사) |
 | Guide | 인물화 그리기 안내 |
-| Upload | 이미지 드래그&드롭 업로드 |
+| Upload | 이미지 드래그&드롭 업로드 (10MB 제한) |
 | Loading | AI 분석 대기 |
 | Result | IQ·백분위·발달 트리 시각화, PDF 저장 |
+| Error | 422(컬러/저신뢰도) / 429(Rate Limit) / 503 전용 안내 + 재시도 |
+
+**입력 유효성 검사**
+
+- 이름: 2~20자, 한글/영문/공백만 허용
+- 생년월일: 만 5~13세 범위, `min`/`max` picker 제한
+- 이미지: 10MB 이하, JPEG/PNG/BMP/WebP
+- `AnalysisError` 클래스 + Axios 인터셉터로 상태 코드별 분기 처리
 
 ---
 
@@ -447,14 +489,40 @@ Body:
 ### 사전 요구사항
 
 | 항목 | 버전 |
-|------|------|
+| --- | --- |
 | Node.js | 18+ |
 | Python | 3.10+ |
 | CMake | 3.15+ |
 | vcpkg | 최신 (Windows: `x64-windows` triplet 필수) |
-| CUDA | 12.x (TensorRT 사용 시) |
+| CUDA | 12.x (TensorRT 사용 시, 선택) |
+| Docker | 24+ & Compose v2 (통합 실행 시) |
 
-### 1. Preprocess Server
+### Quick Start — Docker Compose (권장)
+
+전체 스택을 한 번에 띄우려면:
+
+```bash
+# 로컬 개발 모드 (override 자동 적용, 포트 노출)
+docker compose up --build
+
+# 프로덕션 모드 (internal-net 격리, Nginx SSL 종단)
+docker compose -f docker-compose.yml up -d --build
+```
+
+`.env` (루트)의 주요 환경변수:
+
+```bash
+PREPROCESS_WORKERS=2
+CACHE_TTL_SECONDS=3600
+KEEP_IMAGES=false
+AI_MODEL_DIR=./ai-server/models
+```
+
+> **프로덕션 배포**: AWS EC2 c5.large (Ubuntu 22.04) + Let's Encrypt 인증서. 상세는 [`docs/guides/aws-deployment-guide.md`](docs/guides/aws-deployment-guide.md) 참조.
+
+### 개별 서비스 실행 (개발용)
+
+#### 1. Preprocess Server
 
 ```bash
 cd preprocess-server
@@ -466,7 +534,7 @@ cmake --build build --config Release
 > **Windows 주의:** vcpkg triplet은 반드시 `x64-windows` (동적 링크)를 사용하세요.
 > `x64-windows-static` 사용 시 CRT Mismatch로 Heap Assertion 오류가 발생합니다.
 
-### 2. AI Server
+#### 2. AI Server
 
 ```bash
 cd ai-server
@@ -483,7 +551,7 @@ INFERENCE_BACKEND=onnx   # pytorch | onnx | tensorrt_native | tensorrt_ort
 DEVICE=cuda              # cuda | cpu
 ```
 
-### 3. API Gateway
+#### 3. API Gateway
 
 ```bash
 cd api-gateway
@@ -504,7 +572,7 @@ KEEP_IMAGES=false
 NODE_ENV=production
 ```
 
-### 4. Frontend
+#### 4. Frontend
 
 ```bash
 cd frontend
@@ -541,16 +609,19 @@ pytest tests/ -v
 ```
 
 | 테스트 파일 | 검증 내용 |
-|------------|----------|
+| --- | --- |
 | `test_model_architecture.py` | 모델 구조 (입력/출력 shape) |
 | `test_preprocessing.py` | 전처리 파이프라인 |
-| `test_augmentation.py` | 스케치 특화 데이터 증강 |
+| `test_augmentation.py` | 스케치 특화 데이터 증강 (ChannelDropout 등) |
+| `test_dataset.py` | HFDDataset 실제/합성 로더 |
 | `test_inference.py` | PyTorch 추론 결과 |
-| `test_onnx.py` | ONNX 변환 동등성 |
-| `test_tensorrt.py` | TensorRT 엔진 |
-| `test_iq_scorer.py` | IQ/백분위 변환 로직 |
+| `test_onnx.py` | ONNX 변환 동등성 (max_abs_err < 1e-4) |
+| `test_tensorrt.py` | TensorRT FP16 엔진 (3채널, Optimization Profile) |
+| `test_iq_scorer.py` | IQ/백분위 변환 로직 (연령·성별 규준표) |
 | `test_item_mapping.py` | 60문항 → 4헤드 매핑 |
-| `test_analyze.py` | `/analyze` E2E |
+| `test_analyze.py` | `/analyze` E2E + Confidence Guard (422) |
+| `test_hybrid_combiner.py` | C++ 기하 특징 + AI 결과 결합 |
+| `test_e2e_real_image.py` | 실제 스케치 이미지 End-to-End |
 | `test_health.py` | `/health` 응답 |
 
 ### API Gateway (Jest)
@@ -567,6 +638,13 @@ cd frontend
 npm test
 ```
 
+### 부하 테스트 (k6)
+
+```bash
+# Smoke / Load(100 VU) / Stress(200 VU) 시나리오 제공
+k6 run scripts/load-test.js
+```
+
 ---
 
 ## 개발 현황
@@ -574,19 +652,28 @@ npm test
 ### 완료
 
 | Phase | 내용 |
-|-------|------|
-| Phase 1 | 프로젝트 설계, 아키텍처 결정 |
-| Phase 2 | React Frontend (6단계 흐름, 결과 시각화, PDF) |
-| Phase 3 | C++ Preprocess Server (11개 필터, 스레드 풀, Google Test) |
-| Phase 4 | Python AI Server (EfficientNet-B2, ONNX/TensorRT, pytest) |
-| Phase 5 | Node.js API Gateway (오케스트레이션, 보안, Rate Limiting) |
+| --- | --- |
+| Phase 1 | 프로젝트 설계, 아키텍처 결정 (ADR-001~036) |
+| Phase 2 | React Frontend (7단계 흐름, 에러 화면, 유효성 검사, PDF) |
+| Phase 3 | C++ Preprocess Server (11 필터 + 2 분석 모듈, ThreadPool, GTest 59) |
+| Phase 4 | Python AI Server (EfficientNet-B2, ONNX/TensorRT FP16, pytest 147) |
+| Phase 5 | API Gateway + 배포 (Hash Cache, Nginx SSL, Docker Compose, EC2) |
+| QA/CI | GitHub Actions, CodeQL (JS/TS·C++), 단위·통합·k6 부하 테스트 |
+
+### 최근 주요 마일스톤
+
+- **2026-04-12**: 프론트엔드 에러 화면 및 입력 유효성 검사 완료 (22개 테스트)
+- **2026-04-05**: ADR-034 컬러 이미지 2-Tier Fail-Fast 필터 완료, Docker Build 최적화 (6GB → 1MB)
+- **2026-03-30**: EC2 c5.large 프로덕션 배포 + Let's Encrypt HTTPS 전환
+- **2026-03-20**: Phase 4 AI 서버 완료 (TensorRT P95 14.1ms, 325 QPS)
+- **2026-03-18**: 3-Engine 벤치마크 (PyTorch/ONNX/TensorRT)
 
 ### 진행 예정
 
-- Docker Compose 컨테이너화
-- GitHub Actions CI/CD
-- 모델 학습 데이터 수집 및 파인튜닝
-- 마이크로서비스 서비스 메시 통합
+- [ ] k6 EC2 실환경 부하 테스트 (100 VU P95 < 500ms 목표)
+- [ ] Phase 6 Chaos Engineering (Circuit Breaker, Failover)
+- [ ] 추가 데이터 수집(50+) 후 모델 재학습 (C++ 전처리 통합 학습)
+- [ ] CRITICAL 로그 Slack/Email 알림
 
 ---
 
@@ -596,34 +683,55 @@ npm test
 mind-palette-project/
 ├── preprocess-server/          C++17 이미지 전처리 서버
 │   ├── src/
-│   │   ├── core/               server.h, image_processor.cpp
-│   │   ├── filters/            11개 필터 구현
-│   │   └── infra/              thread_pool, atomic_writer
-│   └── tests/                  Google Test 수트
+│   │   ├── core/               server.h, image_processor, validation_exception
+│   │   ├── filters/            11개 필터 (color_validation 포함)
+│   │   ├── analysis/           pressure_analyzer, tremor_analyzer
+│   │   ├── infra/              thread_pool, atomic_writer
+│   │   └── utils/              Logger
+│   └── tests/                  Google Test 수트 (59개)
 │
 ├── ai-server/                  Python FastAPI 추론 서버
 │   ├── src/
-│   │   ├── core/               model, preprocessing, iq_scorer
+│   │   ├── core/               model, preprocessing, iq_scorer, augmentation, dataset
 │   │   ├── infra/              model_loader, onnx/tensorrt engine
-│   │   └── routes/             health, analyze
-│   └── tests/                  pytest 수트 (13개)
+│   │   └── routes/             health, analyze (Confidence Guard)
+│   ├── scripts/                train, export_model, build_tensorrt_engine
+│   └── tests/                  pytest 수트 (147개)
 │
 ├── api-gateway/                Node.js 오케스트레이터
 │   ├── src/
 │   │   ├── routes/             health, analyze
-│   │   ├── services/           analysisService, imageValidator
-│   │   └── utils/              logger, hashIntegrity, pathValidator
+│   │   ├── services/           analysisService, cacheService, imageValidator
+│   │   └── utils/              logger (Winston), hashIntegrity, pathValidator, fileStorage
 │   └── tests/                  Jest 수트
 │
 ├── frontend/                   React 웹 클라이언트
 │   └── src/
-│       ├── components/         Hero, InfoForm, Upload, Result, ...
-│       └── api/                uploadApi
+│       ├── components/         Hero, InfoForm, Upload, Result, Error, ...
+│       ├── types/              errors.ts (AnalysisError)
+│       ├── utils/              validation.ts
+│       └── api/                client (Axios 인터셉터), uploadApi
 │
+├── nginx/                      Reverse Proxy + SSL 종단
+│   ├── nginx.conf              HTTPS 종단, HTTP→HTTPS 리다이렉트
+│   ├── Dockerfile
+│   └── ssl-local/              로컬 개발용 자체 서명 인증서
+│
+├── scripts/                    운영 스크립트
+│   ├── load-test.js            k6 부하 테스트 시나리오
+│   ├── traffic-bot.ts          주기적 요청 자동화
+│   └── ci/                     CI 보조 스크립트
+│
+├── docker-compose.yml          프로덕션 구성 (internal-net 격리)
+├── docker-compose.override.yml 로컬 개발 구성 (포트 노출)
+├── docker-compose.dev.yml      개발 편의 구성
 └── docs/                       설계 문서 및 ADR
-    ├── CODING_STANDARDS.md
-    ├── project-guides/
-    └── troubleshooting/
+    ├── standards/              CODING_STANDARDS, ADR 모음
+    ├── architecture/           ARCHITECTURE_DECISIONS, ADR-parameter-rationale
+    ├── guides/                 git-workflow, aws-deployment, CI/CD, MCP 등
+    ├── reports/                서비스별 아키텍처 리포트
+    ├── status/                 BENCHMARKS, PROGRESS, CODE_REVIEW_HISTORY
+    └── troubleshooting/        Windows 빌드, CRT Mismatch 등
 ```
 
 ---
@@ -632,6 +740,10 @@ mind-palette-project/
 
 주요 아키텍처 결정 및 가이드는 [`docs/`](docs/) 디렉토리에 있습니다.
 
-- [CODING_STANDARDS.md](docs/CODING_STANDARDS.md) — TDD, 커밋 규칙, 코드 품질 기준
-- [project-guides/git-workflow-guide.md](docs/project-guides/git-workflow-guide.md) — Git 브랜치 전략
+- [standards/CODING_STANDARDS.md](docs/standards/CODING_STANDARDS.md) — TDD, 커밋 규칙, 코드 품질 기준
+- [architecture/ARCHITECTURE_DECISIONS.md](docs/architecture/ARCHITECTURE_DECISIONS.md) — ADR-001~036 전체 목록
+- [guides/git-workflow-guide.md](docs/guides/git-workflow-guide.md) — Feature Branch + Conventional Commits
+- [guides/aws-deployment-guide.md](docs/guides/aws-deployment-guide.md) — EC2 c5.large 배포 절차
+- [guides/AI_SERVER_MODEL_OPERATIONS_GUIDE.md](docs/guides/AI_SERVER_MODEL_OPERATIONS_GUIDE.md) — 모델 학습·변환·운영
+- [guides/cache-performance-verification.md](docs/guides/cache-performance-verification.md) — Hash Cache 성능 검증
 - [troubleshooting/](docs/troubleshooting/) — Windows 빌드 이슈, CRT Mismatch 해결 등

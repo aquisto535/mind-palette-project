@@ -10,7 +10,22 @@
 > "데이터가 많아서 모델이 정확하다는 것은 시스템 엔지니어의 핵심 무기가 아닙니다. **현재의 우수한 아키텍처 설계를 클라우드에 PoC 형태로 단단하게 배포하고, 어떤 거대한 트래픽이나 무거운 모델이 들어와도 버틸 수 있는 견고한 구조(MSA)를 짰음을 증명하는 것**이 이 프로젝트의 최우선 목표입니다."
 
 ---
-  
+
+## 📌 프로젝트 현황 스냅샷 (2026-04 기준)
+
+| 축 | 상태 | 핵심 결정 ADR |
+| --- | --- | --- |
+| **Phase 1~4** (설계·C++ 전처리·AI 서빙·모델 학습) | ✅ 완료 | ADR-001, 010, 011, 019, 025, 030 |
+| **Phase 5** (배포·관측성·보안 하드닝) | ✅ 완료 | ADR-003, 015, 028, 032, 033, 034, 036 |
+| **QA/CI** (테스트 스택·CI 감사·환경 검증) | ✅ 완료 | ADR-007, 022, 033, 036 |
+| **Phase 6** (Chaos Engineering·자동 롤백) | ⏳ 예정 | — |
+
+- **총 테스트**: C++ 59 + Python 147 + Gateway/Frontend 다수 → `plan.md` Phase 5 잔여 항목만 일부 진행 중
+- **관측성**: Winston `DailyRotateFile` + structlog + spdlog + W3C Server-Timing(ADR-027)로 관통
+- **배포 토폴로지**: Nginx(443/80) → API Gateway → C++ preprocess / Python AI (internal-net 격리, ADR-015)
+
+---
+
 ## 📋 의사결정 목록 (Decision Index)
 
 | ID | 제목 | 날짜 | 상태 |
@@ -27,30 +42,30 @@
 | ADR-010 | Transfer Learning 모델로 EfficientNet-B2 채택 | 2026-02 | ✅ Accepted |
 | ADR-011 | C++ 전처리 파이프라인 결과물 명세 | 2026-02 | ✅ Accepted |
 | ADR-012 | C++ 전처리 서버 개발 로드맵 (Week 2-4) | 2026-02 | ✅ Accepted |
-| ADR-013 | Git Workflow로 GitHub Flow (Feature Branch + PR) 채택 | 2026-02 | ✅ Accepted |
-| ADR-014 | AWS EC2와 Docker 연결 구조 (Port Mapping & Bridge Network) | 2026-02 | ✅ Accepted |
-| ADR-015 | 하이브리드 배포 전략 (Local GPU 개발 vs EC2 CPU 배포) | 2026-02 | ✅ Accepted |
-| ADR-016 | Antigravity Awesome Skills 도입 및 코드베이스 현대화 | 2026-02 | ✅ Accepted |
-| ADR-017 | AI 코딩 도구(Antigravity vs Claude Code) 역할 분담 전략 도입 | 2026-03 | ✅ Accepted |
-| ADR-018 | HFD 도메인 기반 Multi-label Binary Classification 아키텍처 채택 | 2026-03 | ✅ Accepted |
-| ADR-019 | 서브 에이전트 기반 전문화 전략 채택 (TOP 3 구축) | 2026-03 | ✅ Accepted |
-| ADR-020 | 6-Layer 이미지 파일 보안 검증 아키텍처 | 2026-03 | ✅ Accepted |
-| ADR-021 | 마이크로서비스 간 API 계약 및 자동 검증 도입 | 2026-03 | ✅ Accepted |
-| ADR-022 | TDD Quality Guardian 서브 에이전트의 보안 감사 역할 확장 | 2026-03 | ✅ Accepted |
-| ADR-023 | 러버덕 리뷰 서브 에이전트 도입 (Self-Explanation Learning) | 2026-03 | ✅ Accepted |
-| ADR-024 | FilterPipeline 패턴 및 Early Resize 최적화 채택 | 2026-03 | ✅ Accepted |
-| ADR-025 | PowerShell 기반 E2E 스모크 테스트 자동화 채택 | 2026-03 | ✅ Accepted |
-| ADR-026 | W3C Server-Timing 기반 Zero-Disk E2E 프로파일링 시스템 구축 | 2026-03 | ✅ Accepted |
-| ADR-027 | EC2 인스턴스 타입 선택 전략 (t3.medium 기각, c5.large 채택) | 2026-03 | ✅ Accepted |
-| ADR-028 | C++ 동시 처리 최적화: WorkerPool 튜닝 및 콜드 스타트 수용 | 2026-03 | ✅ Accepted |
-| ADR-029 | 딥러닝 추론 최적화를 위한 TensorRT FP16 양자화 채택 | 2026-04 | ✅ Accepted |
-| ADR-030 | AI 사각지대 보완을 위한 C++ 정량 분석 레이어(Hu Moments, Histogram) 도입 | 2026-04 | ✅ Accepted |
-| ADR-031 | API Gateway 해시(SHA-256) 기반 스마트 캐싱 아키텍처 채택 | 2026-04 | ✅ Accepted |
-| ADR-032 | 부하 테스트 및 성능 검증 도구로 오픈소스 k6 채택 | 2026-04 | ✅ Accepted |
-| ADR-033 | 비연필(컬러) 이미지 조기 필터링 및 예외 처리 전략 | 2026-04 | ✅ Accepted |
-| ADR-034 | AI 코딩 도구 통합 컨텍스트 자동 모니터링 시스템 구축 (Antigravity + Claude Code) | 2026-04 | ✅ Accepted |
-| ADR-035 | 설정 관리 시스템화 — 환경 변수 인벤토리·검증·CI 감사 도입 | 2026-04 | ✅ Accepted |
-| ADR-036 | AI 모듈 내부 아키텍처: 3-Layer 분리 및 Protocol 기반 엔진 교환 설계 | 2026-04 | ✅ Accepted |
+| ADR-013 | AI 모듈 내부 아키텍처: 3-Layer 분리 및 Protocol 기반 엔진 교환 설계 | 2026-02 | ✅ Accepted |
+| ADR-014 | Git Workflow로 GitHub Flow (Feature Branch + PR) 채택 | 2026-02 | ✅ Accepted |
+| ADR-015 | AWS EC2와 Docker 연결 구조 (Port Mapping & Bridge Network) | 2026-02 | ✅ Accepted |
+| ADR-016 | 하이브리드 배포 전략 (Local GPU 개발 vs EC2 CPU 배포) | 2026-02 | ✅ Accepted |
+| ADR-017 | Antigravity Awesome Skills 도입 및 코드베이스 현대화 | 2026-02 | ✅ Accepted |
+| ADR-018 | AI 코딩 도구(Antigravity vs Claude Code) 역할 분담 전략 도입 | 2026-03 | ✅ Accepted |
+| ADR-019 | HFD 도메인 기반 Multi-label Binary Classification 아키텍처 채택 | 2026-03 | ✅ Accepted |
+| ADR-020 | 서브 에이전트 기반 전문화 전략 채택 (TOP 3 구축) | 2026-03 | ✅ Accepted |
+| ADR-021 | 6-Layer 이미지 파일 보안 검증 아키텍처 | 2026-03 | ✅ Accepted |
+| ADR-022 | 마이크로서비스 간 API 계약 및 자동 검증 도입 | 2026-03 | ✅ Accepted |
+| ADR-023 | TDD Quality Guardian 서브 에이전트의 보안 감사 역할 확장 | 2026-03 | ✅ Accepted |
+| ADR-024 | 러버덕 리뷰 서브 에이전트 도입 (Self-Explanation Learning) | 2026-03 | ✅ Accepted |
+| ADR-025 | FilterPipeline 패턴 및 Early Resize 최적화 채택 | 2026-03 | ✅ Accepted |
+| ADR-026 | PowerShell 기반 E2E 스모크 테스트 자동화 채택 | 2026-03 | ✅ Accepted |
+| ADR-027 | W3C Server-Timing 기반 Zero-Disk E2E 프로파일링 시스템 구축 | 2026-03 | ✅ Accepted |
+| ADR-028 | EC2 인스턴스 타입 선택 전략 (t3.medium 기각, c5.large 채택) | 2026-03 | ✅ Accepted |
+| ADR-029 | C++ 동시 처리 최적화: WorkerPool 튜닝 및 콜드 스타트 수용 | 2026-03 | ✅ Accepted |
+| ADR-030 | 딥러닝 추론 최적화를 위한 TensorRT FP16 양자화 채택 | 2026-04 | ✅ Accepted |
+| ADR-031 | AI 사각지대 보완을 위한 C++ 정량 분석 레이어(Hu Moments, Histogram) 도입 | 2026-04 | ✅ Accepted |
+| ADR-032 | API Gateway 해시(SHA-256) 기반 스마트 캐싱 아키텍처 채택 | 2026-04 | ✅ Accepted |
+| ADR-033 | 부하 테스트 및 성능 검증 도구로 오픈소스 k6 채택 | 2026-04 | ✅ Accepted |
+| ADR-034 | 비연필(컬러) 이미지 조기 필터링 및 예외 처리 전략 | 2026-04 | ✅ Accepted |
+| ADR-035 | AI 코딩 도구 통합 컨텍스트 자동 모니터링 시스템 구축 (Antigravity + Claude Code) | 2026-04 | ✅ Accepted |
+| ADR-036 | 설정 관리 시스템화 — 환경 변수 인벤토리·검증·CI 감사 도입 | 2026-04 | ✅ Accepted |
 
 ---
 
@@ -616,7 +631,7 @@ describe('POST /analyze', () => {
 ### 상태
 
 ✅ **Accepted** (2025-11)
-⚠️ **[Update 2026-04]**: TensorRT 및 ONNX 하이브리드 폴백 엔진 도입으로 인해 배포 환경 추론 운영 전략은 **ADR-029**로 갱신/확장되었습니다.
+⚠️ **[Update 2026-04]**: TensorRT 및 ONNX 하이브리드 폴백 엔진 도입으로 인해 배포 환경 추론 운영 전략은 **ADR-030**로 갱신/확장되었습니다. 모듈 조립 설계(3-Layer + Protocol 엔진 교환)는 **ADR-013**에서 별도로 문서화되었으며, c5.large CPU 배포에서는 PyTorch 자체를 lazy import하여 컨테이너 슬림화했습니다.
 
 ### 컨텍스트 (Context)
 
@@ -1166,7 +1181,7 @@ cv::merge(channels, result);
 | **채널 구성** | R:Gray, G:Binary, B:Dist | 정보 밀도 극대화 (필압+형태+골격) |
 | **해상도** | 512×512 (Letterbox) | 비율 왜곡 방지 및 추론 입력 준비 |
 | **배경색** | White (255, 255, 255) | ImageNet 도메인 친화성 |
-| **정량 수치 (Float)** | `tremor_score`, `pressure_score` | AI 분류 보완을 위한 부가 분석 데이터 (ADR-030 결합) |
+| **정량 수치 (Float)** | `tremor_score`, `pressure_score` | AI 분류 보완을 위한 부가 분석 데이터 (ADR-031 결합) |
 
 ### 결론 (Consequences)
 
@@ -1452,7 +1467,146 @@ Week 4: 성능 최적화
 
 ---
 
-## ADR-013: Git Workflow로 GitHub Flow (Feature Branch + PR) 채택
+## ADR-013: AI 모듈 내부 아키텍처: 3-Layer 분리 및 Protocol 기반 엔진 교환 설계
+
+### ADR-013 상태
+
+✅ **Accepted** (2026-04)
+
+### ADR-013 컨텍스트 (Context)
+
+`ai-server`는 아동 인물화(HFD) 60문항 채점, IQ 산출, 백분위 변환, 그리고 C++ 전처리 서버의 기하 분석 결과와의 결합까지 수행하는 핵심 서비스입니다. 기존 ADR들은 개별 기술 선택(ADR-009 PyTorch, ADR-010 EfficientNet-B2, ADR-019 4-Head 구조, ADR-030 TensorRT)을 다루지만, 이들을 **하나의 모듈로 조립하는 내부 아키텍처** — 레이어 분리 원칙, 추론 엔진 교환 메커니즘, 데이터 흐름 파이프라인 — 에 대한 설계 근거가 문서화되어 있지 않았습니다.
+
+이 ADR은 "왜 이 코드 구조를 선택했는가"에 대한 근거를 기록합니다.
+
+### ADR-013 의사결정 (Decision)
+
+#### 1️⃣ 3-Layer 패키지 분리 (`core` / `infra` / `routes`)
+
+```text
+ai-server/src/
+├── core/           # 도메인 로직 (순수 Python, 프레임워크 비의존)
+│   ├── model.py          # HFDClassifier: EfficientNet-B2 + 4-Head
+│   ├── item_mapping.py   # 60문항 ↔ 4-Head 매핑 규칙
+│   ├── iq_scorer.py      # 원점수 → IQ(표준점수) → 백분위 변환
+│   ├── dataset.py         # HFDDataset: 학습/검증 데이터셋
+│   ├── augmentation.py   # 스케치 특화 데이터 증강
+│   ├── evaluate.py       # Head별 Accuracy, F1, LOOCV
+│   ├── preprocessing.py  # C++ 출력 → 모델 입력 텐서 변환
+│   ├── onnx_converter.py # PyTorch → ONNX 변환
+│   └── hybrid_combiner.py # AI + C++ 기하 분석 결합
+├── infra/          # 인프라 어댑터 (외부 런타임 의존)
+│   ├── engine_protocol.py     # InferenceEngine Protocol (공통 인터페이스)
+│   ├── onnx_inference.py      # ONNX Runtime 엔진
+│   ├── tensorrt_engine.py     # TensorRT Native API 엔진
+│   ├── tensorrt_ort_engine.py # ORT TensorrtExecutionProvider 엔진
+│   ├── model_loader.py        # Fallback 체인 로더
+│   └── logger.py              # structlog 기반 구조화 로깅
+├── routes/         # HTTP 엔드포인트 (FastAPI 의존)
+│   ├── health.py   # GET /health
+│   └── analyze.py  # POST /analyze
+├── config.py       # Pydantic BaseSettings 중앙 설정
+└── main.py         # App Factory (create_app)
+```
+
+**원칙**: 의존성 방향은 `routes → core/infra → config` 단방향입니다. `core`는 FastAPI, ONNX Runtime, TensorRT 등 외부 프레임워크에 의존하지 않으며, `infra`가 외부 런타임과의 어댑터 역할을 담당합니다.
+
+#### 2️⃣ Protocol 기반 추론 엔진 교환 (Duck Typing)
+
+```python
+# infra/engine_protocol.py
+@runtime_checkable
+class InferenceEngine(Protocol):
+    def run(self, image: np.ndarray) -> Tuple[np.ndarray, ...]: ...
+    @property
+    def output_names(self) -> list[str]: ...
+```
+
+3개의 추론 엔진(`OnnxInferenceEngine`, `TensorRtNativeEngine`, `TensorRtOrtEngine`)이 **명시적 상속 없이** 동일한 `run()` / `output_names` 인터페이스를 구현합니다. ABC 상속 대신 Python Protocol을 사용하여, 각 엔진이 자기 런타임 의존성(onnxruntime, tensorrt, torch)만 임포트하면서도 호출부에서는 동일하게 취급됩니다.
+
+#### 3️⃣ Graceful Degradation Fallback 체인
+
+```text
+model_loader.load_models() 실행 순서:
+  1. torch.cuda.is_available() → TensorRT Native Engine 시도
+  2. 실패 시 → ONNX Runtime Engine으로 Fallback
+  3. 모두 실패 시 → ModelState(engine_type="none") 반환, /health에서 감지
+```
+
+GPU 환경에서는 TensorRT의 극한 성능(14ms)을 활용하고, CPU 전용 클라우드(ADR-028 c5.large)에서는 ONNX Runtime(24ms)으로 자동 전환합니다. PyTorch 자체를 lazy import하여 GPU가 없는 슬림 이미지에서는 torch 의존성 없이 ONNX만으로 구동됩니다.
+
+#### 4️⃣ End-to-End 데이터 흐름 파이프라인
+
+```text
+[C++ preprocess-server]
+     │  512x512 3-Channel Hybrid (R=Gray, G=Binary, B=DistanceTransform)
+     ▼
+[POST /analyze]  이미지 업로드 수신
+     │
+     ├─ _validate_image_file()     매직바이트 + PIL verify
+     ├─ _preprocess_image()        Resize(260x260) → Normalize → CHW → numpy
+     ├─ engine.run(img_np)         ONNX/TensorRT 추론 → 4-Head 로짓
+     ├─ _compute_mean_confidence() OOD 감지 (ADR-034 Tier 2)
+     ├─ _logits_to_item_results()  Sigmoid → 60문항 0/1 판정
+     ├─ score_to_result()          원점수 → IQ → 백분위 (전국 규준)
+     └─ HybridCombiner.combine()   AI 결과 + C++ 기하 분석 결합
+```
+
+각 단계가 독립 함수로 추출(Extract Method)되어 있어 단위 테스트와 디버깅이 용이합니다.
+
+#### 5️⃣ 설정 중앙화 (Pydantic BaseSettings)
+
+`config.py`에서 `ModelConfig`, `ServerConfig`, `TrainingConfig`를 분리하여 모든 하이퍼파라미터(입력 크기, Head 크기, 정규화 통계, 모델 경로, TensorRT 옵션 등)를 중앙 관리합니다. 환경 변수 오버라이드가 가능하며, 시작 시 Fail-Fast 검증(`INFERENCE_BACKEND` 유효값 체크)을 수행합니다.
+
+#### 6️⃣ App Factory 패턴
+
+`create_app(model_config=None)` 팩토리 함수로 FastAPI 앱을 생성합니다. 테스트에서는 `ModelConfig`를 주입하여 모델 로드 없이 격리된 앱 인스턴스를 만들 수 있으며, 프로덕션에서는 `app = create_app()`으로 기본 설정을 사용합니다.
+
+### ADR-013 근거 (Rationale)
+
+#### 왜 3-Layer인가 — Hexagonal Architecture의 경량 적용
+
+| 계층 | 책임 | 교체 시나리오 |
+| ---- | ---- | ------------ |
+| `core` | 도메인 규칙 (HFD 60문항, IQ 공식, 4-Head 매핑) | 채점 규칙 변경 시 core만 수정, infra/routes 무변경 |
+| `infra` | 런타임 어댑터 (ONNX, TensorRT, 로깅) | 새 추론 엔진 추가 시 infra에 엔진 클래스 1개 추가 + Protocol 준수 |
+| `routes` | HTTP 인터페이스 | API 스펙 변경 시 routes만 수정, 도메인 로직 무변경 |
+
+Full Hexagonal이나 DDD를 도입하면 이 규모(20여 개 파일)에서는 오버엔지니어링입니다. 3-Layer는 "충분한 분리"를 제공하면서 파일 탐색 비용을 최소화합니다.
+
+#### 왜 Protocol인가 — ABC 상속보다 나은 이유
+
+- 각 엔진이 서로 다른 C 라이브러리(onnxruntime, tensorrt)에 의존하며, 이들의 **임포트 자체가 환경에 따라 실패**합니다. ABC 상속은 모든 엔진 클래스를 동시에 임포트해야 하지만, Protocol은 호출부에서만 타입 검증을 수행하므로 lazy import와 양립합니다.
+- `@runtime_checkable`을 통해 `isinstance(engine, InferenceEngine)` 런타임 검증도 가능합니다.
+
+#### 왜 Lazy Import인가 — 메모리 최적화
+
+`model_loader.py`에서 `torch`, `TensorRtNativeEngine`, `OnnxInferenceEngine`을 함수 내부에서 임포트합니다. CPU 전용 배포 환경에서 PyTorch(~2GB)를 임포트하지 않아 컨테이너 메모리를 절약하고, 불필요한 ImportError를 방지합니다.
+
+#### 왜 Extract Method인가 — analyze.py의 함수 분리
+
+`POST /analyze` 핸들러가 검증→전처리→추론→OOD감지→채점→IQ산출→결합까지 수행하므로, 단일 함수로 두면 300줄 이상의 God Function이 됩니다. 각 단계를 `_preprocess_image()`, `_run_inference()`, `_logits_to_item_results()`, `_build_analysis_result()` 등으로 추출하여 단위 테스트 가능성과 가독성을 확보했습니다.
+
+### ADR-013 대안 검토 (Alternatives)
+
+| 대안 | 거부 이유 |
+| ---- | -------- |
+| 단일 `model.py`에 모든 로직 집중 | 추론 엔진 교체, 채점 로직 수정, API 변경이 모두 같은 파일을 건드리게 됨 (변경 이유의 혼재) |
+| ABC 상속 기반 엔진 인터페이스 | TensorRT/ONNX의 조건부 임포트와 충돌. GPU 없는 환경에서 임포트 에러 발생 |
+| Full Hexagonal / Clean Architecture | 20개 파일 규모에서 Port, Adapter, UseCase 분리는 복잡도만 증가. 3-Layer로 충분 |
+| Django/Flask 대신 FastAPI | ADR-004에서 결정 완료. 비동기 + 자동 OpenAPI + Pydantic 검증의 조합이 AI 서빙에 최적 |
+
+### ADR-013 결론 (Consequences)
+
+- ✅ **엔진 교환 용이**: TensorRT, ONNX, 향후 OpenVINO 등 새 엔진 추가 시 `infra/`에 Protocol 구현체 1개만 추가하면 됨
+- ✅ **테스트 격리**: `core/` 도메인 로직은 외부 런타임 없이 순수 Python/PyTorch로 단위 테스트 가능
+- ✅ **배포 유연성**: CPU 전용 환경에서 PyTorch 없이 ONNX만으로 구동, GPU 환경에서 자동 TensorRT 전환
+- ✅ **온보딩 효율**: 패키지 구조만으로 "어디를 고쳐야 하는가"가 명확 (채점 규칙 → core, 엔진 추가 → infra, API 변경 → routes)
+- ⚠️ **Protocol 제약**: `mypy`의 Protocol 검증은 정적 분석에만 유효하며, 런타임에서는 메서드 시그니처까지 검증하지 않으므로 통합 테스트가 필수
+
+---
+
+## ADR-014: Git Workflow로 GitHub Flow (Feature Branch + PR) 채택
 
 ### 상태
 
@@ -1603,7 +1757,7 @@ git branch -d feature/filter-strategy-pattern
 
 ---
 
-## ADR-014: AWS EC2와 Docker 연결 구조 (Port Mapping & Bridge Network)
+## ADR-015: AWS EC2와 Docker 연결 구조 (Port Mapping & Bridge Network)
 
 ### 상태
 
@@ -1706,7 +1860,7 @@ graph TD
 
 ---
 
-## ADR-015: 하이브리드 배포 전략 (Local GPU 개발 vs EC2 CPU 배포)
+## ADR-016: 하이브리드 배포 전략 (Local GPU 개발 vs EC2 CPU 배포)
 
 ### 상태
 
@@ -1769,7 +1923,7 @@ graph TD
 
 ---
 
-## ADR-016: Antigravity Awesome Skills 도입 및 코드베이스 현대화
+## ADR-017: Antigravity Awesome Skills 도입 및 코드베이스 현대화
 
 ### 상태
 
@@ -1830,11 +1984,11 @@ graph TD
 - [implementation_plan.md](../.gemini/antigravity/brain/25394dd5-b6fa-4aac-8d14-3ffee0e6e7f0/implementation_plan.md)
 - [walkthrough.md](../.gemini/antigravity/brain/25394dd5-b6fa-4aac-8d14-3ffee0e6e7f0/walkthrough.md)
 - [code-style-guide.md](../.agent/rules/code-style-guide.md)
-- [ADR-013: GitHub Flow 채택](#adr-013-git-workflow로-github-flow-feature-branch--pr-채택)
+- [ADR-014: GitHub Flow 채택](#adr-014-git-workflow로-github-flow-feature-branch--pr-채택)
 
 ---
 
-## ADR-017: AI 코딩 도구(Antigravity vs Claude Code) 역할 분담 전략 도입
+## ADR-018: AI 코딩 도구(Antigravity vs Claude Code) 역할 분담 전략 도입
 
 ### 상태
 
@@ -1892,7 +2046,7 @@ graph TD
 
 ---
 
-## ADR-018: HFD 도메인 기반 Multi-label Binary Classification 아키텍처 채택
+## ADR-019: HFD 도메인 기반 Multi-label Binary Classification 아키텍처 채택
 
 ### 상태
 
@@ -1930,7 +2084,7 @@ graph TD
 
 ---
 
-## ADR-019: 서브 에이전트 기반 전문화 전략 채택 (TOP 3 구축)
+## ADR-020: 서브 에이전트 기반 전문화 전략 채택 (TOP 3 구축)
 
 ### 상태
 
@@ -1969,7 +2123,7 @@ Antigravity의 Persona & Skill 기능을 활용하여 **TOP 3 전문 서브 에�
 
 ---
 
-## ADR-020: 6-Layer 이미지 파일 보안 검증 아키텍처
+## ADR-021: 6-Layer 이미지 파일 보안 검증 아키텍처
 
 ### 상태
 
@@ -2015,7 +2169,7 @@ Antigravity의 Persona & Skill 기능을 활용하여 **TOP 3 전문 서브 에�
 
 ---
 
-## ADR-021: 마이크로서비스 간 API 계약 및 자동 검증 도입
+## ADR-022: 마이크로서비스 간 API 계약 및 자동 검증 도입
 
 ### 상태
 
@@ -2055,7 +2209,7 @@ Antigravity의 Persona & Skill 기능을 활용하여 **TOP 3 전문 서브 에�
 
 ---
 
-## ADR-022: TDD Quality Guardian 서브 에이전트의 보안 감사 역할 확장
+## ADR-023: TDD Quality Guardian 서브 에이전트의 보안 감사 역할 확장
 
 ### 상태
 
@@ -2097,7 +2251,7 @@ Antigravity의 Persona & Skill 기능을 활용하여 **TOP 3 전문 서브 에�
 
 ---
 
-## ADR-023: 러버덕 리뷰 서브 에이전트 도입 (Self-Explanation Learning)
+## ADR-024: 러버덕 리뷰 서브 에이전트 도입 (Self-Explanation Learning)
 
 ### 상태
 
@@ -2150,7 +2304,7 @@ Claude Code에 **러버덕 리뷰 모드**를 워크플로우(`.agent/workflows/
 
 ---
 
-## ADR-024: FilterPipeline 패턴 및 Early Resize 최적화 채택
+## ADR-025: FilterPipeline 패턴 및 Early Resize 최적화 채택
 
 ### 상태
 
@@ -2186,7 +2340,7 @@ Phase 3 C++ 전처리 서버의 `ImageProcessor::Preprocess` 함수가 수백 �
 
 ---
 
-## ADR-025: PowerShell 기반 E2E 스모크 테스트 자동화 채택
+## ADR-026: PowerShell 기반 E2E 스모크 테스트 자동화 채택
 
 ### 상태
 
@@ -2232,7 +2386,7 @@ Mind Palette 프로젝트는 Node.js, C++, Python이라는 3개의 서로 다른
 
 ---
 
-## ADR-026: W3C Server-Timing 기반 Zero-Disk E2E 프로파일링 시스템 구축
+## ADR-027: W3C Server-Timing 기반 Zero-Disk E2E 프로파일링 시스템 구축
 
 ### 상태
 
@@ -2275,11 +2429,11 @@ Mind Palette 프로젝트는 Node.js, C++, Python이라는 3개의 서로 다른
 
 - ✅ **장점**: 디스크 I/O 없이 프로덕션 성능을 실시간 파악하고, 병목 모듈 정밀 타겟팅(Node vs C++ vs Python) 가능.
 - ⚠️ **주의사항**: C++ 및 Python 프레임워크 모두에서 커스텀 HTTP Header 조작 규격을 정확히 맞추어 릴레이(Relay)해야 합니다.
-- ✅ **실증 사례**: 동시성 3 부하 테스트(`-Concurrency 3`)에서 CPP_Pre_Ms `537ms / 115ms / 118ms`의 이상값을 최초 발견. 이 프로파일링 시스템이 OpenCV CPU 오버 서브스크립션 문제를 특정하는 데 직접 기여했으며, ADR-028의 최적화 결정으로 이어짐.
+- ✅ **실증 사례**: 동시성 3 부하 테스트(`-Concurrency 3`)에서 CPP_Pre_Ms `537ms / 115ms / 118ms`의 이상값을 최초 발견. 이 프로파일링 시스템이 OpenCV CPU 오버 서브스크립션 문제를 특정하는 데 직접 기여했으며, ADR-029의 최적화 결정으로 이어짐.
 
 ### 구현 현황 (Implementation)
 
-ADR-026의 의사결정 3항("E2E 스크립트에 벤치마킹 모드 탑재")은 아래 파일들로 구현되었습니다.
+ADR-027의 의사결정 3항("E2E 스크립트에 벤치마킹 모드 탑재")은 아래 파일들로 구현되었습니다.
 
 | 파일 | 역할 |
 |------|------|
@@ -2295,7 +2449,7 @@ ADR-026의 의사결정 3항("E2E 스크립트에 벤치마킹 모드 탑재")�
 [TrafficBot] 완료: 5/5 성공, avgResponseMs=214ms, P95=841ms
 서비스별 평균 응답시간 (Server-Timing):
   gateway:      607ms
-  preprocess:   530ms   ← ADR-028 콜드 스타트 분석의 근거 수치
+  preprocess:   530ms   ← ADR-029 콜드 스타트 분석의 근거 수치
   ai_inference:  18ms
 ```
 
@@ -2303,7 +2457,7 @@ ADR-026의 의사결정 3항("E2E 스크립트에 벤치마킹 모드 탑재")�
 
 ---
 
-## ADR-027: EC2 인스턴스 타입 선택 전략 (t3.medium 기각, c5.large 채택)
+## ADR-028: EC2 인스턴스 타입 선택 전략 (t3.medium 기각, c5.large 채택)
 
 ### 상태
 
@@ -2311,7 +2465,7 @@ ADR-026의 의사결정 3항("E2E 스크립트에 벤치마킹 모드 탑재")�
 
 ### 컨텍스트 (Context)
 
-마이크로서비스(C++ 전처리 + Python AI 추론 + Node.js API Gateway)를 단일 EC2 인스턴스에 배포하는 시나리오에서 인스턴스 타입을 결정해야 했습니다. 초기 후보는 비용이 낮은 **t3.medium(vCPU 2개, RAM 4GB, 월 ~$30)**이었으나, E2E 프로파일링 결과(`ADR-026`)와 서비스 리소스 요구사항을 정밀 분석한 결과 부적합 판정을 내렸습니다.
+마이크로서비스(C++ 전처리 + Python AI 추론 + Node.js API Gateway)를 단일 EC2 인스턴스에 배포하는 시나리오에서 인스턴스 타입을 결정해야 했습니다. 초기 후보는 비용이 낮은 **t3.medium(vCPU 2개, RAM 4GB, 월 ~$30)**이었으나, E2E 프로파일링 결과(`ADR-027`)와 서비스 리소스 요구사항을 정밀 분석한 결과 부적합 판정을 내렸습니다.
 
 ### 의사결정 (Decision)
 
@@ -2331,7 +2485,7 @@ t3.medium은 **기준 성능이 vCPU 2개의 20%(= 0.4 vCPU 상당)**입니다. 
 | EfficientNet-B2 추론 (Python, CPU) | 500ms~2s | CPU-bound |
 | Node.js 라우팅 + 파일 I/O | ~50ms | I/O-bound |
 
-> **측정 방법**: 위 수치는 `scripts/e2e_smoke_test.ps1 -ProfileMode -Concurrency 3`으로 TrafficBot을 실행하여 `Server-Timing` 헤더에서 수집한 실측값이다. (ADR-026 구현체)
+> **측정 방법**: 위 수치는 `scripts/e2e_smoke_test.ps1 -ProfileMode -Concurrency 3`으로 TrafficBot을 실행하여 `Server-Timing` 헤더에서 수집한 실측값이다. (ADR-027 구현체)
 
 CPU 크레딧 소진 시 위 연산들이 **0.4 vCPU 기준으로 직렬 처리**되어 실사용 불가 수준의 응답 지연이 발생합니다.
 
@@ -2371,7 +2525,7 @@ c5.large 채택의 전제 조건으로 **Python AI 서버의 추론 엔진을 Py
 | g4dn.xlarge | 4 + T4 GPU | 16GB | ~$380 | ⚪ GPU 추론 필요 시 고려 (TensorRT 연계) |
 
 - **c5.xlarge**: 동시 처리 요구가 높아질 경우 자연스러운 업그레이드 경로.
-- **g4dn.xlarge**: TensorRT 기반 GPU 추론(ADR-023)이 요구될 때 전환. ONNX → TensorRT 변환 경로가 이미 ADR-023에 설계되어 있어 이전 비용 낮음.
+- **g4dn.xlarge**: TensorRT 기반 GPU 추론(ADR-024)이 요구될 때 전환. ONNX → TensorRT 변환 경로가 이미 ADR-024에 설계되어 있어 이전 비용 낮음.
 
 ### 결론 (Consequences)
 
@@ -2383,7 +2537,7 @@ c5.large 채택의 전제 조건으로 **Python AI 서버의 추론 엔진을 Py
 
 ---
 
-## ADR-028: C++ 동시 처리 최적화: WorkerPool 튜닝 및 콜드 스타트 수용
+## ADR-029: C++ 동시 처리 최적화: WorkerPool 튜닝 및 콜드 스타트 수용
 
 ### 상태
 
@@ -2391,7 +2545,7 @@ c5.large 채택의 전제 조건으로 **Python AI 서버의 추론 엔진을 Py
 
 ### 컨텍스트 (Context)
 
-ADR-026의 W3C Server-Timing 프로파일링 시스템을 통해 동시성 3 부하 테스트(`-Concurrency 3`)에서 C++ 전처리 서버의 응답 시간이 `537ms / 115ms / 118ms`로 첫 번째 요청만 4.7배 느린 이상값이 발견되었습니다. 단일 요청 기준 처리 시간이 ~115ms임에도 첫 요청이 537ms를 기록하는 원인을 분석해야 했습니다.
+ADR-027의 W3C Server-Timing 프로파일링 시스템을 통해 동시성 3 부하 테스트(`-Concurrency 3`)에서 C++ 전처리 서버의 응답 시간이 `537ms / 115ms / 118ms`로 첫 번째 요청만 4.7배 느린 이상값이 발견되었습니다. 단일 요청 기준 처리 시간이 ~115ms임에도 첫 요청이 537ms를 기록하는 원인을 분석해야 했습니다.
 
 또한, `GetWorkerPool()`이 `hardware_concurrency()`를 그대로 사용하여 고성능 머신에서 과도한 워커 스레드가 생성될 가능성이 있었습니다.
 
@@ -2491,7 +2645,7 @@ Total_E2E_Ms: ~664ms
 
 ---
 
-## ADR-029: 딥러닝 추론 최적화를 위한 TensorRT FP16 양자화 채택
+## ADR-030: 딥러닝 추론 최적화를 위한 TensorRT FP16 양자화 채택
 
 ### 상태
 
@@ -2499,18 +2653,21 @@ Total_E2E_Ms: ~664ms
 
 ### Context (배경)
 
-* `ai-server`의 AI 추론 엔진은 초기에 PyTorch로 구축되었으며, 최적화를 위해 ONNX Runtime 기반 CPU 추론을 채택했습니다. (ADR-009)
+- `ai-server`의 AI 추론 엔진은 초기에 PyTorch로 구축되었으며, 최적화를 위해 ONNX Runtime 기반 CPU 추론을 채택했습니다. (ADR-009)
+
 - 성능 평가 결과, ONNX Runtime은 P95 Latency 24.4ms, 48 QPS(Queries Per Second)를 달성하여 준수한 성능을 보였으나, 폭발적인 트래픽 시 지연을 방어하고 특정 환경(GPU)에서 시스템 처리량을 극대화하기 위한 "엔드게임(Endgame) 최적화" 궤적을 제시할 필요가 있었습니다.
 
 ### Decision (의사결정)
 
-* **하이브리드 엔진 Fallback 아키텍처 구축**: 클라우드 인프라(ADR-027, c5.large 등 CPU 전용) 배포 환경과 로컬(GPU) 가속 환경 사이의 텐션(Tension)을 허물기 위해 투트랙 운영을 채택합니다.
+- **하이브리드 엔진 Fallback 아키텍처 구축**: 클라우드 인프라(ADR-028, c5.large 등 CPU 전용) 배포 환경과 로컬(GPU) 가속 환경 사이의 텐션(Tension)을 허물기 위해 투트랙 운영을 채택합니다.
+
 - **최적화 엔진(GPU 환경)**: **TensorRT 엔진 및 FP16 양자화(Quantization)**. 데이터 I/O만 FP32로 유지하고, 연산 매트릭스를 FP16으로 타협하여 극한의 성능(14ms)을 뽑아냅니다.
 - **운영/폴백 엔진(CPU 환경)**: 클라우드 프로덕션 서버 결정을 준수하기 위해 인프라에 TensorRT가 부재할 경우 크래시를 내지 않고, 이전 기술인 **ONNX Runtime(CPU, 24ms)**으로 우회/안착(Graceful Degradation) 합니다.
 
 ### Consequences (결과)
 
-* ✅ **극강의 성능 향상**: P95 Latency **14.1ms** (1.7배 향상), Throughput **325 QPS** (6.8배 향상)를 달성하여 시스템 병목을 완전히 해소했습니다.
+- ✅ **극강의 성능 향상**: P95 Latency **14.1ms** (1.7배 향상), Throughput **325 QPS** (6.8배 향상)를 달성하여 시스템 병목을 완전히 해소했습니다.
+
 - ✅ **메모리 최적화**: GPU 메모리 할당량이 53MB(PyTorch)에서 **40MB**로 감소했습니다 (RTX 3050 Ti 기준).
 - ⚠️ **빌드 복잡도 증가**: 배포 환경(GPU 드라이버, CUDA 버전)에 강하게 결합되므로 하드웨어 스펙이 바뀔 때마다 `.engine` 파일을 재빌드해야 하는 제약이 발생합니다. 모델 로더 폴백 시스템을 통해 방어합니다.
 
@@ -2518,7 +2675,7 @@ Total_E2E_Ms: ~664ms
 
 ---
 
-## ADR-030: AI 사각지대 보완을 위한 C++ 정량 분석 레이어(Hu Moments, Histogram) 도입
+## ADR-031: AI 사각지대 보완을 위한 C++ 정량 분석 레이어(Hu Moments, Histogram) 도입
 
 ### 상태
 
@@ -2526,22 +2683,24 @@ Total_E2E_Ms: ~664ms
 
 ### Context (배경)
 
-* HFD(인물화 검사)의 효율적인 채점을 위해 도입된 EfficientNet-B2 기반 모델은 공간적 특징 분류에 뛰어나지만, 신경학적 미세 떨림(Tremor)이나 펜의 필압(Pressure) 등 **심리학적/임상적 힌트를 수치화**하는 데는 블랙박스 한계를 가집니다.
+- HFD(인물화 검사)의 효율적인 채점을 위해 도입된 EfficientNet-B2 기반 모델은 공간적 특징 분류에 뛰어나지만, 신경학적 미세 떨림(Tremor)이나 펜의 필압(Pressure) 등 **심리학적/임상적 힌트를 수치화**하는 데는 블랙박스 한계를 가집니다.
 
 ### Decision (의사결정)
 
-* C++ `preprocess-server` 전처리 파이프라인 내에 별도의 **정량 분석 레이어(Analysis Layer)**를 도입했습니다.
+- C++ `preprocess-server` 전처리 파이프라인 내에 별도의 **정량 분석 레이어(Analysis Layer)**를 도입했습니다.
+
 - **PressureAnalyzer**: 이미지의 `R` 채널(Grayscale) 픽셀 히스토그램을 분석하여 평균 밝기와 픽셀 밀도(필압의 강도)를 Float 수치로 추출합니다.
 - **TremorAnalyzer**: 불변 모멘트 기반의 기하학적 복잡도 수치인 **Hu Moments** 7개 축 분산을 산출하여, AI가 놓치기 쉬운 선의 "미세한 떨림"을 정량 표기합니다.
 
 ### Consequences (결과)
 
-* ✅ **설명 가능한 AI(XAI) 보조**: 모델이 단순히 "불안 증세"라는 라벨링을 던져주는 것에 머물지 않고, 의사나 전문가에게 "필압 0.82(강함), Tremor 0.3(불안정)"이라는 뒷받침되는 수치적 근거를 함께 제공합니다.
+- ✅ **설명 가능한 AI(XAI) 보조**: 모델이 단순히 "불안 증세"라는 라벨링을 던져주는 것에 머물지 않고, 의사나 전문가에게 "필압 0.82(강함), Tremor 0.3(불안정)"이라는 뒷받침되는 수치적 근거를 함께 제공합니다.
+
 - ✅ **도메인 락인(Lock-in) 방어**: 딥러닝만의 맹점을 고전 컴퓨터 비전(Computer Vision) 수학의 역량으로 단단히 메운 하이브리드 추론 구조를 완성했습니다.
 
 ---
 
-## ADR-031: API Gateway 해시(SHA-256) 기반 스마트 캐싱 아키텍처 채택
+## ADR-032: API Gateway 해시(SHA-256) 기반 스마트 캐싱 아키텍처 채택
 
 ### 상태
 
@@ -2549,24 +2708,27 @@ Total_E2E_Ms: ~664ms
 
 ### Context (배경)
 
-* 동일한 이미지를 여러 유저가 중복 업로드하거나 새로고침 과정에서 재전송할 경우, C++ 전처리 서버와 Python AI 서버 등 무거운 연산을 담당하는 노드에 불필요한 부하가 반복적으로 발생합니다.
+- 동일한 이미지를 여러 유저가 중복 업로드하거나 새로고침 과정에서 재전송할 경우, C++ 전처리 서버와 Python AI 서버 등 무거운 연산을 담당하는 노드에 불필요한 부하가 반복적으로 발생합니다.
+
 - 초기(Phase 4까지) 개발 환경에서는 분석의 독립적 추적을 위해 임시 타임스탬프 기반 파일명 체계를 차용했으나, 시스템 고도화에 따라 메모리 및 CPU 소모를 막는 방어 기제가 필요했습니다.
 
 ### Decision (의사결정)
 
-* `api-gateway` 단에 이미지 콘텐츠 기반의 **SHA-256 해싱 LRU 캐시 레이어**를 도입합니다.
+- `api-gateway` 단에 이미지 콘텐츠 기반의 **SHA-256 해싱 LRU 캐시 레이어**를 도입합니다.
+
 - 분석 요청 시 보안과 성능의 **Trade-off를 계산한 특정 시점(L2 후속)**에서 캐시 룩업(Lookup)을 수행합니다:
   - L1(확장자) 검증 및 L2(매직 바이트) 검증을 통과한 직후 캐시를 확인합니다. (해시가 스푸핑(Spoofing) 되었더라도 파일시스템 레벨에서 안전한 미디어임이 1차 증명된 요청만을 신뢰)
   - 해시가 맞다면 후속 보안기제인 L3~L6(안티바이러스 파싱, 비싼 재인코딩 연산) 및 C++/Python 연산을 모두 완전히 생략(Bypass)합니다.
 
 ### Consequences (결과)
 
-* ✅ **지연 시간 극복**: C++ 파이프라인 오버헤드(~100ms), 딥러닝 추론(~15ms), 재인코딩 보안 검증시간을 모두 회피하여, **10ms 이내에 즉각 응답**하는 극단적 속도를 산출합니다.
+- ✅ **지연 시간 극복**: C++ 파이프라인 오버헤드(~100ms), 딥러닝 추론(~15ms), 재인코딩 보안 검증시간을 모두 회피하여, **10ms 이내에 즉각 응답**하는 극단적 속도를 산출합니다.
+
 - ✅ **보안-성능 균형 증명**: 성능(캐시)을 맹신하여 외부 페이로드를 즉시 통과시키지 않고, '기본적인 무결성 규칙(L2 매직 바이트)' 확인이라는 최소 페널티 구간을 설정하여 **해시 충돌 기반의 악성코드 공격**을 아키텍처 레벨에서 세련되게 방어했습니다.
 
 ---
 
-## ADR-032: 부하 테스트 및 성능 검증 도구로 오픈소스 k6 채택
+## ADR-033: 부하 테스트 및 성능 검증 도구로 오픈소스 k6 채택
 
 ### 상태
 
@@ -2574,21 +2736,23 @@ Total_E2E_Ms: ~664ms
 
 ### Context (배경)
 
-* Phase 5 배포 및 시스템 안정화 과정에서 타겟 성능인 동시 접속자 100명(100 VU) 환경에서 서비스가 무너지지 않고 지정된 P95 지연 지표(Latency)를 만족하는지 철저하게 검증할 도구가 필요했습니다.
+- Phase 5 배포 및 시스템 안정화 과정에서 타겟 성능인 동시 접속자 100명(100 VU) 환경에서 서비스가 무너지지 않고 지정된 P95 지연 지표(Latency)를 만족하는지 철저하게 검증할 도구가 필요했습니다.
 
 ### Decision (의사결정)
 
-* JMeter(JVM 기반으로 무거움), Artillery(Node.js 오버헤드) 등을 고려했으나, Go 언어 기반으로 매우 가벼우며 최소한의 OS 리소스를 사용하는 **OSS k6**를 표준 부하 테스트 도구로 채택했습니다.
+- JMeter(JVM 기반으로 무거움), Artillery(Node.js 오버헤드) 등을 고려했으나, Go 언어 기반으로 매우 가벼우며 최소한의 OS 리소스를 사용하는 **OSS k6**를 표준 부하 테스트 도구로 채택했습니다.
+
 - 시나리오 스크립팅은 JavaScript 규격을 차용하고 있어, `api-gateway` 개발에 사용된 Node 생태계 경험을 곧바로 재활용할 수 있었습니다.
 
 ### Consequences (결과)
 
-* ✅ **고효율 테스트**: 단일 워크스테이션 환경에서도 부담 없이 100~500 VU 이상의 대규모 부하 파동(Wave)을 스크립트로 구현할 수 있으며, CLI를 통해 직관적인 성능 리포트를 발급받을 수 있습니다.
+- ✅ **고효율 테스트**: 단일 워크스테이션 환경에서도 부담 없이 100~500 VU 이상의 대규모 부하 파동(Wave)을 스크립트로 구현할 수 있으며, CLI를 통해 직관적인 성능 리포트를 발급받을 수 있습니다.
+
 - ✅ **테스트 파이프라인 내재화 자동화**: k6 시나리오를 추후 CI/CD 환경에 통합하여 배포 시 성능 회귀(Performance Regression)가 일어나는지 모니터링할 수 있는 SRE 기반을 다졌습니다.
 
 ---
 
-## ADR-033: 비연필(컬러) 이미지 조기 필터링 및 예외 처리 전략
+## ADR-034: 비연필(컬러) 이미지 조기 필터링 및 예외 처리 전략
 
 ### 상태
 
@@ -2619,8 +2783,8 @@ Mind Palette 프로젝트는 **연필로 그린 아동화(HFD)**를 분석 대�
 
 ### 근거 (Rationale)
 
-1. **조명 왜곡과 OpenCV 생태계 최적해 (Color vs Monochrome)**: 
-   - 기존에는 "연필 그림의 전체 S(채도) 평균이 낮다"는 가정으로 접근했으나, 실생활의 스마트폰이나 형광등/황변 종이에 의해 배경 픽셀의 채도가 튀는 상황에서 오탐지(False Positive)가 빈번했습니다. 
+1. **조명 왜곡과 OpenCV 생태계 최적해 (Color vs Monochrome)**:
+   - 기존에는 "연필 그림의 전체 S(채도) 평균이 낮다"는 가정으로 접근했으나, 실생활의 스마트폰이나 형광등/황변 종이에 의해 배경 픽셀의 채도가 튀는 상황에서 오탐지(False Positive)가 빈번했습니다.
    - "배경은 선형 객체보다 항상 무조건 밝다"는 제1원칙을 적용하여, **명도(Value) 기반의 마스킹 기법**을 선행함으로써 오직 그려진 획(Stroke) 부분의 특정 HSV 조건(V <= 220, S >= 50)만 집중 검사하도록 복합 필터 구조로 재설계했습니다.
    - **출처 (Context7 검증)**: [OpenCV 4.x Official Tutorial: Thresholding Operations using inRange](https://docs.opencv.org/4.x/da/d97/tutorial_threshold_inRange.html). 공식 레퍼런스의 `cv::cvtColor(frame, frame_HSV, cv::COLOR_BGR2HSV)` 및 `cv::inRange()`를 활용한 객체 추적 원리를 차용하여, Pencil Sketch(무채색)와 Background(고명도) 영역을 분리하는 임계값(V=220, S=50)을 도출했습니다.
 2. **비용 효율성 (Fail-Fast)**: C++ OpenCV 연산은 Python 딥러닝 추론보다 수십 배 빠르고 가볍습니다. 1차 관문에서 조기 드랍함으로써 전체 시스템의 Throughput을 최적화합니다.
@@ -2635,7 +2799,7 @@ Mind Palette 프로젝트는 **연필로 그린 아동화(HFD)**를 분석 대�
 
 ---
 
-## ADR-034: Claude Code Stop 훅 기반 컨텍스트 자동 모니터링 도입
+## ADR-035: Claude Code Stop 훅 기반 컨텍스트 자동 모니터링 도입
 
 ### 상태
 
@@ -2703,7 +2867,7 @@ Claude Code는 대화가 길어질수록 컨텍스트 창(Context Window)에 이
 
 #### 3️⃣ Antigravity와의 경험 일관성
 
-- ADR-017에서 채택한 역할 분담 전략의 연장선으로, 두 AI 도구가 동등한 수준의 컨텍스트 관리 안전망을 제공하게 됩니다.
+- ADR-018에서 채택한 역할 분담 전략의 연장선으로, 두 AI 도구가 동등한 수준의 컨텍스트 관리 안전망을 제공하게 됩니다.
 
 ### 대안 검토 (Alternatives)
 
@@ -2721,7 +2885,7 @@ Claude Code는 대화가 길어질수록 컨텍스트 창(Context Window)에 이
 
 ---
 
-## ADR-035: 설정 관리 시스템화 — 환경 변수 인벤토리·검증·CI 감사 도입
+## ADR-036: 설정 관리 시스템화 — 환경 변수 인벤토리·검증·CI 감사 도입
 
 - **날짜**: 2026-04-13
 - **상태**: ✅ Accepted
@@ -2729,7 +2893,7 @@ Claude Code는 대화가 길어질수록 컨텍스트 창(Context Window)에 이
 
 ### 배경 (Context)
 
-ADR-033 구현 과정에서 발생한 컬러 이미지 필터 우회 버그의 근본 원인 중 하나는 **환경 변수 관리 부재**였다.
+ADR-034 구현 과정에서 발생한 컬러 이미지 필터 우회 버그의 근본 원인 중 하나는 **환경 변수 관리 부재**였다.
 
 - `VITE_USE_MOCK=true`가 `.dockerignore`에 의해 Docker 빌드에서 제외되지만, 이 사실을 문서화하지 않아 개발자가 인지하지 못함
 - `KEEP_IMAGES=false`가 프로덕션 기본값이어야 하지만 `.env.example`이 없어 신규 기여자가 안전값을 파악하기 어려움
@@ -2749,7 +2913,7 @@ ADR-033 구현 과정에서 발생한 컬러 이미지 필터 우회 버그의 �
 5. **CI 자동 감사**: `.github/workflows/main.yml`의 `config-audit` 잡 → PR마다 키 누락·Mock 잔재 자동 검출
 6. **배포 후 가시성**: `GET /health` 응답에 `mode` 필드 추가 → 실제 런타임 설정을 즉시 확인 가능
 
-### ADR-035 근거 (Rationale)
+### ADR-036 근거 (Rationale)
 
 **Fail-Safe Defaults 원칙**: 기본값은 항상 "프로덕션에서 안전한 값"이어야 한다. `VITE_USE_MOCK`의 기본값이 `false`인 것처럼, 모든 개발/디버그 설정은 명시적으로 `true`를 설정해야만 활성화되어야 한다.
 
@@ -2757,7 +2921,7 @@ ADR-033 구현 과정에서 발생한 컬러 이미지 필터 우회 버그의 �
 
 **Shift-Left**: 잘못된 설정을 런타임(배포 후)이 아니라 빌드 시점(CI)에 발견하면 수정 비용이 훨씬 낮다.
 
-### ADR-035 대안 검토 (Alternatives)
+### ADR-036 대안 검토 (Alternatives)
 
 | 대안 | 거부 이유 |
 | ---- | --------- |
@@ -2765,7 +2929,7 @@ ADR-033 구현 과정에서 발생한 컬러 이미지 필터 우회 버그의 �
 | dotenv-vault 같은 시크릿 관리 서비스 | 클라우드 추가 비용·복잡도 증가. 현재 EC2+GitHub Secrets 조합으로 충분 |
 | 검증 없이 .env.example만 추가 | 문서가 코드와 멀어질 경우 형식적 파일로 전락 — CI 감사 없이는 신뢰 불가 |
 
-### ADR-035 결과 (Consequences)
+### ADR-036 결과 (Consequences)
 
 - ✅ 신규 기여자가 `.env.example`만 보면 서비스 구동에 필요한 모든 설정을 파악 가능
 - ✅ `VITE_USE_MOCK=true`가 프로덕션 빌드에 포함되면 CI에서 자동 차단
@@ -2775,141 +2939,25 @@ ADR-033 구현 과정에서 발생한 컬러 이미지 필터 우회 버그의 �
 
 ---
 
-## ADR-036: AI 모듈 내부 아키텍처: 3-Layer 분리 및 Protocol 기반 엔진 교환 설계
+## 🎯 면접 압박 질문 & 답변 (Pressure Interview Q&A)
 
-### ADR-036 상태
+> 본 섹션은 ADR 전반에서 참조되는 12개 압박 질문(Q1~Q12)의 **인덱스 자리**입니다. 질문별 코드 레벨 상세 답변은 아래 보조 문서에서 관리합니다.
 
-✅ **Accepted** (2026-04)
+| # | 질문 주제 | 관련 ADR |
+| --- | --- | --- |
+| Q1 | FilterPipeline + Early Resize 47% 개선의 코드 레벨 기법 | ADR-025 |
+| Q2 | ONNX vs TensorRT 근본 아키텍처 차이 (커널 퓨전, FP16 Tensor Core) | ADR-030 |
+| Q3 | Server-Timing 측정 환경 구성 (파싱, 보안 게이팅, Prometheus 미선택 사유) | ADR-027 |
+| Q4 | WorkerPool 튜닝과 Race Condition 방지 설계 | ADR-029 |
+| Q5 | 콜드 스타트 530ms를 SLA 위반으로 보지 않는 근거 | ADR-029 |
+| Q6 | EfficientNet-B2를 ResNet-50보다 느린데도 채택한 이유 | ADR-010 |
+| Q7 | MSA 전환의 네트워크 오버헤드를 어떻게 상쇄했는가 | ADR-001 |
+| Q8 | SHA-256 캐시의 보안-성능 균형 | ADR-032 |
+| Q9 | FP16 양자화 후 정확도 편차 0.0004 검증 방법 | ADR-030 |
+| Q10 | Kubernetes를 배제한 비용·운영 복잡도 분석 | ADR-002 |
+| Q11 | gRPC 대신 REST를 택한 병목 분석 (실측 근거) | ADR-008 |
+| Q12 | 컬러 이미지 2-Tier Fail-Fast 검증 구조 | ADR-034 |
 
-### ADR-036 컨텍스트 (Context)
-
-`ai-server`는 아동 인물화(HFD) 60문항 채점, IQ 산출, 백분위 변환, 그리고 C++ 전처리 서버의 기하 분석 결과와의 결합까지 수행하는 핵심 서비스입니다. 기존 ADR들은 개별 기술 선택(ADR-009 PyTorch, ADR-010 EfficientNet-B2, ADR-018 4-Head 구조, ADR-029 TensorRT)을 다루지만, 이들을 **하나의 모듈로 조립하는 내부 아키텍처** — 레이어 분리 원칙, 추론 엔진 교환 메커니즘, 데이터 흐름 파이프라인 — 에 대한 설계 근거가 문서화되어 있지 않았습니다.
-
-이 ADR은 "왜 이 코드 구조를 선택했는가"에 대한 근거를 기록합니다.
-
-### ADR-036 의사결정 (Decision)
-
-#### 1️⃣ 3-Layer 패키지 분리 (`core` / `infra` / `routes`)
-
-```text
-ai-server/src/
-├── core/           # 도메인 로직 (순수 Python, 프레임워크 비의존)
-│   ├── model.py          # HFDClassifier: EfficientNet-B2 + 4-Head
-│   ├── item_mapping.py   # 60문항 ↔ 4-Head 매핑 규칙
-│   ├── iq_scorer.py      # 원점수 → IQ(표준점수) → 백분위 변환
-│   ├── dataset.py         # HFDDataset: 학습/검증 데이터셋
-│   ├── augmentation.py   # 스케치 특화 데이터 증강
-│   ├── evaluate.py       # Head별 Accuracy, F1, LOOCV
-│   ├── preprocessing.py  # C++ 출력 → 모델 입력 텐서 변환
-│   ├── onnx_converter.py # PyTorch → ONNX 변환
-│   └── hybrid_combiner.py # AI + C++ 기하 분석 결합
-├── infra/          # 인프라 어댑터 (외부 런타임 의존)
-│   ├── engine_protocol.py     # InferenceEngine Protocol (공통 인터페이스)
-│   ├── onnx_inference.py      # ONNX Runtime 엔진
-│   ├── tensorrt_engine.py     # TensorRT Native API 엔진
-│   ├── tensorrt_ort_engine.py # ORT TensorrtExecutionProvider 엔진
-│   ├── model_loader.py        # Fallback 체인 로더
-│   └── logger.py              # structlog 기반 구조화 로깅
-├── routes/         # HTTP 엔드포인트 (FastAPI 의존)
-│   ├── health.py   # GET /health
-│   └── analyze.py  # POST /analyze
-├── config.py       # Pydantic BaseSettings 중앙 설정
-└── main.py         # App Factory (create_app)
-```
-
-**원칙**: 의존성 방향은 `routes → core/infra → config` 단방향입니다. `core`는 FastAPI, ONNX Runtime, TensorRT 등 외부 프레임워크에 의존하지 않으며, `infra`가 외부 런타임과의 어댑터 역할을 담당합니다.
-
-#### 2️⃣ Protocol 기반 추론 엔진 교환 (Duck Typing)
-
-```python
-# infra/engine_protocol.py
-@runtime_checkable
-class InferenceEngine(Protocol):
-    def run(self, image: np.ndarray) -> Tuple[np.ndarray, ...]: ...
-    @property
-    def output_names(self) -> list[str]: ...
-```
-
-3개의 추론 엔진(`OnnxInferenceEngine`, `TensorRtNativeEngine`, `TensorRtOrtEngine`)이 **명시적 상속 없이** 동일한 `run()` / `output_names` 인터페이스를 구현합니다. ABC 상속 대신 Python Protocol을 사용하여, 각 엔진이 자기 런타임 의존성(onnxruntime, tensorrt, torch)만 임포트하면서도 호출부에서는 동일하게 취급됩니다.
-
-#### 3️⃣ Graceful Degradation Fallback 체인
-
-```text
-model_loader.load_models() 실행 순서:
-  1. torch.cuda.is_available() → TensorRT Native Engine 시도
-  2. 실패 시 → ONNX Runtime Engine으로 Fallback
-  3. 모두 실패 시 → ModelState(engine_type="none") 반환, /health에서 감지
-```
-
-GPU 환경에서는 TensorRT의 극한 성능(14ms)을 활용하고, CPU 전용 클라우드(ADR-027 c5.large)에서는 ONNX Runtime(24ms)으로 자동 전환합니다. PyTorch 자체를 lazy import하여 GPU가 없는 슬림 이미지에서는 torch 의존성 없이 ONNX만으로 구동됩니다.
-
-#### 4️⃣ End-to-End 데이터 흐름 파이프라인
-
-```text
-[C++ preprocess-server]
-     │  512x512 3-Channel Hybrid (R=Gray, G=Binary, B=DistanceTransform)
-     ▼
-[POST /analyze]  이미지 업로드 수신
-     │
-     ├─ _validate_image_file()     매직바이트 + PIL verify
-     ├─ _preprocess_image()        Resize(260x260) → Normalize → CHW → numpy
-     ├─ engine.run(img_np)         ONNX/TensorRT 추론 → 4-Head 로짓
-     ├─ _compute_mean_confidence() OOD 감지 (ADR-033 Tier 2)
-     ├─ _logits_to_item_results()  Sigmoid → 60문항 0/1 판정
-     ├─ score_to_result()          원점수 → IQ → 백분위 (전국 규준)
-     └─ HybridCombiner.combine()   AI 결과 + C++ 기하 분석 결합
-```
-
-각 단계가 독립 함수로 추출(Extract Method)되어 있어 단위 테스트와 디버깅이 용이합니다.
-
-#### 5️⃣ 설정 중앙화 (Pydantic BaseSettings)
-
-`config.py`에서 `ModelConfig`, `ServerConfig`, `TrainingConfig`를 분리하여 모든 하이퍼파라미터(입력 크기, Head 크기, 정규화 통계, 모델 경로, TensorRT 옵션 등)를 중앙 관리합니다. 환경 변수 오버라이드가 가능하며, 시작 시 Fail-Fast 검증(`INFERENCE_BACKEND` 유효값 체크)을 수행합니다.
-
-#### 6️⃣ App Factory 패턴
-
-`create_app(model_config=None)` 팩토리 함수로 FastAPI 앱을 생성합니다. 테스트에서는 `ModelConfig`를 주입하여 모델 로드 없이 격리된 앱 인스턴스를 만들 수 있으며, 프로덕션에서는 `app = create_app()`으로 기본 설정을 사용합니다.
-
-### ADR-036 근거 (Rationale)
-
-#### 왜 3-Layer인가 — Hexagonal Architecture의 경량 적용
-
-| 계층 | 책임 | 교체 시나리오 |
-| ---- | ---- | ------------ |
-| `core` | 도메인 규칙 (HFD 60문항, IQ 공식, 4-Head 매핑) | 채점 규칙 변경 시 core만 수정, infra/routes 무변경 |
-| `infra` | 런타임 어댑터 (ONNX, TensorRT, 로깅) | 새 추론 엔진 추가 시 infra에 엔진 클래스 1개 추가 + Protocol 준수 |
-| `routes` | HTTP 인터페이스 | API 스펙 변경 시 routes만 수정, 도메인 로직 무변경 |
-
-Full Hexagonal이나 DDD를 도입하면 이 규모(20여 개 파일)에서는 오버엔지니어링입니다. 3-Layer는 "충분한 분리"를 제공하면서 파일 탐색 비용을 최소화합니다.
-
-#### 왜 Protocol인가 — ABC 상속보다 나은 이유
-
-- 각 엔진이 서로 다른 C 라이브러리(onnxruntime, tensorrt)에 의존하며, 이들의 **임포트 자체가 환경에 따라 실패**합니다. ABC 상속은 모든 엔진 클래스를 동시에 임포트해야 하지만, Protocol은 호출부에서만 타입 검증을 수행하므로 lazy import와 양립합니다.
-- `@runtime_checkable`을 통해 `isinstance(engine, InferenceEngine)` 런타임 검증도 가능합니다.
-
-#### 왜 Lazy Import인가 — 메모리 최적화
-
-`model_loader.py`에서 `torch`, `TensorRtNativeEngine`, `OnnxInferenceEngine`을 함수 내부에서 임포트합니다. CPU 전용 배포 환경에서 PyTorch(~2GB)를 임포트하지 않아 컨테이너 메모리를 절약하고, 불필요한 ImportError를 방지합니다.
-
-#### 왜 Extract Method인가 — analyze.py의 함수 분리
-
-`POST /analyze` 핸들러가 검증→전처리→추론→OOD감지→채점→IQ산출→결합까지 수행하므로, 단일 함수로 두면 300줄 이상의 God Function이 됩니다. 각 단계를 `_preprocess_image()`, `_run_inference()`, `_logits_to_item_results()`, `_build_analysis_result()` 등으로 추출하여 단위 테스트 가능성과 가독성을 확보했습니다.
-
-### ADR-036 대안 검토 (Alternatives)
-
-| 대안 | 거부 이유 |
-| ---- | -------- |
-| 단일 `model.py`에 모든 로직 집중 | 추론 엔진 교체, 채점 로직 수정, API 변경이 모두 같은 파일을 건드리게 됨 (변경 이유의 혼재) |
-| ABC 상속 기반 엔진 인터페이스 | TensorRT/ONNX의 조건부 임포트와 충돌. GPU 없는 환경에서 임포트 에러 발생 |
-| Full Hexagonal / Clean Architecture | 20개 파일 규모에서 Port, Adapter, UseCase 분리는 복잡도만 증가. 3-Layer로 충분 |
-| Django/Flask 대신 FastAPI | ADR-004에서 결정 완료. 비동기 + 자동 OpenAPI + Pydantic 검증의 조합이 AI 서빙에 최적 |
-
-### ADR-036 결론 (Consequences)
-
-- ✅ **엔진 교환 용이**: TensorRT, ONNX, 향후 OpenVINO 등 새 엔진 추가 시 `infra/`에 Protocol 구현체 1개만 추가하면 됨
-- ✅ **테스트 격리**: `core/` 도메인 로직은 외부 런타임 없이 순수 Python/PyTorch로 단위 테스트 가능
-- ✅ **배포 유연성**: CPU 전용 환경에서 PyTorch 없이 ONNX만으로 구동, GPU 환경에서 자동 TensorRT 전환
-- ✅ **온보딩 효율**: 패키지 구조만으로 "어디를 고쳐야 하는가"가 명확 (채점 규칙 → core, 엔진 추가 → infra, API 변경 → routes)
-- ⚠️ **Protocol 제약**: `mypy`의 Protocol 검증은 정적 분석에만 유효하며, 런타임에서는 메서드 시그니처까지 검증하지 않으므로 통합 테스트가 필수
+> 💡 **사용 가이드**: 각 질문의 상세 답변은 관련 ADR의 "근거(Rationale)"·"대안(Alternatives)" 섹션을 교차 참조하여 정리하세요. 본 인덱스는 ADR 본문 내 `→ [면접 압박 질문 & 답변]` 링크의 앵커 수렴점 역할을 합니다.
 
 ---
