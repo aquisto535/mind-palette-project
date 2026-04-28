@@ -2455,6 +2455,62 @@ ADR-027의 의사결정 3항("E2E 스크립트에 벤치마킹 모드 탑재")�
 
 > 📌 **관련 압박 질문**: Q3 (Server-Timing 측정 환경 구성 — 파싱 정규식, 보안 게이팅, Prometheus 대신 선택한 이유) → [면접 압박 질문 & 답변](#-면접-압박-질문--답변-pressure-interview-qa)
 
+### 업데이트 (2026-04): 로그 기반 측정 경로 추가 — 이중화
+
+#### 배경 변경
+
+- **인프라 전환**: ADR-028로 EC2 인스턴스가 T3.medium → **c5.large**로 승격되어, ADR-027 제정 당시의 "Disk Exhaustion" 전제가 완화되었습니다.
+- **로깅 스택 도입**: 운영 과정에서 Winston `DailyRotateFile`(일별 로테이션·크기 제한) 및 Python `structlog`, C++ `spdlog`가 이미 표준 로거로 정착 — 파일 로깅 자체는 이미 운영 중입니다.
+- **관측 공백**: ADR-027의 Server-Timing 경로는 `X-Admin-Profile-Key` 게이트에 묶여 있어, 일반 트래픽에 대한 **상시 P95 관측·이상 탐지**가 불가능했습니다. 관리자 스크립트 실행 시점의 샘플만 수집되므로, 무작위 레이턴시 스파이크의 사후 분석이 어렵습니다.
+
+#### 보완 의사결정
+
+Server-Timing 헤더와 **구조화 로그 두 경로로 이중화**하되, 측정 지점은 단일 소스(각 모듈의 타이머 1개)로 유지합니다.
+
+| 경로 | 게이트 | 용도 | 확인 방법 |
+| ---- | ------ | ---- | -------- |
+| `Server-Timing` 응답 헤더 | `X-Admin-Profile-Key` 일치 시 | 일회성·대화식 프로파일링 | 브라우저 개발자 도구 → Network → Timing 탭 / TrafficBot 집계 |
+| 구조화 로그 이벤트 (`analyze_completed` / `inference_completed` / `Successfully processed ...ms`) | 없음 — 항상 기록 | 상시 모니터링·P95 집계·사후 분석 | `docker compose logs <service> \| grep <event>` |
+
+#### 내부 측정 헤더 — `X-Process-Duration-Ms`
+
+서비스 간 내부망 전용의 신규 헤더로, 업스트림(preprocess / ai) 응답에 **항상** 포함됩니다 (Admin Key 무관).
+
+- **흐름**: preprocess/ai 서버가 duration을 헤더에 실어 전달 → Gateway가 파싱해 `preprocessDurationMs` / `aiDurationMs`를 로그에 기록 → **Gateway는 외부 응답에 전파하지 않음** (정보 누출 방지).
+- Server-Timing 헤더는 기존처럼 Admin Key 일치 시에만 외부 응답에 실립니다.
+
+#### 호환성 (Non-Breaking)
+
+- 기존 `Server-Timing` 헤더 동작, `X-Admin-Profile-Key` 게이트, TrafficBot 파싱 로직 모두 **완전 보존**됩니다.
+- 비즈니스 로직(전처리 파이프라인·AI 추론·캐시·에러 처리)은 변경 없으며, 관측 경로만 추가됩니다.
+
+#### 로그 디스크 점유 정책 (기존 로테이션 재사용)
+
+추가되는 `analyze_completed` / `inference_completed` 등의 이벤트는 모두 이미 운영 중인 로테이션 싱크를 경유하므로, **별도 보존·삭제 로직을 신설하지 않습니다.**
+
+세 모듈 모두 **자동 로테이션 + 보관 한도 초과 시 자동 삭제**가 이미 구현되어 있어, 로그 파일이 무한정 누적되는 상황은 발생하지 않습니다. 각 싱크는 단일 파일이 크기 한도에 도달하면 새 파일로 롤오버하고, 보관 한도를 초과한 과거 파일은 싱크 자체가 자동으로 제거합니다 — 별도의 cron·cleanup 스크립트가 필요하지 않습니다.
+
+| 모듈 | 싱크 | 단일 파일 한도 | 보관 한도 | 삭제 방식 | 참조 |
+| ---- | ---- | ------------- | -------- | -------- | ---- |
+| api-gateway (Node.js) | Winston `DailyRotateFile` (error + combined) | 10MB | 7일 (gzip 압축) | 7일 초과 시 자동 삭제 (`maxFiles: '7d'`) | [logger.ts:42-59](../../api-gateway/src/utils/logger.ts#L42-L59) |
+| ai-server (Python) | `logging.handlers.RotatingFileHandler` | 10MB | 백업 5개 (총 ~60MB) | 가장 오래된 백업 덮어쓰기 (`backupCount=5`) | [logger.py:15-17](../../ai-server/src/infra/logger.py#L15-L17) |
+| preprocess-server (C++) | spdlog `rotating_file_sink_mt` | 10MB | 백업 3개 (총 ~40MB) | 가장 오래된 백업 덮어쓰기 (인자 `3`) | [Logger.cpp:16-17](../../preprocess-server/src/utils/Logger.cpp#L16-L17) |
+
+- **세 모듈 합산 최대 디스크 점유**: 약 240MB — `c5.large` EBS(gp3 기본 8~30GB) 기준 1% 미만.
+- **추가 로그 볼륨 영향**: `logger.info` 한 줄당 약 200~300 bytes (JSON 직렬화 기준). 요청당 3줄(preprocess/ai/gateway) × 300B ≈ 1KB 미만. 기존 로테이션 정책 범위 내에서 충분히 흡수됩니다.
+- **부하 급증 시 완화책**: `LOG_LEVEL=warn` 환경변수로 성능 이벤트(`info` 레벨) 억제 가능. 로테이션 정책 자체를 변경할 필요는 없습니다.
+
+#### 근거 (Why Not New ADR)
+
+본 업데이트는 ADR-027의 **대체가 아닌 연장**입니다. Server-Timing 경로는 유지되고, 로그 경로가 상호 보완 수단으로 추가되므로 별도 ADR로 분리할 경우 오히려 두 결정 간의 모순으로 오해될 소지가 있어 ADR-027 내부에 통합 문서화합니다.
+
+#### 결론 — 업데이트 이후의 장/단점
+
+- ✅ **상시 관측 가능**: 모든 트래픽에 대해 P50/P95 집계·이상 탐지 가능 (Admin Key 없이도).
+- ✅ **Gateway 자체 오버헤드 가시화**: `gatewayOverheadMs = totalDurationMs - preprocessDurationMs - aiDurationMs`로 병목을 서비스 단위로 분리.
+- ✅ **외부 노출 최소화 유지**: 내부 측정 헤더(`X-Process-Duration-Ms`)는 Gateway에서 드롭, 외부 응답에는 기존 Server-Timing만 (Admin Key 조건).
+- ⚠️ **주의**: 로그 볼륨이 요청당 3줄(preprocess/ai/gateway) 증가 — `DailyRotateFile` 용량 정책 유지로 충분하나, 과도한 부하 시 `LOG_LEVEL=warn`으로 억제 가능.
+
 ---
 
 ## ADR-028: EC2 인스턴스 타입 선택 전략 (t3.medium 기각, c5.large 채택)
@@ -2670,6 +2726,122 @@ Total_E2E_Ms: ~664ms
 
 - ✅ **메모리 최적화**: GPU 메모리 할당량이 53MB(PyTorch)에서 **40MB**로 감소했습니다 (RTX 3050 Ti 기준).
 - ⚠️ **빌드 복잡도 증가**: 배포 환경(GPU 드라이버, CUDA 버전)에 강하게 결합되므로 하드웨어 스펙이 바뀔 때마다 `.engine` 파일을 재빌드해야 하는 제약이 발생합니다. 모델 로더 폴백 시스템을 통해 방어합니다.
+
+---
+
+### Rationale (왜 FP16인가 — 핵심 근거)
+
+#### 1️⃣ Tensor Core 하드웨어 정합성 (가장 큰 이유)
+
+NVIDIA Ampere 아키텍처(RTX 3050 Ti) GPU 내부에는 두 종류의 연산 유닛이 공존합니다.
+
+| 연산 유닛   | 처리 대상              | 특징                                  |
+| ----------- | ---------------------- | ------------------------------------- |
+| CUDA Core   | FP32 일반 연산         | 범용성 높음, AI 행렬곱에 비효율       |
+| Tensor Core | FP16/BF16 행렬곱 전용  | 이론상 FP32 대비 2~4배 throughput     |
+
+- **FP32 추론 시**: CUDA Core만 사용 → GPU 자원의 절반만 활용
+- **FP16 추론 시**: Tensor Core까지 가동 → GPU **100% 활용**
+- 즉 FP16 채택은 단순한 "정밀도 낮추기"가 아니라 **놀고 있던 전용 가속기를 깨우는 결정**입니다.
+
+#### 2️⃣ 혼합 정밀도(Mixed Precision) 전략 — I/O는 FP32 유지
+
+```text
+[입력 텐서 FP32] → [내부 Conv/GEMM 연산 FP16] → [출력 텐서 FP32] → sigmoid
+                       ↑ Tensor Core 가속
+```
+
+- **이유**: 누적 오차 폭발 방지 + 호출부 코드 변경 불필요
+- 입출력 경계에서만 FP32를 유지하므로 ai-server `routes/`와 `core/` 레이어는 FP16 도입 영향을 받지 않음
+- 내부 GEMM/Conv 연산만 FP16 Tensor Core로 수행
+
+#### 3️⃣ 왜 INT8까지 가지 않았는가 (양자화 깊이의 절충점)
+
+| 옵션    | 이론적 속도 | 채택 안 한 이유                              |
+| ------- | ----------- | -------------------------------------------- |
+| FP32    | 기준 (1.0x) | Tensor Core 미활용으로 GPU 자원 낭비         |
+| FP16 ✅ | 1.7~2x      | 하드웨어 가속 + 무손실에 가까운 정확도       |
+| INT8    | 2~4x        | Calibration 비용 + 정확도 위험 + ROI 소진    |
+
+**INT8 미채택 상세 사유**:
+
+1. Calibration 데이터셋 구축 비용 발생
+2. Multi-label sigmoid 분포에 민감 (max_diff 0.20 통과 불확실)
+3. AI 추론이 더 이상 시스템 병목이 아님 (병목은 C++ 전처리 97ms로 이동)
+
+> 즉 **"더 최적화할 수 있는데 안 한 게 아니라, 추가 최적화의 ROI가 사라진 지점에서 멈춘 것"** 입니다.
+
+---
+
+### FP32 vs FP16 트레이드오프 정량 비교
+
+| 항목                | FP32 (기준) | FP16 (채택) | 변화                    |
+| ------------------- | ----------- | ----------- | ----------------------- |
+| 정밀도 (mantissa)   | 23bit       | 10bit       | 표현 정밀도 ↓           |
+| 표현 범위 (exponent)| ±10³⁸       | ±6.5×10⁴    | 언더플로우 위험 ↑       |
+| 메모리/파라미터     | 4 byte      | 2 byte      | 50% 절감                |
+| GPU 메모리 사용량   | 53 MB       | 40 MB       | -25%                    |
+| 연산 유닛           | CUDA Core   | Tensor Core | 전용 가속기 사용        |
+| P95 Latency         | 24.4 ms     | 14.1 ms     | -42% (1.7배)            |
+| Throughput          | 48 QPS      | 325 QPS     | +577% (6.8배)           |
+| 정확도 (max_diff)   | 기준        | 0.0004      | 허용 기준(0.20)의 1/500 |
+| 이진 분류 일치율    | 기준        | 100%        | 완전 일치               |
+
+**해석**: 일반적인 "성능 ↑ ↔ 정확도 ↓" 트레이드오프 관계가 **이 프로젝트 규모/도메인에서는 성립하지 않음**. max_diff 0.0004는 sigmoid 출력 노이즈 수준이므로 사실상 **Pareto 개선(무손실 가속)**.
+
+---
+
+### Risk Mitigation (잠재적 리스크와 방어 설계)
+
+#### 리스크 1: FP16 언더플로우 (수치적 안정성)
+
+- **현상**: FP16 표현 가능 최소값(약 6×10⁻⁵) 미만의 활성화 값이 0으로 라운딩됨 → sigmoid 직전 로짓이 죽으면 분류 결과 왜곡 가능
+- **방어**: ai-server `tests/test_tensorrt.py`에서 **5-seed 무작위 입력**에 대해 FP32 ONNX vs FP16 TensorRT 출력 차이를 sigmoid 확률 공간에서 측정
+- **검증 결과**: max_diff = **0.0004** (허용 기준 0.20의 1/500) → 언더플로우가 분류 경계에 영향 없음을 실증
+
+#### 리스크 2: 하드웨어 종속성 (배포 환경 제약)
+
+- **현상**: TensorRT FP16 엔진은 NVIDIA GPU + Tensor Core(Volta 이후 아키텍처) 필수. 클라우드 배포 환경(c5.large)은 CPU 전용 → 그대로 배포 시 즉시 크래시
+- **방어**: `src/infra/model_loader.py`의 **계층적 Fallback 체인**
+
+  ```text
+  1. torch.cuda.is_available() 검사
+  2. .engine 파일 존재 확인 → TensorRtNativeEngine 로드 (FP16, 14ms)
+  3. 실패 시 → OnnxInferenceEngine CPU 폴백 (24ms)
+  4. 폴백도 실패 시 → 명시적 예외 발생 (Silent Fallback 방지)
+  ```
+
+- **결과**: GPU 환경에서는 14ms 극강 성능, CPU 환경에서는 24ms로 **Graceful Degradation**
+
+#### 리스크 3: GPU 아키텍처 변경 시 엔진 무효화
+
+- **현상**: `.engine` 파일은 빌드 시점의 GPU 아키텍처(SM 버전)·CUDA 버전·TensorRT 버전에 강결합. RTX 3050 Ti(SM 86)에서 빌드한 엔진은 다른 SM에서 동작 보장 안 됨
+- **방어**:
+  - `tools/build_engine.py` 스크립트로 **재빌드 자동화**
+  - 모델 로더가 엔진 로드 실패를 감지하면 자동으로 ONNX 폴백
+  - `.onnx` 파일은 항상 함께 배포하여 재빌드 원본 보장
+
+---
+
+### Verification (검증 방법)
+
+| 검증 항목         | 방법                                       | 통과 기준              | 실측값       |
+| ----------------- | ------------------------------------------ | ---------------------- | ------------ |
+| FP16 정확도 손실  | 5-seed 무작위 입력의 sigmoid 출력 max_diff | < 0.20                 | 0.0004 ✅    |
+| 분류 결과 일관성  | 이진 임계값(0.5) 기반 분류 일치율          | ≥ 70%                  | 100% ✅      |
+| P95 Latency       | 1000회 추론의 95-percentile                | < 20ms                 | 14.1ms ✅    |
+| Throughput        | 동시성 32 부하 테스트                      | > 100 QPS              | 325 QPS ✅   |
+| Fallback 동작     | CUDA 비활성 환경에서 ONNX 자동 전환        | 크래시 없이 추론 성공  | 통과 ✅      |
+
+> 상세 측정 데이터는 [docs/status/BENCHMARKS/phase4_step4_tensorrt_benchmark.md](../status/BENCHMARKS/phase4_step4_tensorrt_benchmark.md) 참조.
+
+---
+
+### One-Line Summary (한 줄 정리)
+
+> FP16은 정확도-성능 트레이드오프가 아니라, **Tensor Core라는 하드웨어 자원을 정확도 검증으로 안전하게 회수한 결정**이다. max_diff 0.0004를 측정한 시점부터 이 결정은 "타협"이 아니라 "단순한 개선"으로 정의된다.
+
+---
 
 > 📌 **관련 압박 질문**: Q2 (ONNX vs TensorRT 근본 아키텍처 차이 — 커널 퓨전, FP16 Tensor Core, 하드웨어 프로파일링), Q9 (FP16 정확도 0.0004 검증 방법) → [면접 압박 질문 & 답변](#-면접-압박-질문--답변-pressure-interview-qa)
 
