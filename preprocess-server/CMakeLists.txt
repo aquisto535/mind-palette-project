@@ -152,6 +152,26 @@ add_executable(visualize_pipeline src/utils/visualize_pipeline.cpp src/core/imag
 target_link_libraries(visualize_pipeline PRIVATE ${OpenCV_LIBS} spdlog::spdlog)
 target_include_directories(visualize_pipeline PRIVATE src src/core)
 
+# Direct resize interpolation test for docs/pipeline-stages/preprocess-server.md
+add_executable(direct_resize_test src/utils/direct_resize_test.cpp)
+target_link_libraries(direct_resize_test PRIVATE ${OpenCV_LIBS})
+target_include_directories(direct_resize_test PRIVATE src src/core)
+
+# Direct denoise parameter test for docs/pipeline-stages/preprocess-server.md
+add_executable(direct_denoise_test src/utils/direct_denoise_test.cpp)
+target_link_libraries(direct_denoise_test PRIVATE ${OpenCV_LIBS})
+target_include_directories(direct_denoise_test PRIVATE src src/core)
+
+# Direct grayscale conversion test for docs/pipeline-stages/preprocess-server.md
+add_executable(direct_grayscale_test src/utils/direct_grayscale_test.cpp)
+target_link_libraries(direct_grayscale_test PRIVATE ${OpenCV_LIBS})
+target_include_directories(direct_grayscale_test PRIVATE src src/core)
+
+# Direct tests for remaining preprocess stages in docs/pipeline-stages/preprocess-server.md
+add_executable(direct_pipeline_remaining_test src/utils/direct_pipeline_remaining_test.cpp)
+target_link_libraries(direct_pipeline_remaining_test PRIVATE ${OpenCV_LIBS})
+target_include_directories(direct_pipeline_remaining_test PRIVATE src src/core)
+
 # Phase 3 Latency Test
 add_executable(phase3_latency_test src/utils/phase3_latency_test.cpp src/core/image_processor.cpp ${FILTER_SOURCES})
 target_link_libraries(phase3_latency_test PRIVATE ${OpenCV_LIBS} spdlog::spdlog)

@@ -1,0 +1,53 @@
+#:schema https://developers.openai.com/codex/config-schema.json
+
+# Mind Palette project-local Codex config.
+# Keep project behavior rules in AGENTS.md; keep runtime/session settings here.
+
+model = "gpt-5.5"
+model_reasoning_effort = "medium"
+model_verbosity = "medium"
+
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
+web_search = "cached"
+
+project_doc_max_bytes = 65536
+project_root_markers = [".git", "AGENTS.md", "docker-compose.yml"]
+
+developer_instructions = """
+이 저장소의 AGENTS.md에는 Antigravity/Gemini 중심 표현이 포함되어 있다.
+Codex 세션에서는 이를 프로젝트 배경과 작업 규칙으로 참고하되, 실제 역할은 Codex 코딩 에이전트로 수행한다.
+
+항상 한국어로 답한다.
+변경은 요청 범위에 맞게 작게 유지한다.
+Frontend 작업은 가능하면 브라우저/스크린샷으로 시각 검증한다.
+아동 그림, 검사 결과, 업로드 이미지 등 민감할 수 있는 데이터는 외부 네트워크로 보내지 않는다.
+"""
+
+[sandbox_workspace_write]
+network_access = false
+writable_roots = [
+  "/mnt/c/Users/user/Documents/GitHub/mind-palette-project",
+  "/tmp",
+]
+
+[tools]
+view_image = true
+
+[features]
+multi_agent = true
+shell_snapshot = true
+unified_exec = true
+
+[profiles.frontend]
+model_reasoning_effort = "medium"
+web_search = "live"
+tools_view_image = true
+
+[profiles.architecture]
+model_reasoning_effort = "high"
+web_search = "live"
+
+[profiles.review]
+sandbox_mode = "read-only"
+model_reasoning_effort = "high"
