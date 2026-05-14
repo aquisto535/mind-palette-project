@@ -1,6 +1,7 @@
-﻿#include "infra/thread_pool.h"
+#include "infra/thread_pool.h"
 
-ThreadPool::ThreadPool(size_t numThreads) {
+ThreadPool::ThreadPool(size_t numThreads, size_t maxQueueSize)
+    : maxQueueSize_(maxQueueSize) {
     // Default to hardware concurrency, minimum 1
     if (numThreads == 0) {
         numThreads = std::thread::hardware_concurrency();

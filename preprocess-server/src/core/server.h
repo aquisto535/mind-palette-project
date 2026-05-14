@@ -50,6 +50,16 @@ inline ThreadPool& GetWorkerPool() {
         // Default: cap at 4 to prevent over-provisioning on high-core-count machines
         size_t hw = std::thread::hardware_concurrency();
         return (hw > 0) ? std::min(hw, size_t(4)) : 2;
+    }(),
+    []() -> size_t {
+        // Allow runtime tuning of queue depth via environment variable
+        // Default: 16 (safe for c5.large / 4GB RAM at ~125MB per image peak)
+        std::string queueStr = GetEnvVar("PREPROCESS_QUEUE_SIZE");
+        if (!queueStr.empty()) {
+            size_t n = static_cast<size_t>(std::atoi(queueStr.c_str()));
+            if (n > 0) return n;
+        }
+        return 16;
     }());
     return pool;
 }
@@ -220,7 +230,7 @@ inline void setup_routes(crow::SimpleApp& app) {
         auto promise = std::make_shared<std::promise<std::optional<cv::Mat>>>();
         auto future = promise->get_future();
         
-        GetWorkerPool().enqueue([promise, imagePath, requestId]()
+        bool enqueued = GetWorkerPool().enqueue([promise, imagePath, requestId]()
         {
             try {
                 promise->set_value(ProcessImageFile(imagePath, requestId));
@@ -228,6 +238,18 @@ inline void setup_routes(crow::SimpleApp& app) {
                 promise->set_exception(std::current_exception());
             }
         });
+
+        // Queue full → reject immediately with 503 (circuit breaker)
+        if (!enqueued) {
+            LOG_WARN(requestId, "Worker queue full, rejecting request (503)");
+            crow::json::wvalue body;
+            body["error"] = "SERVER_BUSY";
+            body["message"] = "Server is at capacity, please retry later";
+            crow::response res(503, body.dump());
+            res.add_header("Content-Type", "application/json");
+            res.add_header("Retry-After", "5");
+            return res;
+        }
 
         // Wait for worker thread to complete processing
         // ValidationException propagates via promise/future → HTTP 422

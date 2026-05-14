@@ -484,9 +484,9 @@
 
 #### Load Testing - Phase 5 (최종 성능)
 
-- [x] **k6 부하 테스트**:
-  - [x] [TDD] 동시 접속자 100명 달성 시 응답 지연(P95) 기준 미달 시 실패 처리 (Red) — `scripts/load-test.js` thresholds: `p(95)<500` 설정
-  - [x] k6 시나리오 작성 및 결과 벤치마크 리포트 생성 (Green) — smoke/load(100VU)/stress(200VU) 3개 시나리오 완료
+- [] **k6 부하 테스트**:
+  - [] [TDD] 동시 접속자 100명 달성 시 응답 지연(P95) 기준 미달 시 실패 처리 (Red) — `scripts/load-test.js` thresholds: `p(95)<500` 설정
+  - [] k6 시나리오 작성 및 결과 벤치마크 리포트 생성 (Green) — smoke/load(100VU)/stress(200VU) 3개 시나리오 완료
 
 ---
 

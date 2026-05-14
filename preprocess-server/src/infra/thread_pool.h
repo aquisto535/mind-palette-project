@@ -18,9 +18,11 @@ class ThreadPool {
 public:
     /**
      * @brief Construct thread pool
-     * @param numThreads Number of worker threads (0 = hardware_concurrency)
+     * @param numThreads   Number of worker threads (0 = hardware_concurrency)
+     * @param maxQueueSize Maximum pending tasks before enqueue() returns false.
+     *                     Default: SIZE_MAX (unbounded — backward-compatible)
      */
-    explicit ThreadPool(size_t numThreads = 0);
+    explicit ThreadPool(size_t numThreads = 0, size_t maxQueueSize = SIZE_MAX);
     
     /**
      * @brief Destructor - waits for all tasks to complete
@@ -34,9 +36,11 @@ public:
     /**
      * @brief Enqueue a task for execution
      * @param task Function to execute
+     * @return true  Task accepted and queued
+     * @return false Queue is full (maxQueueSize reached) — caller should return 503
      */
     template<class F>
-    void enqueue(F&& task);
+    bool enqueue(F&& task);
 
     /**
      * @brief Get number of worker threads
@@ -51,6 +55,7 @@ public:
 private:
     std::vector<std::thread> workers_;
     std::queue<std::function<void()>> tasks_;
+    size_t maxQueueSize_;
     
     mutable std::mutex mutex_;
     std::condition_variable cv_;
@@ -60,11 +65,13 @@ private:
 
 // Template implementation (must be in header)
 template<class F>
-void ThreadPool::enqueue(F&& task) {
+bool ThreadPool::enqueue(F&& task) {
     {
         std::lock_guard<std::mutex> lock(mutex_);  // 큐 보호 잠금
-        if (stop_) return;  // Don't accept new tasks after stop
+        if (stop_) return false;  // Don't accept new tasks after stop
+        if (tasks_.size() >= maxQueueSize_) return false; // 큐 초과 → 거절
         tasks_.emplace(std::forward<F>(task)); // 람다를 큐에 넣음
     }
     cv_.notify_one(); // 워커 스레드에게 작업이 왔음을 알림
+    return true;
 }

@@ -120,6 +120,7 @@
   - ❌ **Rejected**: 이미지 처리 성능이 C++ 대비 현저히 낮음. GIL(Global Interpreter Lock)로 인한 멀티스레딩 비효율.
 - **서버리스 아키텍처 (AWS Lambda)**: 각 단계를 Lambda 함수로 분리
   - ❌ **Rejected**: Cold Start 지연 시간, 로컬 개발 복잡도 증가, 비용 예측 어려움.
+  - 📎 상세 분석: [`ADR-001-serverless-lambda-analysis.md`](./ADR-001-serverless-lambda-analysis.md)
 
 ### 결론 (Consequences)
 

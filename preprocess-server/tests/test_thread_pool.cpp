@@ -93,6 +93,72 @@ TEST(ThreadPoolTest, ZeroThreadsFallback) {
     EXPECT_GE(pool.size(), 1);
 }
 
+// ==================== Queue Size Limit Tests ====================
+
+TEST(ThreadPoolTest, EnqueueReturnsTrueOnSuccess) {
+    ThreadPool pool(2, 10); // maxQueueSize = 10
+    std::atomic<int> counter{0};
+
+    bool result = pool.enqueue([&counter]() { counter++; });
+
+    EXPECT_TRUE(result);
+    pool.shutdown();
+    EXPECT_EQ(counter.load(), 1);
+}
+
+TEST(ThreadPoolTest, EnqueueReturnsFalseWhenQueueFull) {
+    // Workers are blocked → queue fills up
+    ThreadPool pool(1, 3); // 1 worker, maxQueueSize = 3
+
+    std::mutex blockMutex;
+    std::unique_lock<std::mutex> blockLock(blockMutex);
+
+    // Block the single worker thread
+    pool.enqueue([&blockMutex]() {
+        std::unique_lock<std::mutex> lk(blockMutex); // blocks until test releases
+    });
+
+    // Fill queue to capacity (worker is blocked, so queue depth grows)
+    bool r1 = pool.enqueue([]() {});
+    bool r2 = pool.enqueue([]() {});
+    bool r3 = pool.enqueue([]() {}); // This should hit the limit
+
+    EXPECT_TRUE(r1);
+    EXPECT_TRUE(r2);
+    EXPECT_FALSE(r3); // Queue full → rejected
+
+    blockLock.unlock(); // Release worker
+    pool.shutdown();
+}
+
+TEST(ThreadPoolTest, QueueFullDoesNotCrash) {
+    ThreadPool pool(1, 2); // Very small queue
+    std::atomic<int> accepted{0};
+    std::atomic<int> rejected{0};
+
+    std::mutex blockMutex;
+    std::unique_lock<std::mutex> blockLock(blockMutex);
+
+    // Block the single worker
+    pool.enqueue([&blockMutex]() {
+        std::unique_lock<std::mutex> lk(blockMutex);
+    });
+
+    // Flood with tasks
+    for (int i = 0; i < 20; ++i) {
+        if (pool.enqueue([]() {})) {
+            ++accepted;
+        } else {
+            ++rejected;
+        }
+    }
+
+    EXPECT_LE(accepted.load(), 2);  // At most maxQueueSize accepted
+    EXPECT_GE(rejected.load(), 18); // Rest must be rejected
+    EXPECT_NO_FATAL_FAILURE(blockLock.unlock());
+    pool.shutdown();
+}
+
 // ==================== Scalability Preparation ====================
 
 TEST(ThreadPoolTest, WorkDistribution) {

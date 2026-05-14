@@ -1,5 +1,5 @@
 {
-  "tests": 102,
+  "tests": 107,
   "name": "AllTests",
   "testsuites": [
     {
@@ -355,7 +355,7 @@
     },
     {
       "name": "ColorValidationFilterTest",
-      "tests": 10,
+      "tests": 12,
       "testsuite": [
         {
           "name": "PassesGrayscaleImage",
@@ -403,9 +403,19 @@
           "line": 509
         },
         {
-          "name": "PipelineThrowsForColorImage",
+          "name": "PassesWarmTintedPencilStroke",
           "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
           "line": 521
+        },
+        {
+          "name": "ThrowsOnHighChromaStroke",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
+          "line": 531
+        },
+        {
+          "name": "PipelineThrowsForColorImage",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_filters.cpp",
+          "line": 540
         }
       ]
     },
@@ -514,7 +524,7 @@
     },
     {
       "name": "ThreadPoolTest",
-      "tests": 8,
+      "tests": 11,
       "testsuite": [
         {
           "name": "CreateAndDestroy",
@@ -552,9 +562,24 @@
           "line": 90
         },
         {
-          "name": "WorkDistribution",
+          "name": "EnqueueReturnsTrueOnSuccess",
           "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_thread_pool.cpp",
           "line": 98
+        },
+        {
+          "name": "EnqueueReturnsFalseWhenQueueFull",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_thread_pool.cpp",
+          "line": 109
+        },
+        {
+          "name": "QueueFullDoesNotCrash",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_thread_pool.cpp",
+          "line": 134
+        },
+        {
+          "name": "WorkDistribution",
+          "file": "C:\/Users\/user\/Documents\/GitHub\/mind-palette-project\/preprocess-server\/tests\/test_thread_pool.cpp",
+          "line": 164
         }
       ]
     },
