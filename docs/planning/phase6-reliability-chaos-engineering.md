@@ -2,12 +2,13 @@
 
 ## Context
 
-Phase 5까지 모든 서비스(C++, Python, Gateway, Frontend, Nginx)가 완성됐지만 **장애 탄력성이 없다**:
+Phase 5까지 모든 서비스(C++, Python, Gateway, Frontend, Nginx)가 완성됐지만 **장애 탄력성은 아직 검증되지 않았다**:
 
-- `invokeAiServer`는 axios 타임아웃 없음 → ai-server 느려지면 이벤트 루프 블로킹
+- `invokeAiServer`는 axios 타임아웃 없음 → ai-server 지연 시 요청이 오래 pending 되며 연결/메모리 리소스 잠식
 - Circuit Breaker 없음 → 사망한 서버에 계속 TCP 연결 시도
 - Retry 없음 → 일시적 네트워크 오류에 취약
 - Chaos Testing 없음 → 컨테이너 재시작 자동 복구 미검증
+- Phase 5의 `scripts/load-test.js`는 구현됨 → Phase 6은 해당 k6 기준선을 바탕으로 장애 주입 시 회복성을 검증
 
 목표: TDD로 Circuit Breaker + Retry 구현 → Docker Chaos 스크립트로 E2E 복구 검증.
 
@@ -17,8 +18,8 @@ Phase 5까지 모든 서비스(C++, Python, Gateway, Frontend, Nginx)가 완성�
 
 | 서비스 장애 | 현재 동작 | 변경 후 |
 |---|---|---|
-| preprocess-server 사망 | soft-fail, 원본 이미지 사용. 단, 사망 서버에 계속 TCP 연결 | OPEN 즉시 fallback, TCP 낭비 없음 |
-| **ai-server 지연** | **무한 대기 → 이벤트 루프 블로킹** | **30s timeout + OPEN 즉시 503** |
+| preprocess-server 사망 | Fail-Closed: `PreprocessServiceError` → 503. 단, 사망 서버에 계속 TCP 연결 | OPEN 즉시 503. 원본 이미지 우회 금지 유지 |
+| **ai-server 지연** | **무한 대기 → 요청 pending/리소스 잠식** | **30s timeout + OPEN 즉시 503** |
 | ai-server 사망 | throw → 500. 타임아웃 없음 | OPEN 즉시 503 |
 | api-gateway 사망 | Docker 자동 재시작 (미검증) | chaos-test.sh로 복구 시간 측정 |
 
@@ -44,8 +45,8 @@ Phase 5까지 모든 서비스(C++, Python, Gateway, Frontend, Nginx)가 완성�
 **신규: `api-gateway/tests/failover.test.ts`**
 ```
 # Failover 시나리오 (nock으로 HTTP 스터빙)
-[FO-01] C++ 서버 500 × 5회 → preprocessBreaker OPEN → fallback({sanitized:false}) 반환
-[FO-02] preprocessBreaker OPEN 중 AI 서버 정상 → 분석 결과 200 반환 (원본 이미지 사용)
+[FO-01] C++ 서버 500 × 5회 → preprocessBreaker OPEN → PreprocessServiceError 반환
+[FO-02] preprocessBreaker OPEN 중 요청 → AI 서버 미호출, 즉시 503 반환
 [FO-03] AI 서버 timeout × 5회 → aiBreaker OPEN → ServiceUnavailableError throw
 [FO-04] aiBreaker OPEN 중 요청 → fn 미호출, 즉시 에러
 
@@ -102,7 +103,8 @@ opossum 라이브러리 사용. `opossum` 이벤트(`open`, `halfOpen`, `close`)
 // invokePreprocessServer 변경 (L78)
 // 변경 전: axios.post(PREPROCESS_SERVER_URL/preprocess, ...)
 // 변경 후: preprocessBreaker.fire(filePath, requestId, passKey)
-// fallback: { processedImagePath: filePath, sanitized: false, serverTiming: undefined }
+// fallback: throws PreprocessServiceError('PREPROCESS_SERVICE_UNAVAILABLE')
+// 보안 정책: ADR-033 Fail-Closed 유지. 전처리 장애 시 원본 이미지 우회 금지.
 
 // invokeAiServer 변경 (L110)
 // 변경 전: axios.post(AI_SERVER_URL/analyze, formData, { headers })
@@ -116,18 +118,22 @@ opossum 라이브러리 사용. `opossum` 이벤트(`open`, `halfOpen`, `close`)
 
 **수정: `api-gateway/src/routes/analyze.ts`** (또는 해당 라우터 파일)
 - `ServiceUnavailableError` 타입 가드로 503 반환
+- 기존 `PreprocessServiceError`는 계속 503으로 반환
 
 ---
 
 ### 4단계: Chaos Testing 스크립트
 
 **신규: `scripts/chaos-test.sh`**
+- 안전장치: `CHAOS_ENV=local` 또는 `CONFIRM_CHAOS_TEST=true` 없으면 즉시 종료
+- 대상 확인: Docker Compose project name이 `mind-palette`인지 확인하고, 실행 전 대상 컨테이너 목록 출력
 - Docker Compose SIGKILL 기반 4개 시나리오:
   1. preprocess-server SIGKILL
   2. ai-server SIGKILL
   3. api-gateway SIGKILL
   4. preprocess + ai 동시 종료
 - 각 시나리오: SIGKILL → chaos-verify.ts 폴링 → 복구 확인 → chaos_results.json 기록
+- `scripts/load-test.js`의 Phase 5 k6 결과를 정상 기준선으로 보관하고, Chaos 실행 후 회복 시간/SLO 위반 여부를 별도 기록
 
 **신규: `scripts/chaos-verify.ts`**
 ```typescript
@@ -167,8 +173,8 @@ async function pollUntilHealthy(serviceUrl, maxWaitMs): Promise<RecoveryResult>
 | `api-gateway/src/services/analysisService.ts` | 수정 | L78, L110 — 브레이커 통합, axios timeout 추가 |
 | `api-gateway/src/routes/analyze.ts` | 수정 | ServiceUnavailableError → 503 |
 | `api-gateway/tests/circuitBreaker.test.ts` | **신규** | CB 단위 테스트 9개 |
-| `api-gateway/tests/failover.test.ts` | **신규** | Failover + Chaos 통합 테스트 8개 |
-| `scripts/chaos-test.sh` | **신규** | SIGKILL 시나리오 자동화 |
+| `api-gateway/tests/failover.test.ts` | **신규** | Failover + Chaos 통합 테스트 8개, 전처리 Fail-Closed 검증 |
+| `scripts/chaos-test.sh` | **신규** | 안전장치 포함 SIGKILL 시나리오 자동화 |
 | `scripts/chaos-verify.ts` | **신규** | 헬스체크 폴링 + 복구 검증 |
 
 ---
@@ -185,7 +191,7 @@ npm test -- --testPathPattern="(circuitBreaker|failover)"
 ### E2E Chaos 테스트 (Docker 환경)
 ```bash
 docker compose up -d --build
-bash scripts/chaos-test.sh
+CHAOS_ENV=local bash scripts/chaos-test.sh
 # chaos_results.json에 복구 시간 기록
 # 모든 시나리오의 복구 시간이 SLO 이내인지 확인
 ```
@@ -193,4 +199,4 @@ bash scripts/chaos-test.sh
 ### 수동 검증 포인트
 1. `docker compose kill -s SIGKILL preprocess-server` → Gateway 로그에 "circuit open" 메시지
 2. 60초 후 → 로그에 "circuit half-open", "circuit closed" 순서로 출력
-3. `curl -X POST http://localhost:3000/api/analyze -F file=@test.jpg` → OPEN 중 즉시 503
+3. `curl -X POST http://localhost:3000/api/analyze -F image=@test.jpg` → preprocess OPEN 중 즉시 503, AI 서버 미호출
